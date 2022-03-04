@@ -69,8 +69,8 @@ install(TARGETS dnn_node
 
 # Install include directories
 install(
-  DIRECTORY include/
-  DESTINATION include
+  DIRECTORY include/dnn_node/
+  DESTINATION include/dnn_node/
 )
 
 # Install deps

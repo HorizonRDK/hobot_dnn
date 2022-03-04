@@ -39,6 +39,13 @@ dnn_node_example编译完成后，可执行程序以及其依赖安装在install
 
 ## 编译
 
+编译环境确认：
+
+- 当前编译终端已设置ROS环境变量：`source /opt/ros/foxy/setup.bash`。
+-  已安装ROS2编译工具colcon。安装的ROS不包含编译工具colcon，需要手动安装colcon。colcon安装命令：`apt update; apt install python3-colcon-common-extensions`
+
+编译：
+
 - 同时编译dnn_node和dnn_node_example两个package：`colcon build`
 - 只编译dnn_node package：`colcon build --packages-select dnn_node`
 - 只编译dnn_node_example package：`colcon build --packages-select dnn_node_example`

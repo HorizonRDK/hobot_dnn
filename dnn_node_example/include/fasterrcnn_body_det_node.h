@@ -65,7 +65,7 @@ class FasterRcnnBodyDetNode : public DnnNode {
 
   const int model_input_width_ = 960;
   const int model_input_height_ = 544;
-  const int model_output_count_ = 3;
+  const int32_t model_output_count_ = 3;
   // box output index is 1
   const int32_t box_output_index_ = 1;
   // kps output index is 2

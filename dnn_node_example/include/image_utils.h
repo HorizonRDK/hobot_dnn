@@ -89,25 +89,6 @@ using hobot::easy_dnn::TaskManager;
 #define ALIGN_16(w) ALIGNED_2E(w, 16U)
 #define ALIGN_64(w) ALIGNED_2E(w, 64U)
 
-static uint8_t bgr_putpalette[] = {
-    128, 64,  128, 244, 35,  232, 70,  70,  70,  102, 102, 156, 190, 153, 153,
-    153, 153, 153, 250, 170, 30,  220, 220, 0,   107, 142, 35,  152, 251, 152,
-    0,   130, 180, 220, 20,  60,  255, 0,   0,   0,   0,   142, 0,   0,   70,
-    0,   60,  100, 0,   80,  100, 0,   0,   230, 119, 11,  32};
-
-static std::vector<std::vector<int>> residual_color_map = {
-    {255, 0, 0},   {255, 17, 0},  {255, 34, 0},  {255, 51, 0},  {255, 68, 0},
-    {255, 85, 0},  {255, 102, 0}, {255, 119, 0}, {255, 136, 0}, {255, 153, 0},
-    {255, 170, 0}, {255, 187, 0}, {255, 204, 0}, {255, 221, 0}, {255, 238, 0},
-    {255, 255, 0}, {213, 255, 0}, {170, 255, 0}, {128, 255, 0}, {85, 255, 0},
-    {43, 255, 0},  {0, 255, 0},   {0, 255, 63},  {0, 255, 127}, {0, 255, 191},
-    {0, 255, 255}, {0, 232, 255}, {0, 209, 255}, {0, 186, 255}, {0, 163, 255},
-    {0, 140, 255}, {0, 116, 255}, {0, 93, 255},  {0, 70, 255},  {0, 47, 255},
-    {0, 24, 255},  {0, 0, 255},   {19, 0, 255},  {39, 0, 255},  {58, 0, 255},
-    {78, 0, 255},  {98, 0, 255},  {117, 0, 255}, {137, 0, 255}, {156, 0, 255},
-    {176, 0, 255}, {196, 0, 255}, {215, 0, 255}, {235, 0, 255}, {255, 0, 255},
-    {255, 0, 213}, {255, 0, 170}, {255, 0, 128}, {255, 0, 85},  {255, 0, 43}};
-
 static cv::Scalar colors[] = {
     cv::Scalar(255, 0, 0),    // red
     cv::Scalar(255, 255, 0),  // yellow
@@ -143,37 +124,6 @@ class ImageUtils {
   static void GetNV12Tensor(std::string &image_file,
                             std::shared_ptr<DNNTensor> &tensor);
 
-  static void DrawParsing(const std::string &saving_path,
-                          ParsingResult *parsing_result);
-
-  static void DrawDepth(const std::string &image_file,
-                        const std::string &saving_path,
-                        DepthResult *result);
-
-  static void DrawResidual(const std::string &image_file,
-                           const std::string &saving_path,
-                           ParsingResult *parsing_result,
-                           ResidualResult *result);
-  /**
-   * Render the image with elevation
-   * @param[in] image_file: input image
-   * @param[in] saving_path: the path to render the image
-   * @param[in] K: camera Parameters
-   * @param[in] desc: description of model output
-   * @param[in] result: inference output
-   */
-  static void DrawElevation(const std::string &image_file,
-                            const std::string &saving_path,
-                            cv::Mat &K,
-                            ElevationOutputDescription *desc,
-                            ElevationResult *result);
-  /**
-   * Render the image with bev3d
-   * @param[in] saving_path: the path to render the image
-   * @param[in] result: inference output
-   */
-  static void DrawBev3D(const std::string &saving_path, Bev3DResult *result);
-
   static void RenderingFilter2d(const std::string &image_file,
                                 const std::string &saving_path,
                                 std::vector<PerceptionRect> &boxes,
@@ -185,22 +135,6 @@ class ImageUtils {
                                 std::vector<Landmarks> &lmks,
                                 int scaled_height = 0,
                                 int scaled_width = 0);
-
-  static void RenderingClassification(const std::string &image_file,
-                                      std::vector<hbDNNRoi> &boxes,
-                                      const std::string &saving_path,
-                                      std::vector<std::string> &class_names);
-
-  static void RenderingReal3d(const std::string &image_file,
-                              const std::string &save_file,
-                              const Real3dResult *real3d_result,
-                              cv::Mat K,
-                              cv::Mat dist_coeff,
-                              float scale);
-  static void RendingBgrImg(const std::string &saving_path,
-                            int8_t *data,
-                            int height,
-                            int width);
 };
 
 #endif  // EASY_DNN_IMAGE_UTILS_H

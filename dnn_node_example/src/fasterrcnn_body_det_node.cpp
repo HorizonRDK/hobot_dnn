@@ -137,6 +137,9 @@ int FasterRcnnBodyDetNode::PreProcess(
     RCLCPP_ERROR(rclcpp::get_logger("example"), "Failed to set inputs");
     return ret;
   }
+  if (rois) {
+    // set roi
+  }
   return ret;
 }
 
@@ -144,7 +147,8 @@ int FasterRcnnBodyDetNode::PostProcess(
   const std::vector<std::shared_ptr<DNNResult>> &outputs) {
   RCLCPP_INFO(rclcpp::get_logger("example"),
     "outputs size: %d", outputs.size());
-  if (outputs.empty() || outputs.size() < model_output_count_) {
+  if (outputs.empty() ||
+    static_cast<int32_t>(outputs.size()) < model_output_count_) {
     RCLCPP_ERROR(rclcpp::get_logger("example"), "Invalid outputs");
     return -1;
   }
@@ -222,7 +226,7 @@ int FasterRcnnBodyDetNode::Predict(
   auto task_id = AllocTask();
   uint32_t ret = 0;
   // 2. 将准备好的数据通过前处理接口输入给模型
-  ret = PreProcess(inputs, task_id);
+  ret = PreProcess(inputs, task_id, rois);
   if (ret != 0) {
     RCLCPP_ERROR(rclcpp::get_logger("example"), "Run PreProcess failed!");
     return ret;
