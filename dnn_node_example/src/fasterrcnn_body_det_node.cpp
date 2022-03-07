@@ -57,6 +57,7 @@ int FasterRcnnBodyDetNode::SetNodePara() {
   dnn_node_para_ptr_->model_file = model_file_name_;
   dnn_node_para_ptr_->model_name = model_name_;
   dnn_node_para_ptr_->model_task_type = model_task_type_;
+  dnn_node_para_ptr_->task_num = 2;
   return 0;
 }
 
@@ -144,7 +145,21 @@ int FasterRcnnBodyDetNode::PreProcess(
 }
 
 int FasterRcnnBodyDetNode::PostProcess(
-  const std::vector<std::shared_ptr<DNNResult>> &outputs) {
+  const std::shared_ptr<DnnNodeOutput> &node_output) {
+  auto fasterRcnn_output =
+    std::dynamic_pointer_cast<FasterRcnnOutput>(node_output);
+  if (fasterRcnn_output) {
+    std::stringstream ss;
+    ss << "Output from image_name: " << fasterRcnn_output->image_name;
+    if (fasterRcnn_output->image_msg_header) {
+      ss << ", frame_id: " << fasterRcnn_output->image_msg_header->frame_id
+         << ", stamp: " << fasterRcnn_output->image_msg_header->stamp.sec
+         << "." << fasterRcnn_output->image_msg_header->stamp.nanosec;
+    }
+    RCLCPP_INFO(rclcpp::get_logger("example"), "%s", ss.str().c_str());
+  }
+
+  const auto& outputs = node_output->outputs;
   RCLCPP_INFO(rclcpp::get_logger("example"),
     "outputs size: %d", outputs.size());
   if (outputs.empty() ||
@@ -221,7 +236,7 @@ int FasterRcnnBodyDetNode::PostProcess(
 int FasterRcnnBodyDetNode::Predict(
   std::vector<std::shared_ptr<DNNInput>> &inputs,
   const std::shared_ptr<std::vector<hbDNNRoi>> rois,
-  std::vector<std::shared_ptr<DNNResult>> &outputs) {
+  std::shared_ptr<DnnNodeOutput> dnn_output) {
   // 1. 申请预测task
   auto task_id = AllocTask();
   uint32_t ret = 0;
@@ -233,7 +248,7 @@ int FasterRcnnBodyDetNode::Predict(
   }
 
   // 3. 模型推理
-  ret = RunInferTask(outputs, task_id, is_sync_mode_);
+  ret = RunInferTask(dnn_output, task_id, is_sync_mode_);
   if (ret != 0) {
     RCLCPP_ERROR(rclcpp::get_logger("example"), "Run RunInferTask failed!");
     ReleaseTask(task_id);
@@ -242,7 +257,7 @@ int FasterRcnnBodyDetNode::Predict(
   if (is_sync_mode_) {
     ReleaseTask(task_id);
     // 4. 通过后处理接口处理模型输出
-    ret = PostProcess(outputs);
+    ret = PostProcess(dnn_output);
     if (ret != 0) {
       RCLCPP_ERROR(rclcpp::get_logger("example"), "Run PostProcess failed!");
     }
@@ -290,12 +305,13 @@ int FasterRcnnBodyDetNode::FeedFromLocal() {
   // 2. 使用pyramid创建DNNInput对象inputs
   // inputs将会作为模型的输入通过RunInferTask接口传入
   auto inputs = std::vector<std::shared_ptr<DNNInput>>{pyramid};
-  std::vector<std::shared_ptr<DNNResult>> outputs;
+  auto dnn_output = std::make_shared<FasterRcnnOutput>();
+  dnn_output->image_name = image_;
   uint32_t ret = 0;
   // 3. 开始预测
-  ret = Predict(inputs, nullptr, outputs);
+  ret = Predict(inputs, nullptr, dnn_output);
   // 4. 处理预测结果，如渲染到图片或者发布预测结果
-  if (ret != 0 || outputs.empty()) {
+  if (ret != 0) {
     RCLCPP_ERROR(rclcpp::get_logger("example"), "Run predict failed!");
     return ret;
   } else if (dump_render_img_ &&
@@ -304,8 +320,10 @@ int FasterRcnnBodyDetNode::FeedFromLocal() {
     std::string result_image = "render.jpg";
     cv::Mat mat = cv::imread(image_, cv::IMREAD_COLOR);
     Render(mat,
-          dynamic_cast<Filter2DResult *>(outputs[box_output_index_].get()),
-          dynamic_cast<LandmarksResult *>(outputs[kps_output_index_].get()),
+          dynamic_cast<Filter2DResult *>(
+            dnn_output->outputs[box_output_index_].get()),
+          dynamic_cast<LandmarksResult *>(
+            dnn_output->outputs[kps_output_index_].get()),
           model_input_height_, model_input_width_);
     RCLCPP_INFO(rclcpp::get_logger("example"),
       "Draw result to file: %s", result_image.c_str());
@@ -405,11 +423,13 @@ int FasterRcnnBodyDetNode::FeedFromSubscriber() {
     // 2. 使用pyramid创建DNNInput对象inputs
     // inputs将会作为模型的输入通过RunInferTask接口传入
     auto inputs = std::vector<std::shared_ptr<DNNInput>>{pyramid};
-    std::vector<std::shared_ptr<DNNResult>> outputs;
-    outputs.clear();
+    auto dnn_output = std::make_shared<FasterRcnnOutput>();
+    dnn_output->image_msg_header = std::make_shared<std_msgs::msg::Header>();
+    dnn_output->image_msg_header->set__frame_id(img_msg->header.frame_id);
+    dnn_output->image_msg_header->set__stamp(img_msg->header.stamp);
     uint32_t ret = 0;
     // 3. 开始预测
-    ret = Predict(inputs, nullptr, outputs);
+    ret = Predict(inputs, nullptr, dnn_output);
 
     {
       auto tp_now = std::chrono::system_clock::now();
@@ -429,8 +449,10 @@ int FasterRcnnBodyDetNode::FeedFromSubscriber() {
         std::to_string(img_msg->header.stamp.nanosec) + ".jpg";
       auto mat = cv_img->image;
       Render(mat,
-            dynamic_cast<Filter2DResult *>(outputs[box_output_index_].get()),
-            dynamic_cast<LandmarksResult *>(outputs[kps_output_index_].get()),
+            dynamic_cast<Filter2DResult *>(
+              dnn_output->outputs[box_output_index_].get()),
+            dynamic_cast<LandmarksResult *>(
+              dnn_output->outputs[kps_output_index_].get()),
             model_input_height_, model_input_width_);
       RCLCPP_INFO(rclcpp::get_logger("example"),
         "Draw result to file: %s", result_image.c_str());

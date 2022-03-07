@@ -34,7 +34,27 @@ struct DnnNodePara {
 };
 ```
 
+## 2.3 Dnn Node输出数据
 
+```cpp
+struct DnnNodeOutput {
+  DnnNodeOutput() {
+    outputs.clear();
+  }
+  virtual ~DnnNodeOutput() {}
+  // 输出数据智能指针列表
+  std::vector<std::shared_ptr<DNNResult>> outputs;
+};
+```
+
+用户可以继承DnnNodeOutput来扩展输出内容，增加预测输出对应的输入数据信息。例如对于以图片作为输入的检测任务，可以增加图片名、header信息：
+
+```
+struct FasterRcnnOutput : public DnnNodeOutput {
+  std::string image_name = "";
+  std::shared_ptr<std_msgs::msg::Header> image_msg_header = nullptr;
+};
+```
 
 # 3.DnnNode类接口
 
@@ -70,7 +90,7 @@ virtual int PreProcess(std::vector<std::shared_ptr<DNNInput>> &inputs,
 
 ## 3.3 RunInferTask()
 ```cpp
-int RunInferTask(std::vector<std::shared_ptr<DNNResult>> &sync_outputs,
+int RunInferTask(std::shared_ptr<DnnNodeOutput> &sync_output,
                    const TaskId& task_id,
                    const bool is_sync_mode = true,
                    const int timeout_ms = 1000);
@@ -78,7 +98,7 @@ int RunInferTask(std::vector<std::shared_ptr<DNNResult>> &sync_outputs,
 执行推理任务。
 
 - 参数
-    - [out] outputs 输出数据智能指针列表，同步模式有效。
+    - [out] sync_output 输出数据智能指针。
     - [in] task_id 预测任务ID。
     - [in] is_sync_mode 预测模式，true为同步模式，false为异步模式。
     - [in] timeout_ms 预测推理超时时间。
@@ -87,16 +107,18 @@ int RunInferTask(std::vector<std::shared_ptr<DNNResult>> &sync_outputs,
 
 ## 3.4 PostProcess()
 ```cpp
-virtual int PostProcess(const std::vector<std::shared_ptr<DNNResult>> &outputs) = 0;
+virtual int PostProcess(const std::shared_ptr<DnnNodeOutput> &output) = 0;
 ```
 处理解析后的模型输出数据，例如将输出封装成msg发布到总线。
+
+DnnNodeOutput中包含用户自定义的扩展输出内容（如预测输出对应的输入数据信息）和DNNResult。
 
 DNNResult是easy dnn中定义的模型输出数据类型，用户必须根据实际使用的模型输出数据类型，继承DNNResult并定义模型输出数据类型。
 
 例如对于检测模型，继承DNNResult的子类中需要定义检测框、置信度等输出数据类型。
 
 - 参数
-    - [out] outputs 输出数据智能指针列表。
+    - [out] output 输出数据智能指针。
 - 返回值
     - 0成功，非0失败。
 

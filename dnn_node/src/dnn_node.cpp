@@ -11,6 +11,7 @@
 #include <vector>
 #include <queue>
 #include <unordered_map>
+#include <utility>
 
 #include "rclcpp/rclcpp.hpp"
 
@@ -121,34 +122,10 @@ int DnnNode::TaskInit() {
   }
 
   // 1. 为每个模型创建task
-  const auto& model_name = dnn_node_para_ptr_->model_name;
-  // 根据模型类型选择接口创建task
-  // 为task添加model
-  if (ModelTaskType::ModelInferType == dnn_node_para_ptr_->model_task_type) {
-    for (int idx = 0; idx < dnn_node_para_ptr_->task_num; idx++) {
-      auto task =
-        TaskManager::GetInstance()->GetModelInferTask(
-        dnn_node_para_ptr_->timeout_ms);
-      task->SetModel(dnn_rt_para_->model_manage);
-      dnn_rt_para_->tasks.emplace_back(task);
-    }
-  } else if (ModelTaskType::ModelRoiInferType ==
-    dnn_node_para_ptr_->model_task_type) {
-    for (int idx = 0; idx < dnn_node_para_ptr_->task_num; idx++) {
-      auto task =
-      TaskManager::GetInstance()->GetModelRoiInferTask(
-        dnn_node_para_ptr_->timeout_ms);
-      task->SetModel(dnn_rt_para_->model_manage);
-      dnn_rt_para_->tasks.emplace_back(task);
-    }
-  } else {
-    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid model task type [%d]",
-      static_cast<int>(dnn_node_para_ptr_->model_task_type));
-  }
-  if (dnn_rt_para_->tasks.empty()) {
-    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Failed to get infer task");
-    return -1;
-  }
+  // 此处只创建空的task，AllocTask才真正创建task，ReleaseTask时释放task
+  // 原因是目前一个task不支持多次预测，即每次预测都要申请一个新的task
+  // todo 20220305 需要easy dnn支持task复用
+  dnn_rt_para_->tasks.resize(dnn_node_para_ptr_->task_num);
 
   // 2. 创建idle running task
   {
@@ -201,7 +178,7 @@ int DnnNode::Init() {
 }
 
 int DnnNode::RunInferTask(
-  std::vector<std::shared_ptr<DNNResult>> &sync_outputs,
+  std::shared_ptr<DnnNodeOutput> &sync_outputs,
   const TaskId& task_id,
   const bool is_sync_mode,
   const int timeout_ms) {
@@ -209,7 +186,7 @@ int DnnNode::RunInferTask(
     return -1;
   }
   if (is_sync_mode) {
-    return RunInfer(sync_outputs, GetTask(task_id), timeout_ms);
+    return RunInfer(sync_outputs->outputs, GetTask(task_id), timeout_ms);
   } else {
     std::lock_guard<std::mutex> lock(thread_pool_->msg_mutex_);
     if (thread_pool_->msg_handle_.GetTaskNum() >=
@@ -220,9 +197,9 @@ int DnnNode::RunInferTask(
         thread_pool_->msg_limit_count_);
       return -1;
     }
-    auto infer_task = [this, task_id, timeout_ms](){
-      std::vector<std::shared_ptr<DNNResult>> aync_outputs;
-      if (RunInfer(aync_outputs, GetTask(task_id), timeout_ms) != 0) {
+    auto infer_task = [this, task_id, timeout_ms, sync_outputs](){
+      std::shared_ptr<DnnNodeOutput> aync_outputs = sync_outputs;
+      if (RunInfer(aync_outputs->outputs, GetTask(task_id), timeout_ms) != 0) {
         ReleaseTask(task_id);
         RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Run infer fail\n");
       } else {
@@ -301,6 +278,38 @@ TaskId DnnNode::AllocTask(int timeout_ms) {
   if (!dnn_rt_para_) {
     return task_id;
   }
+
+  // 真正创建task
+  std::shared_ptr<Task> task = nullptr;
+  const auto& model_name = dnn_node_para_ptr_->model_name;
+  // 根据模型类型选择接口创建task,为task添加model
+  if (ModelTaskType::ModelInferType == dnn_node_para_ptr_->model_task_type) {
+    task =
+      TaskManager::GetInstance()->GetModelInferTask(
+      dnn_node_para_ptr_->timeout_ms);
+    if (!task) {
+      RCLCPP_ERROR(rclcpp::get_logger("dnn"), "GetModelInferTask fail");
+      return task_id;
+    }
+    std::dynamic_pointer_cast<ModelInferTask>(task)->SetModel(
+      dnn_rt_para_->model_manage);
+  } else if (ModelTaskType::ModelRoiInferType ==
+    dnn_node_para_ptr_->model_task_type) {
+    task =
+    TaskManager::GetInstance()->GetModelRoiInferTask(
+      dnn_node_para_ptr_->timeout_ms);
+    if (!task) {
+      RCLCPP_ERROR(rclcpp::get_logger("dnn"), "GetModelRoiInferTask fail");
+      return task_id;
+    }
+    std::dynamic_pointer_cast<ModelRoiInferTask>(task)->SetModel(
+      dnn_rt_para_->model_manage);
+  } else {
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid model task type [%d]",
+      static_cast<int>(dnn_node_para_ptr_->model_task_type));
+    return task_id;
+  }
+
   auto alloc_task = [this, &task_id](){
     auto idle_task = dnn_rt_para_->idle_tasks.begin();
     idle_task->second->alloc_tp = std::chrono::system_clock::now();
@@ -332,6 +341,8 @@ TaskId DnnNode::AllocTask(int timeout_ms) {
   }
 
   RCLCPP_INFO(rclcpp::get_logger("dnn"), "Alloc task id: %d", task_id);
+  dnn_rt_para_->tasks[task_id] = std::move(task);
+
   return task_id;
 }
 
@@ -352,6 +363,7 @@ int DnnNode::ReleaseTask(const TaskId& task_id) {
   }
   dnn_rt_para_->idle_tasks[node_task->task_id] = node_task;
   dnn_rt_para_->running_tasks.erase(task_id);
+  dnn_rt_para_->tasks[task_id] = nullptr;
   dnn_rt_para_->task_cv.notify_one();
   lg.unlock();
   RCLCPP_INFO(rclcpp::get_logger("dnn"),

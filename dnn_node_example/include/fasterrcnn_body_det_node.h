@@ -24,6 +24,7 @@ using rclcpp::NodeOptions;
 
 using hobot::dnn_node::DnnNode;
 using hobot::dnn_node::DnnNodePara;
+using hobot::dnn_node::DnnNodeOutput;
 using hobot::dnn_node::TaskId;
 using hobot::dnn_node::ModelTaskType;
 
@@ -35,6 +36,11 @@ enum class DnnFeedType {
   // 用于预测的图片来源，0：本地图片；1：订阅到的image msg
   FROM_LOCAL = 0,
   FROM_SUB = 1
+};
+
+struct FasterRcnnOutput : public DnnNodeOutput {
+  std::string image_name = "";
+  std::shared_ptr<std_msgs::msg::Header> image_msg_header = nullptr;
 };
 
 class FasterRcnnBodyDetNode : public DnnNode {
@@ -55,7 +61,7 @@ class FasterRcnnBodyDetNode : public DnnNode {
                 const std::shared_ptr<std::vector<hbDNNRoi>> rois = nullptr)
                 override;
 
-  int PostProcess(const std::vector<std::shared_ptr<DNNResult>> &outputs)
+  int PostProcess(const std::shared_ptr<DnnNodeOutput> &outputs)
     override;
 
  private:
@@ -87,7 +93,7 @@ class FasterRcnnBodyDetNode : public DnnNode {
 
   int Predict(std::vector<std::shared_ptr<DNNInput>> &inputs,
     const std::shared_ptr<std::vector<hbDNNRoi>> rois,
-    std::vector<std::shared_ptr<DNNResult>> &outputs);
+    std::shared_ptr<DnnNodeOutput> dnn_output);
   int FeedFromLocal();
   int FeedFromSubscriber();
   int Render(cv::Mat& mat, const Filter2DResult *, const LandmarksResult *,

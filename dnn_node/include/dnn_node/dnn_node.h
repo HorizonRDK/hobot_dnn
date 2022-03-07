@@ -82,6 +82,17 @@ struct DnnNodePara {
   int task_num = 1;
 };
 
+// 用户可以继承DnnNodeOutput来扩展输出内容
+// 例如增加输入信息：图片数据、图片名、时间戳、ID等
+struct DnnNodeOutput {
+  DnnNodeOutput() {
+    outputs.clear();
+  }
+  virtual ~DnnNodeOutput() {}
+  // 输出数据智能指针列表
+  std::vector<std::shared_ptr<DNNResult>> outputs;
+};
+
 class DnnNode : public rclcpp::Node {
  public:
   // node_name为创建的节点名，options为选项，用法和ROS Node相同
@@ -120,7 +131,7 @@ class DnnNode : public rclcpp::Node {
   //   - [in] task_id 预测任务ID。
   //   - [in] is_sync_mode 预测模式，true为同步模式，false为异步模式。
   //   - [in] timeout_ms 预测推理超时时间。
-  int RunInferTask(std::vector<std::shared_ptr<DNNResult>> &sync_outputs,
+  int RunInferTask(std::shared_ptr<DnnNodeOutput> &sync_output,
                    const TaskId& task_id,
                    const bool is_sync_mode = true,
                    const int timeout_ms = 1000);
@@ -136,7 +147,7 @@ class DnnNode : public rclcpp::Node {
   // 用户必须根据实际使用的模型输出数据类型，继承DNNResult并定义模型输出数据类型
   // 例如对于检测模型，继承DNNResult的子类中需要定义检测框、置信度等输出数据类型
   virtual int PostProcess(
-    const std::vector<std::shared_ptr<DNNResult>> &outputs) = 0;
+    const std::shared_ptr<DnnNodeOutput> &output) = 0;
 
  protected:
   // easy_dnn_node_para_ptr为模型管理和推理参数，用户配置模型文件名和模型类型后传入
