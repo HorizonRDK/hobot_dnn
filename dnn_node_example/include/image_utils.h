@@ -119,6 +119,15 @@ class ImageUtils {
       int scaled_img_height,
       int scaled_img_width);
 
+  // 输入图片size小于scale size（模型输入size）：将输入图片padding到左上区域
+  // 输入图片size大于scale size（模型输入size）：crop输入图片左上区域
+  static std::shared_ptr<NV12PyramidInput> GetNV12PyramidFromNV12Img(
+      const char* in_img_data,
+      int in_img_height,
+      int in_img_width,
+      int scaled_img_height,
+      int scaled_img_width);
+
   static int32_t BGRToNv12(cv::Mat &bgr_mat, cv::Mat &img_nv12);
 
   static void GetNV12Tensor(std::string &image_file,

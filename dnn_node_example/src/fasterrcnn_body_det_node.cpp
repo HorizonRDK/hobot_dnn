@@ -377,35 +377,43 @@ int FasterRcnnBodyDetNode::FeedFromSubscriber() {
     << ", data size: " << img_msg->data.size();
     RCLCPP_INFO(rclcpp::get_logger("example"), "%s", ss.str().c_str());
 
-    auto tp_start = std::chrono::system_clock::now();
-
     // dump recved img msg
     // std::ofstream ofs("img." + img_msg->encoding);
     // ofs.write(reinterpret_cast<const char*>(img_msg->data.data()),
     //   img_msg->data.size());
-    // auto cv_img = cv_bridge::toCvCopy(img_msg, img_msg->encoding);
-    auto cv_img = cv_bridge::cvtColorForDisplay(
-      cv_bridge::toCvShare(img_msg),
-      "bgr8");
-    // dump recved img msg after convert
-    // cv::imwrite("dump_raw_" +
-    //     std::to_string(img_msg->header.stamp.sec) + "." +
-    //     std::to_string(img_msg->header.stamp.nanosec) + ".jpg",
-    //     cv_img->image);
 
-    {
-      auto tp_now = std::chrono::system_clock::now();
-      auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(
-                          tp_now - tp_start).count();
-      RCLCPP_DEBUG(rclcpp::get_logger("example"),
-        "after cvtColorForDisplay cost ms: %d", interval);
-    }
+    auto tp_start = std::chrono::system_clock::now();
 
     // 1. 将图片处理成模型输入数据类型DNNInput
     // 使用图片生成pym，NV12PyramidInput为DNNInput的子类
-    std::shared_ptr<hobot::easy_dnn::NV12PyramidInput> pyramid =
-    ImageUtils::GetNV12Pyramid(cv_img->image,
-      model_input_height_, model_input_width_);
+    std::shared_ptr<hobot::easy_dnn::NV12PyramidInput> pyramid = nullptr;
+    if ("rgb8" == img_msg->encoding) {
+      auto cv_img = cv_bridge::cvtColorForDisplay(
+        cv_bridge::toCvShare(img_msg),
+        "bgr8");
+      // dump recved img msg after convert
+      // cv::imwrite("dump_raw_" +
+      //     std::to_string(img_msg->header.stamp.sec) + "." +
+      //     std::to_string(img_msg->header.stamp.nanosec) + ".jpg",
+      //     cv_img->image);
+
+      {
+        auto tp_now = std::chrono::system_clock::now();
+        auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(
+                            tp_now - tp_start).count();
+        RCLCPP_DEBUG(rclcpp::get_logger("example"),
+          "after cvtColorForDisplay cost ms: %d", interval);
+      }
+
+      pyramid = ImageUtils::GetNV12Pyramid(cv_img->image,
+        model_input_height_, model_input_width_);
+    } else if ("nv12" == img_msg->encoding) {
+      pyramid = ImageUtils::GetNV12PyramidFromNV12Img(
+        reinterpret_cast<const char*>(img_msg->data.data()),
+        img_msg->height, img_msg->width,
+        model_input_height_, model_input_width_);
+    }
+
     if (!pyramid) {
       RCLCPP_ERROR(rclcpp::get_logger("example"),
         "Get Nv12 pym fail with image: %s", image_.c_str());
@@ -447,16 +455,45 @@ int FasterRcnnBodyDetNode::FeedFromSubscriber() {
       std::string result_image = "render_" +
         std::to_string(img_msg->header.stamp.sec) + "." +
         std::to_string(img_msg->header.stamp.nanosec) + ".jpg";
-      auto mat = cv_img->image;
-      Render(mat,
-            dynamic_cast<Filter2DResult *>(
-              dnn_output->outputs[box_output_index_].get()),
-            dynamic_cast<LandmarksResult *>(
-              dnn_output->outputs[kps_output_index_].get()),
-            model_input_height_, model_input_width_);
-      RCLCPP_INFO(rclcpp::get_logger("example"),
-        "Draw result to file: %s", result_image.c_str());
-      cv::imwrite(result_image, mat);
+
+      if ("rgb8" == img_msg->encoding) {
+        auto cv_img = cv_bridge::cvtColorForDisplay(
+          cv_bridge::toCvShare(img_msg),
+          "bgr8");
+        auto mat = cv_img->image;
+        Render(mat,
+              dynamic_cast<Filter2DResult *>(
+                dnn_output->outputs[box_output_index_].get()),
+              dynamic_cast<LandmarksResult *>(
+                dnn_output->outputs[kps_output_index_].get()),
+              model_input_height_, model_input_width_);
+        RCLCPP_INFO(rclcpp::get_logger("example"),
+          "Draw result to file: %s", result_image.c_str());
+        cv::imwrite(result_image, mat);
+      } else if ("nv12" == img_msg->encoding) {
+          char* y_img = reinterpret_cast<char*>(pyramid->y_vir_addr);
+          char* uv_img = reinterpret_cast<char*>(pyramid->uv_vir_addr);
+          auto height = pyramid->height;
+          auto width = pyramid->width;
+          auto img_y_size = height * width;
+          auto img_uv_size = img_y_size / 2;
+          char* buf = new char[img_y_size + img_uv_size];
+          memcpy(buf, y_img, img_y_size);
+          memcpy(buf + img_y_size, uv_img, img_uv_size);
+          cv::Mat nv12(height *3 / 2, width, CV_8UC1, buf);
+          cv::Mat bgr;
+          cv::cvtColor(nv12, bgr, CV_YUV2BGR_NV12);
+          auto& mat = bgr;
+          Render(mat,
+                dynamic_cast<Filter2DResult *>(
+                  dnn_output->outputs[box_output_index_].get()),
+                dynamic_cast<LandmarksResult *>(
+                  dnn_output->outputs[kps_output_index_].get()),
+                model_input_height_, model_input_width_);
+          RCLCPP_INFO(rclcpp::get_logger("example"),
+            "Draw result to file: %s", result_image.c_str());
+          cv::imwrite(result_image, mat);
+      }
     }
   }
   RCLCPP_WARN(rclcpp::get_logger("example"), "FeedFromSubscriber done");
