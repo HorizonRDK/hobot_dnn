@@ -16,7 +16,7 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
 
 具体请参考dnn_node_deps中版本说明。
 
-- dnn:1.5.1
+- dnn:1.6.1
 - easydnn:0.3.3
 - opencv:3.4.5
 - hobotlog:1.0.5
