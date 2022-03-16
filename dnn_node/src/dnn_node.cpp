@@ -92,8 +92,14 @@ int DnnNode::ModelInit() {
   }
 
   // 1. 加载模型hbm文件，一个hbm中可能包含多个模型
-  ModelManager::GetInstance()->Load(dnn_rt_para_->models_load,
+  int ret = 0;
+  ret = ModelManager::GetInstance()->Load(dnn_rt_para_->models_load,
   dnn_node_para_ptr_->model_file);
+  if (0 != ret) {
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Load model: %s fail, ret: %d",
+    dnn_node_para_ptr_->model_file.c_str(), ret);
+    return ret;
+  }
 
   // 2. 根据模型名，加载实际需要管理的模型
   const auto& model_name = dnn_node_para_ptr_->model_name;
@@ -152,6 +158,12 @@ int DnnNode::Init() {
   ret = SetNodePara();
   if (ret != 0) {
     return ret;
+  }
+
+  // check node para
+  if (ModelTaskType::InvalidType == dnn_node_para_ptr_->model_task_type) {
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid model task type");
+    return -1;
   }
 
   // 2. model init
@@ -281,7 +293,6 @@ TaskId DnnNode::AllocTask(int timeout_ms) {
 
   // 真正创建task
   std::shared_ptr<Task> task = nullptr;
-  const auto& model_name = dnn_node_para_ptr_->model_name;
   // 根据模型类型选择接口创建task,为task添加model
   if (ModelTaskType::ModelInferType == dnn_node_para_ptr_->model_task_type) {
     task =
@@ -341,6 +352,11 @@ TaskId DnnNode::AllocTask(int timeout_ms) {
   }
 
   RCLCPP_INFO(rclcpp::get_logger("dnn"), "Alloc task id: %d", task_id);
+  if (task_id < 0 || task_id >= static_cast<int>(dnn_rt_para_->tasks.size())) {
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid task id: %d", task_id);
+    return -1;
+  }
+
   dnn_rt_para_->tasks[task_id] = std::move(task);
 
   return task_id;
@@ -374,7 +390,8 @@ int DnnNode::ReleaseTask(const TaskId& task_id) {
 
 std::shared_ptr<Task> DnnNode::GetTask(const TaskId& task_id) {
   std::shared_ptr<Task> task = nullptr;
-  if (!dnn_rt_para_ || task_id < 0 || task_id >= dnn_rt_para_->tasks.size()) {
+  if (!dnn_rt_para_ || task_id < 0 ||
+      task_id >= static_cast<int>(dnn_rt_para_->tasks.size())) {
     RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid task_id: %d", task_id);
     return task;
   }

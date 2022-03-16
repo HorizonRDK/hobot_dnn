@@ -131,10 +131,14 @@ int FasterRcnnBodyDetNode::PreProcess(
   std::vector<std::shared_ptr<DNNInput>> &inputs,
   const TaskId& task_id,
   const std::shared_ptr<std::vector<hbDNNRoi>> rois) {
-  uint32_t ret = 0;
   std::shared_ptr<ModelInferTask> infer_task =
     std::dynamic_pointer_cast<ModelInferTask>(GetTask(task_id));
-  if (!infer_task || (ret = infer_task->SetInputs(inputs)) != 0) {
+  if (!infer_task) {
+    RCLCPP_ERROR(rclcpp::get_logger("example"), "Invalid infer task");
+    return -1;
+  }
+  uint32_t ret = infer_task->SetInputs(inputs);
+  if (ret != 0) {
     RCLCPP_ERROR(rclcpp::get_logger("example"), "Failed to set inputs");
     return ret;
   }
@@ -237,6 +241,8 @@ int FasterRcnnBodyDetNode::Predict(
   std::vector<std::shared_ptr<DNNInput>> &inputs,
   const std::shared_ptr<std::vector<hbDNNRoi>> rois,
   std::shared_ptr<DnnNodeOutput> dnn_output) {
+  RCLCPP_INFO(rclcpp::get_logger("example"), "task_num: %d",
+  dnn_node_para_ptr_->task_num);
   // 1. 申请预测task
   auto task_id = AllocTask();
   uint32_t ret = 0;
