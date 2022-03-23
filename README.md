@@ -66,11 +66,9 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
      --cmake-force-configure \
      --cmake-args \
      --no-warn-unused-cli \
-     -DCMAKE_TOOLCHAIN_FILE=`pwd`/robot_dev_config/aarch64_toolchainfile.cmake \
-     -DSYS_ROOT=/mnt/test/cc_ws/sysroot_docker
+     -DCMAKE_TOOLCHAIN_FILE=`pwd`/robot_dev_config/aarch64_toolchainfile.cmake
   ```
 
-- 其中SYS_ROOT为交叉编译系统依赖路径，此路径具体地址详见第1步“编译环境确认”的交叉编译说明。
 
 # Usage
 

@@ -106,14 +106,12 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
      --cmake-args \
      --no-warn-unused-cli \
      -DCMAKE_TOOLCHAIN_FILE=`pwd`/robot_dev_config/aarch64_toolchainfile.cmake \
-     -DSYS_ROOT=/mnt/test/cc_ws/sysroot_docker \
      -DCV_BRIDGE_PKG=OFF \
      -DSHARED_MEM=ON
   ```
 
-- 其中SYS_ROOT为交叉编译系统依赖路径，此路径具体地址详见第1步“编译环境确认”的交叉编译说明。
-
 - 编译选项中关闭了cv_bridge pkg依赖，打开了shared mem通信方式，只支持订阅nv12格式图片进行推理。
+
 
 # Usage
 

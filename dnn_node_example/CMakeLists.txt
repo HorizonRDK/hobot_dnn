@@ -47,6 +47,7 @@ include_directories(include
 ${PROJECT_SOURCE_DIR}
 )
 
+set(SYS_ROOT ${CMAKE_SYSROOT})
 message("SYS_ROOT is " ${SYS_ROOT})
 include_directories(
   ${SYS_ROOT}/usr/include/
