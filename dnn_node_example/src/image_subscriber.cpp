@@ -29,6 +29,26 @@ ImageSubscriber::ImageSubscriber(ImgCbType sub_cb_fn,
                 std::placeholders::_1));
 }
 
+
+#ifdef SHARED_MEM_ENABLED
+ImageSubscriber::ImageSubscriber(SharedMemImgCbType sub_cb_fn,
+  std::string node_name, std::string topic_name)
+    : Node(node_name), sharedmem_img_cb_(sub_cb_fn) {
+  if (!topic_name.empty()) {
+    topic_name_ = topic_name;
+  }
+
+  hbmem_subscription_ =
+      this->create_subscription_hbmem<hbm_img_msgs::msg::HbmMsg1080P>(
+          sharedmem_topic_name_, 10,
+          std::bind(&ImageSubscriber::sharedmem_topic_callback, this,
+                    std::placeholders::_1));
+  RCLCPP_WARN(rclcpp::get_logger("ImageSubscriber"),
+    "Create hbmem_subscription with topic_name: %s",
+    sharedmem_topic_name_.c_str());
+}
+#endif
+
 ImageSubscriber::~ImageSubscriber() {}
 
 sensor_msgs::msg::Image::ConstSharedPtr ImageSubscriber::GetImg() {
@@ -76,3 +96,38 @@ void ImageSubscriber::topic_callback(
   sub_msg_info_.msg_queue.push(msg);
   sub_msg_info_.cond.notify_one();
 }
+
+#ifdef SHARED_MEM_ENABLED
+void ImageSubscriber::sharedmem_topic_callback(
+    const hbm_img_msgs::msg::HbmMsg1080P::ConstSharedPtr msg) {
+  RCLCPP_INFO(rclcpp::get_logger("img_sub"), "Recv img");
+  {
+    auto tp_now = std::chrono::system_clock::now();
+    std::unique_lock<std::mutex> lk(frame_stat_mtx_);
+    sub_img_frameCount_++;
+    auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(
+                        tp_now - sub_img_tp_).count();
+    if (interval >= 1000) {
+      RCLCPP_WARN(rclcpp::get_logger("img_sub"),
+      "Sub img fps = %d", sub_img_frameCount_);
+      sub_img_frameCount_ = 0;
+      sub_img_tp_ = std::chrono::system_clock::now();
+    }
+  }
+
+  auto& img_msg = msg;
+  std::stringstream ss;
+  ss << "Recved img encoding: " << img_msg->encoding.data()
+  << ", h: " << img_msg->height
+  << ", w: " << img_msg->width
+  << ", step: " << img_msg->step
+  << ", index: " << img_msg->index
+  << ", stamp: " << img_msg->time_stamp
+  << ", data size: " << img_msg->data_size;
+  RCLCPP_INFO(rclcpp::get_logger("img_sub"), "%s", ss.str().c_str());
+
+  if (sharedmem_img_cb_) {
+    sharedmem_img_cb_(msg);
+  }
+}
+#endif

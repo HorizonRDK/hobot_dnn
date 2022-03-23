@@ -21,38 +21,45 @@ find_package(ament_cmake REQUIRED)
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(cv_bridge REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(dnn_node REQUIRED)
+
+option(CV_BRIDGE_PKG "using cv_bridge pkg" ON)
+if (${CV_BRIDGE_PKG})
+  message("using cv_bridge pkg")
+  find_package(cv_bridge REQUIRED)
+  add_definitions(-DCV_BRIDGE_PKG_ENABLED)
+else()
+  message("not using cv_bridge pkg")
+endif ()
+
+option(SHARED_MEM "using shared mem" OFF)
+if (${SHARED_MEM})
+  message("using shared mem")
+  # rclcpp definition
+  add_definitions(-DUSING_HBMEM)
+  find_package(hbm_img_msgs REQUIRED)
+  add_definitions(-DSHARED_MEM_ENABLED)
+endif ()
 
 include_directories(include
 ${PROJECT_SOURCE_DIR}
 )
 
-set(DNN_NODE_INSTALL_PATH "../install/dnn_node")
-message("DNN_NODE_INSTALL_PATH: " ${DNN_NODE_INSTALL_PATH})
+message("SYS_ROOT is " ${SYS_ROOT})
 include_directories(
-  ${DNN_NODE_INSTALL_PATH}/include
-  ${DNN_NODE_INSTALL_PATH}/include/dnn_node
-  ${DNN_NODE_INSTALL_PATH}/dnn_node_deps
-  ${DNN_NODE_INSTALL_PATH}/dnn_node_deps/hobot/
-  ${DNN_NODE_INSTALL_PATH}/dnn_node_deps/hobot/dnn/include
-  ${DNN_NODE_INSTALL_PATH}/dnn_node_deps/hobot/easy_dnn/include/
-  ${DNN_NODE_INSTALL_PATH}/dnn_node_deps/hobot/easy_dnn/
-  ${DNN_NODE_INSTALL_PATH}/dnn_node_deps/hobot/easy_dnn/include
-  ${DNN_NODE_INSTALL_PATH}/dnn_node_deps/hobot/easy_dnn/include/easy_dnn/
-  ${DNN_NODE_INSTALL_PATH}/dnn_node_deps/hobot/dnn/include
-  ${DNN_NODE_INSTALL_PATH}/dnn_node_deps/third-party/rapidjson/include
-  ${DNN_NODE_INSTALL_PATH}/dnn_node_deps/third-party/opencv/include
+  ${SYS_ROOT}/usr/include/
+  ${SYS_ROOT}/usr/include/opencv/
 )
 
 link_directories(
-  ${DNN_NODE_INSTALL_PATH}/lib
-  ${DNN_NODE_INSTALL_PATH}/dnn_node_deps/hobot/dnn/lib
-  ${DNN_NODE_INSTALL_PATH}/dnn_node_deps/hobot/easy_dnn/lib
-  ${DNN_NODE_INSTALL_PATH}/dnn_node_deps/third-party/opencv/lib
-  ${DNN_NODE_INSTALL_PATH}/dnn_node_deps/third-party/hobotlog/lib
+  ${SYS_ROOT}/usr/lib/hobot/
+  ${SYS_ROOT}/usr/lib/hobot/dnn
+  ${SYS_ROOT}/usr/lib/hobot/easy_dnn
+  ${SYS_ROOT}/usr/lib/hobot/opencv
+  ${SYS_ROOT}/usr/lib/hobot/hobotlog
+  ${SYS_ROOT}/usr/lib/hobot/hbbpu/
 )
 
 add_executable(example
@@ -66,39 +73,35 @@ src/image_subscriber.cpp
 ament_target_dependencies(
   example
   rclcpp
-  cv_bridge
   dnn_node
   sensor_msgs
 )
 
-target_link_libraries(example
-  alog
-  log
-  easy_dnn
-  dnn
-  dnn_node
+if (${SHARED_MEM})
+  target_link_libraries(example
+    hbmem
+  )
+  ament_target_dependencies(
+    example
+    hbm_img_msgs
+  )
+endif ()
+
+include_directories(include
+${PROJECT_SOURCE_DIR}
 )
+
+if (${CV_BRIDGE_PKG})
+ament_target_dependencies(
+  example
+  cv_bridge
+)
+endif()
 
 # Install executables
 install(
   TARGETS example
   RUNTIME DESTINATION lib/${PROJECT_NAME}
-)
-
-install(
-  DIRECTORY
-  ${DNN_NODE_INSTALL_PATH}/dnn_node_deps/third-party/opencv/lib/
-  DESTINATION lib/${PROJECT_NAME}
-)
-install(
-  DIRECTORY
-  ${DNN_NODE_INSTALL_PATH}/dnn_node_deps/hobot/dnn/lib/
-  DESTINATION lib/${PROJECT_NAME}
-)
-install(
-  DIRECTORY
-  ${DNN_NODE_INSTALL_PATH}/dnn_node_deps/hobot/easy_dnn/lib/
-  DESTINATION lib/${PROJECT_NAME}
 )
 
 install(DIRECTORY

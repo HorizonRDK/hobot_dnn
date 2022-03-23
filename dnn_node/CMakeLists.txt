@@ -23,20 +23,20 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 
 include_directories(include include/util/)
+
+message("SYS_ROOT is " ${SYS_ROOT})
 include_directories(
-  ${PROJECT_SOURCE_DIR}/dnn_node_deps/hobot/easy_dnn/
-  ${PROJECT_SOURCE_DIR}/dnn_node_deps/hobot/easy_dnn/include
-  ${PROJECT_SOURCE_DIR}/dnn_node_deps/hobot/dnn/include
-  ${PROJECT_SOURCE_DIR}/dnn_node_deps/third-party/rapidjson/include
-  ${PROJECT_SOURCE_DIR}/dnn_node_deps/third-party/opencv/include
-  ${PROJECT_SOURCE_DIR}/dnn_node_deps/third-party/hobotlog/include
+  ${SYS_ROOT}/usr/include/
 )
 
 link_directories(
-  ${PROJECT_SOURCE_DIR}/dnn_node_deps/hobot/dnn/lib
-  ${PROJECT_SOURCE_DIR}/dnn_node_deps/hobot/easy_dnn/lib
-  ${PROJECT_SOURCE_DIR}/dnn_node_deps/third-party/opencv/lib
-  ${PROJECT_SOURCE_DIR}/dnn_node_deps/third-party/hobotlog/lib
+  ${SYS_ROOT}/usr/lib/hobot/
+  ${SYS_ROOT}/usr/lib/hobot/dnn
+  ${SYS_ROOT}/usr/lib/hobot/easy_dnn
+  ${SYS_ROOT}/usr/lib/hobot/opencv
+  ${SYS_ROOT}/usr/lib/hobot/hobotlog
+  ${SYS_ROOT}/usr/lib/hobot/hbbpu/
+
 )
 
 # Build image_transport library
@@ -44,7 +44,6 @@ add_library(${PROJECT_NAME} SHARED
   src/dnn_node.cpp
   src/util/threads/threadpool.cpp
 )
-
 
 target_link_libraries(${PROJECT_NAME}
   opencv_world
@@ -63,6 +62,10 @@ ament_target_dependencies(
   rclcpp
 )
 
+target_include_directories(${PROJECT_NAME} PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+
 # Install libraries
 install(TARGETS dnn_node
   DESTINATION lib/)
@@ -71,12 +74,6 @@ install(TARGETS dnn_node
 install(
   DIRECTORY include/dnn_node/
   DESTINATION include/dnn_node/
-)
-
-# Install deps
-install(
-  DIRECTORY dnn_node_deps/
-  DESTINATION dnn_node_deps
 )
 
 # Causes the visibility macros to use dllexport rather than dllimport,

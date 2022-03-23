@@ -11,8 +11,9 @@
 #include <vector>
 
 #include "rclcpp/rclcpp.hpp"
+#ifdef CV_BRIDGE_PKG_ENABLED
 #include "cv_bridge/cv_bridge.h"
-
+#endif
 #include "include/image_utils.h"
 #include "dnn_node/dnn_node.h"
 #include "include/image_subscriber.h"
@@ -98,6 +99,11 @@ class FasterRcnnBodyDetNode : public DnnNode {
   int FeedFromSubscriber();
   int Render(cv::Mat& mat, const Filter2DResult *, const LandmarksResult *,
   const float& model_input_h, const float& model_input_w);
+
+#ifdef SHARED_MEM_ENABLED
+  void SharedMemImgProcess(
+    const hbm_img_msgs::msg::HbmMsg1080P::ConstSharedPtr &msg);
+#endif
 };
 
 #endif  // FASTERRCNN_BODY_DET_NODE_H_

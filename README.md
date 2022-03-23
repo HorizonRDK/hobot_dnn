@@ -14,8 +14,6 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
 
 ## Dependency
 
-具体请参考dnn_node_deps中版本说明。
-
 - dnn:1.6.1
 - easydnn:0.3.3
 - opencv:3.4.5
@@ -31,41 +29,48 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
 
 ## package说明
 
-源码包含dnn_node和dnn_node_example两个package，其中dnn_node_example是dnn_node的使用示例package。
-
-dnn_node编译完成后，dnn_node头文件和动态库，以及其依赖安装在install/dnn_node/路径。
-
-dnn_node_example编译完成后，可执行程序以及其依赖安装在install/dnn_node_example/路径，具体使用方法参考dnn_node_example pkg中的README.md。
+源码包含dnn_node和dnn_node_example两个package，其中dnn_node_example是dnn_node的使用示例package，具体使用方法参考dnn_node_example pkg中的README.md。
 
 ## 编译
 
-编译环境确认：
+支持在X3 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
+
+### X3 Ubuntu系统上编译
+
+1、编译环境确认
 
 - 当前编译终端已设置ROS环境变量：`source /opt/ros/foxy/setup.bash`。
 -  已安装ROS2编译工具colcon。安装的ROS不包含编译工具colcon，需要手动安装colcon。colcon安装命令：`apt update; apt install python3-colcon-common-extensions`
 
-编译：
+2、编译
 
-- 同时编译dnn_node和dnn_node_example两个package：`colcon build`
-- 只编译dnn_node package：`colcon build --packages-select dnn_node`
-- 只编译dnn_node_example package：`colcon build --packages-select dnn_node_example`
+- 编译dnn_node package：`colcon build --packages-select dnn_node`
 
-编译和运行dnn_node_example package依赖cv_bridge等ROS开源的package，需要手动安装，具体安装方法：
+### docker交叉编译
 
-```cpp
-# 方法1，直接使用apt安装，以cv_bridge安装举例
-sudo apt-get install ros-foxy-cv-bridge -y
+1、编译环境确认
 
-# 方法2，使用rosdep检查并自动安装pkg编译的依赖项
-# 安装ros pkg依赖下载⼯具rosdep
-sudo apt-get install python3-pip
-sudo pip install rosdep
-sudo rosdep init
-rosdep update
-# 在ros的⼯程路径下执⾏安装依赖，需要指定pkg所在路径。默认为所有pkg安装依赖，也可以指定为某个pkg安装依赖
-rosdep install -i --from-path . --rosdistro foxy -y
-```
+- 在docker中编译，并且docker中已经安装好tros。docker安装、交叉编译说明、tros编译和部署说明：http://gitlab.hobot.cc/robot_dev_platform/robot_dev_config/blob/dev/README.md
 
+2、编译
+
+- 编译dnn_node package： 
+
+  ```
+  export TARGET_ARCH=aarch64
+  export TARGET_TRIPLE=aarch64-linux-gnu
+  export CROSS_COMPILE=/usr/bin/$TARGET_TRIPLE-
+  
+  colcon build --packages-select dnn_node \
+     --merge-install \
+     --cmake-force-configure \
+     --cmake-args \
+     --no-warn-unused-cli \
+     -DCMAKE_TOOLCHAIN_FILE=`pwd`/robot_dev_config/aarch64_toolchainfile.cmake \
+     -DSYS_ROOT=/mnt/test/cc_ws/sysroot_docker
+  ```
+
+- 其中SYS_ROOT为交叉编译系统依赖路径，此路径具体地址详见第1步“编译环境确认”的交叉编译说明。
 
 # Usage
 
@@ -81,7 +86,7 @@ dnn node package中的数据和接口说明详见使用手册：docs/API-Manual/
 
 通过继承接口`int SetOutputParser()`设置模型输出的解析方法。
 
-地平线EasyDnn预测库中预定义了一些模型的解析方法，如人体/人头/人脸/人手检测框的解析，此外还支持分类等模型的解析。支持的解析方法类型详见dnn_node/dnn_node_deps/hobot/easy_dnn/include/easy_dnn/output_parser/。
+地平线EasyDnn预测库中预定义了一些模型的解析方法，如人体/人头/人脸/人手检测框的解析，此外还支持分类等模型的解析。支持的解析方法类型详见${SYS_ROOT}/easy_dnn/include/easy_dnn/output_parser/，其中${SYS_ROOT}为依赖库所在的系统路径。
 
 用户可以用过继承SingleBranchOutputParser/MultiBranchOutputParser类，实现Parse接口来自定义模型的解析方法。
 
