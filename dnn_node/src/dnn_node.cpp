@@ -104,11 +104,10 @@ int DnnNode::ModelInit() {
   // 2. 根据模型名，加载实际需要管理的模型
   const auto& model_name = dnn_node_para_ptr_->model_name;
   for (auto model : dnn_rt_para_->models_load) {
-    if (model->GetName().find(model_name) == std::string::npos) {
-      continue;
+    if (model->GetName() == model_name) {
+      dnn_rt_para_->model_manage = model;
+      break;
     }
-    dnn_rt_para_->model_manage = model;
-    break;
   }
   if (!dnn_rt_para_->model_manage) {
     RCLCPP_ERROR(rclcpp::get_logger("dnn"),
