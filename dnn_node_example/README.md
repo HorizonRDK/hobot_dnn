@@ -12,7 +12,7 @@ Dnn Node example package是Dnn Node package的使用示例，通过继承DnnNode
 
 依赖库：
 
-- dnn:1.6.1
+- dnn:1.8.4
 - easydnn:0.3.3
 - opencv:3.4.5
 - hobotlog:1.0.5
@@ -119,8 +119,7 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 
 ```
 export COLCON_CURRENT_PREFIX=./install
-source ./install/local_setup.sh
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/lib/hobot/
+source ./install/local_setup.bash
 # config中为example使用的模型，回灌使用的本地图片
 # 根据实际安装路径进行拷贝（docker中的安装路径为install/lib/dnn_node_example/config/，拷贝命令为cp -r install/lib/dnn_node_example/config/ .）。
 cp -r install/dnn_node_example/lib/dnn_node_example/config/ .

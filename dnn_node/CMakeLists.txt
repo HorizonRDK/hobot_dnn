@@ -26,18 +26,8 @@ include_directories(include include/util/)
 
 set(SYS_ROOT ${CMAKE_SYSROOT})
 message("SYS_ROOT is " ${SYS_ROOT})
-include_directories(
-  ${SYS_ROOT}/usr/include/
-)
-
 link_directories(
-  ${SYS_ROOT}/usr/lib/hobot/
-  ${SYS_ROOT}/usr/lib/hobot/dnn
-  ${SYS_ROOT}/usr/lib/hobot/easy_dnn
-  ${SYS_ROOT}/usr/lib/hobot/opencv
-  ${SYS_ROOT}/usr/lib/hobot/hobotlog
-  ${SYS_ROOT}/usr/lib/hobot/hbbpu/
-
+  ${SYS_ROOT}/usr/lib/hbbpu/
 )
 
 # Build image_transport library

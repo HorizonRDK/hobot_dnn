@@ -544,13 +544,16 @@ void FasterRcnnBodyDetNode::SharedMemImgProcess(
       img_msg->height, img_msg->width,
       model_input_height_, model_input_width_);
   } else {
-    RCLCPP_INFO(rclcpp::get_logger("example"),
-    "Unsupported img encoding: %s", img_msg->encoding);
+    RCLCPP_ERROR(rclcpp::get_logger("example"),
+    "Unsupported img encoding: %s", img_msg->encoding.data());
+    RCLCPP_ERROR(rclcpp::get_logger("example"),
+    "Only nv12 img encoding is supported for shared mem test");
+    return;
   }
 
   if (!pyramid) {
     RCLCPP_ERROR(rclcpp::get_logger("example"),
-      "Get Nv12 pym fail with image: %s", image_.c_str());
+      "Get Nv12 pym fail");
     return;
   }
 
@@ -572,7 +575,6 @@ void FasterRcnnBodyDetNode::SharedMemImgProcess(
   uint32_t ret = 0;
   // 3. 开始预测
   ret = Predict(inputs, nullptr, dnn_output);
-  RCLCPP_INFO(rclcpp::get_logger("example"), "===%d", __LINE__);
 
   {
     auto tp_now = std::chrono::system_clock::now();
