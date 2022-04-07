@@ -25,7 +25,7 @@ find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(dnn_node REQUIRED)
 
-option(CV_BRIDGE_PKG "using cv_bridge pkg" ON)
+option(CV_BRIDGE_PKG "using cv_bridge pkg" OFF)
 if (${CV_BRIDGE_PKG})
   message("using cv_bridge pkg")
   find_package(cv_bridge REQUIRED)
@@ -34,7 +34,7 @@ else()
   message("not using cv_bridge pkg")
 endif ()
 
-option(SHARED_MEM "using shared mem" OFF)
+option(SHARED_MEM "using shared mem" ON)
 if (${SHARED_MEM})
   message("using shared mem")
   # rclcpp definition

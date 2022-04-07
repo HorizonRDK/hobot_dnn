@@ -58,13 +58,13 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 
 1、CV_BRIDGE_PKG
 
-- cv_bridge pkg依赖的使能开关，默认打开（ON），编译时使用-DCV_BRIDGE_PKG=OFF命令关闭。
+- cv_bridge pkg依赖的使能开关，默认关闭（OFF），编译时使用-DCV_BRIDGE_PKG=ON命令打开。
 - 如果打开，编译和运行会依赖cv_bridge pkg，支持使用订阅到的rgb8和nv12格式图片进行模型推理。
 - 如果关闭，编译和运行不依赖cv_bridge pkg，只支持使用订阅到的nv12格式图片进行模型推理。
 
 2、SHARED_MEM
 
-- shared mem（共享内存传输）使能开关，默认关闭（OFF），编译时使用-DSHARED_MEM=ON命令打开。
+- shared mem（共享内存传输）使能开关，默认打开（ON），编译时使用-DSHARED_MEM=OFF命令关闭。
 - 如果打开，编译和运行会依赖hbm_img_msgs pkg，并且需要使用tros进行编译。
 - 如果关闭，编译和运行不依赖hbm_img_msgs pkg，支持使用原生ros和tros进行编译。
 - 对于shared mem通信方式，当前只支持订阅nv12格式图片。
@@ -80,8 +80,8 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 
 2、编译
 
-- 编译命令：`colcon build --packages-select dnn_node_example`
-- 使用的是默认编译选项，编译和运行会依赖cv_bridge pkg，不使用shared mem通信方式。支持使用订阅到的rgb8和nv12格式图片进行模型推理。
+- 编译命令：`colcon build --packages-select dnn_node_example --cmake-args -DCV_BRIDGE_PKG=ON -DSHARED_MEM=OFF`
+- 编译和运行会依赖cv_bridge pkg，不使用shared mem通信方式。支持使用订阅到的rgb8和nv12格式图片进行模型推理。
 
 ### docker交叉编译
 
@@ -105,9 +105,7 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
      --cmake-force-configure \
      --cmake-args \
      --no-warn-unused-cli \
-     -DCMAKE_TOOLCHAIN_FILE=`pwd`/robot_dev_config/aarch64_toolchainfile.cmake \
-     -DCV_BRIDGE_PKG=OFF \
-     -DSHARED_MEM=ON
+     -DCMAKE_TOOLCHAIN_FILE=`pwd`/robot_dev_config/aarch64_toolchainfile.cmake
   ```
 
 - 编译选项中关闭了cv_bridge pkg依赖，打开了shared mem通信方式，只支持订阅nv12格式图片进行推理。
