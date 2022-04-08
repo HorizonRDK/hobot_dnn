@@ -59,7 +59,7 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 1、CV_BRIDGE_PKG
 
 - cv_bridge pkg依赖的使能开关，默认关闭（OFF），编译时使用-DCV_BRIDGE_PKG=ON命令打开。
-- 如果打开，编译和运行会依赖cv_bridge pkg，支持使用订阅到的rgb8和nv12格式图片进行模型推理。
+- 如果打开，编译和运行会依赖cv_bridge pkg，支持使用订阅到的rgb8, bgr8和nv12格式图片进行模型推理。
 - 如果关闭，编译和运行不依赖cv_bridge pkg，只支持使用订阅到的nv12格式图片进行模型推理。
 
 2、SHARED_MEM
@@ -81,7 +81,7 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 2、编译
 
 - 编译命令：`colcon build --packages-select dnn_node_example --cmake-args -DCV_BRIDGE_PKG=ON -DSHARED_MEM=OFF`
-- 编译和运行会依赖cv_bridge pkg，不使用shared mem通信方式。支持使用订阅到的rgb8和nv12格式图片进行模型推理。
+- 编译和运行会依赖cv_bridge pkg，不使用shared mem通信方式。支持使用订阅到的rgb8, bgr8和nv12格式图片进行模型推理。
 
 ### docker交叉编译
 
@@ -113,7 +113,9 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 
 # Usage
 
-编译成功后，将生成的install路径拷贝到地平线X3开发板上（如果是在X3上编译，忽略拷贝步骤），并执行如下命令运行
+编译成功后，将生成的install路径拷贝到地平线X3开发板上（如果是在X3上编译，忽略拷贝步骤），并执行如下命令运行。
+
+## X3 Ubuntu系统上运行
 
 ```
 export COLCON_CURRENT_PREFIX=./install
@@ -127,3 +129,20 @@ ros2 run dnn_node_example example --ros-args -p feed_type:=0 -p image:=config/te
 # 运行模式2：使用订阅到的image msg(topic为/image_raw)通过异步模式进行预测，并设置log级别为warn
 ros2 run dnn_node_example example --ros-args -p feed_type:=1 -p is_sync_mode:=0 --ros-args --log-level warn
 ```
+
+## X3 yocto系统上运行
+
+```
+export ROS_LOG_DIR=/userdata/
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:./install/lib/
+
+# config中为example使用的模型，回灌使用的本地图片
+cp -r install/lib/dnn_node_example/config/ .
+
+# 运行模式1：使用本地jpg格式图片通过同步模式进行回灌预测，并存储渲染后的图片
+./install/lib/dnn_node_example/example --ros-args -p feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1
+
+# 运行模式2：使用订阅到的image msg(topic为/image_raw)通过异步模式进行预测，并设置log级别为warn
+./install/lib/dnn_node_example/example --ros-args -p feed_type:=1 -p is_sync_mode:=0 --log-level warn
+```
+

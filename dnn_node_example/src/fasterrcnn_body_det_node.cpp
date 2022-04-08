@@ -420,6 +420,30 @@ int FasterRcnnBodyDetNode::FeedFromSubscriber() {
 #else
       RCLCPP_ERROR(rclcpp::get_logger("example"), "Unsupport cv bridge");
 #endif
+    } else if ("bgr8" == img_msg->encoding) {
+#ifdef CV_BRIDGE_PKG_ENABLED
+      auto cv_img = cv_bridge::cvtColorForDisplay(
+        cv_bridge::toCvShare(img_msg),
+        "bgr8");
+      // dump recved img msg after convert
+      // cv::imwrite("dump_raw_" +
+      //     std::to_string(img_msg->header.stamp.sec) + "." +
+      //     std::to_string(img_msg->header.stamp.nanosec) + ".jpg",
+      //     cv_img->image);
+
+      {
+        auto tp_now = std::chrono::system_clock::now();
+        auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(
+                            tp_now - tp_start).count();
+        RCLCPP_DEBUG(rclcpp::get_logger("example"),
+          "after cvtColorForDisplay cost ms: %d", interval);
+      }
+
+      pyramid = ImageUtils::GetNV12Pyramid(cv_img->image,
+        model_input_height_, model_input_width_);
+#else
+      RCLCPP_ERROR(rclcpp::get_logger("example"), "Unsupport cv bridge");
+#endif
     } else if ("nv12" == img_msg->encoding) {
       pyramid = ImageUtils::GetNV12PyramidFromNV12Img(
         reinterpret_cast<const char*>(img_msg->data.data()),
@@ -429,8 +453,8 @@ int FasterRcnnBodyDetNode::FeedFromSubscriber() {
 
     if (!pyramid) {
       RCLCPP_ERROR(rclcpp::get_logger("example"),
-        "Get Nv12 pym fail with image: %s", image_.c_str());
-      return -1;
+        "Get Nv12 pym fail");
+      continue;
     }
 
     {
@@ -470,6 +494,22 @@ int FasterRcnnBodyDetNode::FeedFromSubscriber() {
         std::to_string(img_msg->header.stamp.nanosec) + ".jpg";
 
       if ("rgb8" == img_msg->encoding) {
+#ifdef CV_BRIDGE_PKG_ENABLED
+        auto cv_img = cv_bridge::cvtColorForDisplay(
+          cv_bridge::toCvShare(img_msg),
+          "bgr8");
+        auto mat = cv_img->image;
+        Render(mat,
+              dynamic_cast<Filter2DResult *>(
+                dnn_output->outputs[box_output_index_].get()),
+              dynamic_cast<LandmarksResult *>(
+                dnn_output->outputs[kps_output_index_].get()),
+              model_input_height_, model_input_width_);
+        RCLCPP_INFO(rclcpp::get_logger("example"),
+          "Draw result to file: %s", result_image.c_str());
+        cv::imwrite(result_image, mat);
+#endif
+      } else if ("bgr8" == img_msg->encoding) {
 #ifdef CV_BRIDGE_PKG_ENABLED
         auto cv_img = cv_bridge::cvtColorForDisplay(
           cv_bridge::toCvShare(img_msg),
