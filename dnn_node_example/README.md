@@ -41,7 +41,7 @@ rosdep update
 rosdep install -i --from-path . --rosdistro foxy -y
 ```
 
-hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图片传输，hbm_img_msgs pkg定义在hobot_sensors中，因此如果使用shared mem进行图片传输，需要依赖此pkg。
+hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图片传输，hbm_img_msgs pkg定义在hobot_msgs中，因此如果使用shared mem进行图片传输，需要依赖此pkg。
 
 ## 开发环境
 
