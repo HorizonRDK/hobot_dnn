@@ -126,8 +126,13 @@ cp -r install/dnn_node_example/lib/dnn_node_example/config/ .
 
 # 运行模式1：使用本地jpg格式图片通过同步模式进行回灌预测，并存储渲染后的图片
 ros2 run dnn_node_example example --ros-args -p feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1
+
 # 运行模式2：使用订阅到的image msg(topic为/image_raw)通过异步模式进行预测，并设置log级别为warn
 ros2 run dnn_node_example example --ros-args -p feed_type:=1 -p is_sync_mode:=0 --ros-args --log-level warn
+
+# 运行模式3：使用shared mem通信方式(topic为/hbmem_img)通过异步模式进行预测，并设置log级别为warn
+ros2 run dnn_node_example example --ros-args -p feed_type:=1 -p is_sync_mode:=0 -p is_shared_mem_sub:=1 --ros-args --log-level warn
+
 ```
 
 ## X3 yocto系统上运行
@@ -144,5 +149,9 @@ cp -r install/lib/dnn_node_example/config/ .
 
 # 运行模式2：使用订阅到的image msg(topic为/image_raw)通过异步模式进行预测，并设置log级别为warn
 ./install/lib/dnn_node_example/example --ros-args -p feed_type:=1 -p is_sync_mode:=0 --log-level warn
+
+# 运行模式3：使用shared mem通信方式(topic为/hbmem_img)通过异步模式进行预测，并设置log级别为warn
+./install/lib/dnn_node_example/example --ros-args -p feed_type:=1 -p is_sync_mode:=0 -p is_shared_mem_sub:=1 --ros-args --log-level warn
+
 ```
 

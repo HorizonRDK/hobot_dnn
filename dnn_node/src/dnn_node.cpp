@@ -13,55 +13,18 @@
 #include <unordered_map>
 #include <utility>
 
-#include "rclcpp/rclcpp.hpp"
-
-#include "easy_dnn/model.h"
 #include "dnn_node/dnn_node.h"
-#include "util/threads/threadpool.h"
-#include "hobotlog/hobotlog.hpp"
+#include "dnn_node/dnn_node_impl.h"
 
 namespace hobot {
 namespace dnn_node {
-
-struct DnnNodeTask {
-  explicit DnnNodeTask(TaskId id) {
-    task_id = id;
-    alloc_tp = std::chrono::system_clock::now();
-  }
-  TaskId task_id = -1;
-  std::chrono::high_resolution_clock::time_point alloc_tp;
-};
-
-struct DnnNodeRunTimePara {
-  // 使用模型文件加载后的模型列表
-  std::vector<Model *> models_load;
-
-  // 根据model_name解析出的需要管理和推理使用的模型
-  Model* model_manage = nullptr;
-
-  // 一个DNNNode实例只支持一种ModelTask类型
-  std::vector<std::shared_ptr<Task>> tasks{};
-
-  // todo 20220228
-  // Add task release strategy according to task alloc_tp to
-  // avoid task abnormal leakage
-  std::unordered_map<TaskId, std::shared_ptr<DnnNodeTask>> idle_tasks{};
-  std::unordered_map<TaskId, std::shared_ptr<DnnNodeTask>> running_tasks{};
-  std::mutex task_mtx;
-  std::condition_variable task_cv;
-};
-
-struct ThreadPool {
-  hobot::CThreadPool msg_handle_;
-  std::mutex msg_mutex_;
-  int msg_limit_count_ = 10;
-};
 
 DnnNode::DnnNode(
   const std::string & node_name,
   const NodeOptions & options) :
   rclcpp::Node(node_name, options) {
-  NodeInit();
+  dnn_node_para_ptr_ = std::make_shared<DnnNodePara>();
+  dnn_node_impl_ = std::make_shared<DnnNodeImpl>(dnn_node_para_ptr_);
 }
 
 DnnNode::DnnNode(
@@ -69,82 +32,33 @@ DnnNode::DnnNode(
   const std::string & namespace_,
   const NodeOptions & options) :
   rclcpp::Node(node_name, namespace_, options) {
-  NodeInit();
+  dnn_node_para_ptr_ = std::make_shared<DnnNodePara>();
+  dnn_node_impl_ = std::make_shared<DnnNodeImpl>(dnn_node_para_ptr_);
 }
 
 DnnNode::~DnnNode() {
-  if (!dnn_rt_para_) {
-    ModelManager::GetInstance()->OffLoad(dnn_rt_para_->models_load);
-  }
 }
 
-void DnnNode::NodeInit() {
-  dnn_node_para_ptr_ = std::make_shared<DnnNodePara>();
-  dnn_rt_para_ = std::make_shared<DnnNodeRunTimePara>();
-  thread_pool_ = std::make_shared<ThreadPool>();
-}
-
-int DnnNode::ModelInit() {
-  RCLCPP_INFO(rclcpp::get_logger("dnn"), "Model init.");
-  if (!dnn_node_para_ptr_ || !dnn_rt_para_) {
+int DnnNode::SetOutputParser() {
+  if (!dnn_node_para_ptr_) {
     RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid node para!");
     return -1;
   }
 
-  // 1. 加载模型hbm文件，一个hbm中可能包含多个模型
-  int ret = 0;
-  ret = ModelManager::GetInstance()->Load(dnn_rt_para_->models_load,
-  dnn_node_para_ptr_->model_file);
-  if (0 != ret) {
-    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Load model: %s fail, ret: %d",
-    dnn_node_para_ptr_->model_file.c_str(), ret);
-    return ret;
-  }
-
-  // 2. 根据模型名，加载实际需要管理的模型
-  const auto& model_name = dnn_node_para_ptr_->model_name;
-  for (auto model : dnn_rt_para_->models_load) {
-    if (model->GetName() == model_name) {
-      dnn_rt_para_->model_manage = model;
-      break;
-    }
-  }
-  if (!dnn_rt_para_->model_manage) {
+  if (dnn_node_para_ptr_->output_parsers_.empty()) {
     RCLCPP_ERROR(rclcpp::get_logger("dnn"),
-      "Find model: %s fail!", model_name.c_str());
+    "Output parsers are not set in node para!");
     return -1;
   }
 
-  return 0;
-}
-
-int DnnNode::TaskInit() {
-  RCLCPP_INFO(rclcpp::get_logger("dnn"), "Task init.");
-  if (!dnn_node_para_ptr_ || !dnn_rt_para_ ||
-    dnn_node_para_ptr_->task_num < 1) {
-    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid node para!");
-    return -1;
-  }
-
-  // 1. 为每个模型创建task
-  // 此处只创建空的task，AllocTask才真正创建task，ReleaseTask时释放task
-  // 原因是目前一个task不支持多次预测，即每次预测都要申请一个新的task
-  // todo 20220305 需要easy dnn支持task复用
-  dnn_rt_para_->tasks.resize(dnn_node_para_ptr_->task_num);
-
-  // 2. 创建idle running task
-  {
-    int task_num = dnn_rt_para_->tasks.size();
-    std::unique_lock<std::mutex> lg(dnn_rt_para_->task_mtx);
-    for (int idx = 0; idx < task_num; idx++) {
-      auto node_task = std::make_shared<DnnNodeTask>(idx);
-      dnn_rt_para_->idle_tasks[node_task->task_id] = node_task;
+  for (const auto& parser_pair : dnn_node_para_ptr_->output_parsers_) {
+    std::shared_ptr<OutputParser> out_parser = parser_pair.second;
+    if (GetModel()->SetOutputParser(parser_pair.first, out_parser) != 0) {
+      RCLCPP_ERROR(rclcpp::get_logger("dnn"),
+      "Set output parser index %d fail!", parser_pair.first);
+      return -1;
     }
   }
-
-  thread_pool_->msg_handle_.CreatThread(dnn_node_para_ptr_->task_num);
-  RCLCPP_INFO(rclcpp::get_logger("dnn"), "Set task_num [%d]",
-    dnn_node_para_ptr_->task_num);
 
   return 0;
 }
@@ -166,7 +80,7 @@ int DnnNode::Init() {
   }
 
   // 2. model init
-  ret = ModelInit();
+  ret = dnn_node_impl_->ModelInit();
   if (ret != 0) {
     return ret;
   }
@@ -178,231 +92,76 @@ int DnnNode::Init() {
   }
 
   // 4. task init
-  ret = TaskInit();
+  ret = dnn_node_impl_->TaskInit();
   if (ret != 0) {
     return ret;
   }
 
-  // set log level of easy dnn
-  SetLogLevel(HOBOT_LOG_ERROR);
   return ret;
 }
 
-int DnnNode::RunInferTask(
-  std::shared_ptr<DnnNodeOutput> &sync_outputs,
-  const TaskId& task_id,
-  const bool is_sync_mode,
-  const int timeout_ms) {
-  if (!dnn_rt_para_) {
-    return -1;
-  }
-  if (is_sync_mode) {
-    return RunInfer(sync_outputs->outputs, GetTask(task_id), timeout_ms);
-  } else {
-    std::lock_guard<std::mutex> lock(thread_pool_->msg_mutex_);
-    if (thread_pool_->msg_handle_.GetTaskNum() >=
-      thread_pool_->msg_limit_count_) {
-      RCLCPP_ERROR(rclcpp::get_logger("dnn"),
-        "Task Size: %d exceeds limit: %d",
-        thread_pool_->msg_handle_.GetTaskNum(),
-        thread_pool_->msg_limit_count_);
-      return -1;
-    }
-    auto infer_task = [this, task_id, timeout_ms, sync_outputs](){
-      std::shared_ptr<DnnNodeOutput> aync_outputs = sync_outputs;
-      if (RunInfer(aync_outputs->outputs, GetTask(task_id), timeout_ms) != 0) {
-        ReleaseTask(task_id);
-        RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Run infer fail\n");
-      } else {
-        ReleaseTask(task_id);
-        PostProcess(aync_outputs);
-      }
-    };
-    thread_pool_->msg_handle_.PostTask(infer_task);
-  }
+int DnnNode::PostProcess(
+  const std::shared_ptr<DnnNodeOutput> &output) {
+  RCLCPP_INFO(rclcpp::get_logger("dnn"),
+    "Post process in dnn node");
   return 0;
 }
 
-int DnnNode::RunInfer(std::vector<std::shared_ptr<DNNResult>> &outputs,
-                    const std::shared_ptr<Task>& node_task,
-                    const int timeout_ms) {
-  if (!dnn_node_para_ptr_ || !node_task) {
-    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid infer task\n");
-    return -1;
-  }
-
-  auto& task = node_task;
-  uint32_t ret = 0;
-  ret = task->ProcessInput();
-  if (ret != 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("dnn"),
-      "Failed to run infer task, ret[%d]", ret);
-    return ret;
-  }
-
-  ret = task->RunInfer();
-  if (ret != 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("dnn"),
-      "Failed to run infer task, ret[%d]", ret);
-    return ret;
-  }
-
-  ret = task->WaitInferDone(timeout_ms);
-  if (ret != 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("dnn"),
-      "Failed to run infer task, ret[%d]", ret);
-    return ret;
-  }
-
-  if (ModelTaskType::ModelInferType == dnn_node_para_ptr_->model_task_type) {
-    auto model_task = std::dynamic_pointer_cast<ModelInferTask>(task);
-    ret = model_task->ParseOutput();
-    if (ret != 0) {
-      RCLCPP_ERROR(rclcpp::get_logger("dnn"),
-        "Failed to parse outputs, ret[%d]", ret);
-      return ret;
-    }
-    ret = model_task->GetOutputs(outputs);
-  } else if (ModelTaskType::ModelRoiInferType ==
-    dnn_node_para_ptr_->model_task_type) {
-    auto model_task = std::dynamic_pointer_cast<ModelRoiInferTask>(task);
-    ret = model_task->ParseOutput();
-    if (ret != 0) {
-      RCLCPP_ERROR(rclcpp::get_logger("dnn"),
-        "Failed to parse outputs, ret[%d]", ret);
-      return ret;
-    }
-    ret = model_task->GetOutputs(outputs);
-  }
-
-  if (ret != 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("dnn"),
-      "Failed to get outputs, ret[%d]", ret);
-  }
-
-  return ret;
-}
-
-TaskId DnnNode::AllocTask(int timeout_ms) {
-  RCLCPP_INFO(rclcpp::get_logger("dnn"), "Alloc task");
-  TaskId task_id = -1;
-  if (!dnn_rt_para_) {
-    return task_id;
-  }
-
-  // 真正创建task
-  std::shared_ptr<Task> task = nullptr;
-  // 根据模型类型选择接口创建task,为task添加model
-  if (ModelTaskType::ModelInferType == dnn_node_para_ptr_->model_task_type) {
-    task =
-      TaskManager::GetInstance()->GetModelInferTask(
-      dnn_node_para_ptr_->timeout_ms);
-    if (!task) {
-      RCLCPP_ERROR(rclcpp::get_logger("dnn"), "GetModelInferTask fail");
-      return task_id;
-    }
-    std::dynamic_pointer_cast<ModelInferTask>(task)->SetModel(
-      dnn_rt_para_->model_manage);
-  } else if (ModelTaskType::ModelRoiInferType ==
-    dnn_node_para_ptr_->model_task_type) {
-    task =
-    TaskManager::GetInstance()->GetModelRoiInferTask(
-      dnn_node_para_ptr_->timeout_ms);
-    if (!task) {
-      RCLCPP_ERROR(rclcpp::get_logger("dnn"), "GetModelRoiInferTask fail");
-      return task_id;
-    }
-    std::dynamic_pointer_cast<ModelRoiInferTask>(task)->SetModel(
-      dnn_rt_para_->model_manage);
-  } else {
-    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid model task type [%d]",
-      static_cast<int>(dnn_node_para_ptr_->model_task_type));
-    return task_id;
-  }
-
-  auto alloc_task = [this, &task_id](){
-    auto idle_task = dnn_rt_para_->idle_tasks.begin();
-    idle_task->second->alloc_tp = std::chrono::system_clock::now();
-    task_id = idle_task->first;
-    dnn_rt_para_->running_tasks[task_id] = idle_task->second;
-    dnn_rt_para_->idle_tasks.erase(task_id);
-  };
-  std::unique_lock<std::mutex> lg(dnn_rt_para_->task_mtx);
-  if (!dnn_rt_para_->idle_tasks.empty()) {
-    alloc_task();
-  } else {
-    // wait for idle task
-    if (timeout_ms > 0) {
-      dnn_rt_para_->task_cv.wait_for(lg, std::chrono::milliseconds(timeout_ms),
-      [&](){
-        return !dnn_rt_para_->idle_tasks.empty() || !rclcpp::ok();
-      });
-    } else {
-      dnn_rt_para_->task_cv.wait(lg, [&](){
-        return !dnn_rt_para_->idle_tasks.empty() || !rclcpp::ok();
-      });
-    }
-    if (!rclcpp::ok()) {
-      return task_id;
-    }
-    if (!dnn_rt_para_->idle_tasks.empty()) {
-      alloc_task();
-    }
-  }
-
-  RCLCPP_INFO(rclcpp::get_logger("dnn"), "Alloc task id: %d", task_id);
-  if (task_id < 0 || task_id >= static_cast<int>(dnn_rt_para_->tasks.size())) {
-    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid task id: %d", task_id);
-    return -1;
-  }
-
-  dnn_rt_para_->tasks[task_id] = std::move(task);
-
-  return task_id;
-}
-
-int DnnNode::ReleaseTask(const TaskId& task_id) {
-  RCLCPP_INFO(rclcpp::get_logger("dnn"), "Release task id: %d", task_id);
-
-  if (!dnn_rt_para_ || task_id < 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid task_id: %d", task_id);
-    return -1;
-  }
-  auto node_task = std::make_shared<DnnNodeTask>(task_id);
-  std::unique_lock<std::mutex> lg(dnn_rt_para_->task_mtx);
-  if (dnn_rt_para_->running_tasks.find(task_id) ==
-    dnn_rt_para_->running_tasks.end()) {
-    RCLCPP_ERROR(rclcpp::get_logger("dnn"),
-      "Task id: %d is not running", task_id);
-    return -1;
-  }
-  dnn_rt_para_->idle_tasks[node_task->task_id] = node_task;
-  dnn_rt_para_->running_tasks.erase(task_id);
-  dnn_rt_para_->tasks[task_id] = nullptr;
-  dnn_rt_para_->task_cv.notify_one();
-  lg.unlock();
-  RCLCPP_INFO(rclcpp::get_logger("dnn"),
-    "idle_tasks size: %d, running_tasks size: %d",
-    dnn_rt_para_->idle_tasks.size(), dnn_rt_para_->running_tasks.size());
-  return -1;
-}
-
-std::shared_ptr<Task> DnnNode::GetTask(const TaskId& task_id) {
-  std::shared_ptr<Task> task = nullptr;
-  if (!dnn_rt_para_ || task_id < 0 ||
-      task_id >= static_cast<int>(dnn_rt_para_->tasks.size())) {
-    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid task_id: %d", task_id);
-    return task;
-  }
-  task = dnn_rt_para_->tasks.at(task_id);
-  return task;
-}
-
 Model* DnnNode::GetModel() {
-  if (dnn_rt_para_) {
-    return dnn_rt_para_->model_manage;
+  return dnn_node_impl_->GetModel();
+}
+
+int DnnNode::GetModelInputSize(int32_t input_index, int& w, int& h) {
+  return dnn_node_impl_->GetModelInputSize(input_index, w, h);
+}
+
+int DnnNode::Run(std::vector<std::shared_ptr<DNNInput>> &inputs,
+          const std::shared_ptr<DnnNodeOutput> &output,
+          const std::shared_ptr<std::vector<hbDNNRoi>> rois,
+          const bool is_sync_mode,
+          const int alloctask_timeout_ms,
+          const int infer_timeout_ms) {
+  // 1 申请推理task
+  auto task_id = dnn_node_impl_->AllocTask(alloctask_timeout_ms);
+  // 2 将准备好的模型输入数据inputs通过前处理接口输入给模型
+  // 并通过推理任务的task_id指定推理任务
+  if (dnn_node_impl_->PreProcess(inputs, task_id, rois) != 0) {
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Run PreProcess failed!");
+    return -1;
   }
-  return nullptr;
+
+  // 3 创建模型输出数据
+  // dnn_output用于存储模型推理输出
+  std::shared_ptr<DnnNodeOutput> dnn_output = nullptr;
+  if (output) {
+    // 使用传入的DnnNodeOutput
+    dnn_output = output;
+  }
+  if (!dnn_output) {
+    // 没有传入，创建DnnNodeOutput
+    dnn_output = std::make_shared<DnnNodeOutput>();
+  }
+
+  // 4 执行模型推理
+  if (dnn_node_impl_->RunInferTask(dnn_output, task_id,
+    std::bind(&DnnNode::PostProcess, this, std::placeholders::_1),
+    is_sync_mode, infer_timeout_ms) != 0) {
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Run RunInferTask failed!");
+    dnn_node_impl_->ReleaseTask(task_id);
+    return -1;
+  }
+
+  // 5 如果是同步推理模式
+  if (is_sync_mode) {
+    // 释放推理task
+    dnn_node_impl_->ReleaseTask(task_id);
+    // 通过后处理接口处理模型输出
+    if (PostProcess(dnn_output) != 0) {
+      RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Run PostProcess failed!");
+    }
+  }
+
+  return 0;
 }
 
 }  // namespace dnn_node

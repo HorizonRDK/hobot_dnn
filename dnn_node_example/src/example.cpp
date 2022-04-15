@@ -19,12 +19,12 @@ int main(int argc, char** argv) {
   std::string node_name = "body_det";
   FasterRcnnBodyDetNode body_det_node(node_name);
   if (body_det_node.Init() == 0) {
-    if (body_det_node.Run() != 0) {
+    if (body_det_node.Start() != 0) {
       RCLCPP_ERROR(rclcpp::get_logger("example"),
-        "Run FasterRcnnBodyDetNode failed!");
+        "Start FasterRcnnBodyDetNode failed!");
     } else {
       RCLCPP_INFO(rclcpp::get_logger("example"),
-        "Run FasterRcnnBodyDetNode done!");
+        "Start FasterRcnnBodyDetNode done!");
     }
   } else {
     RCLCPP_ERROR(rclcpp::get_logger("example"),

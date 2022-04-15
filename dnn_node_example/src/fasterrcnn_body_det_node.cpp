@@ -17,7 +17,7 @@
 #include "include/fasterrcnn_body_det_node.h"
 #include "include/image_utils.h"
 #include "include/fasterrcnn_kps_output_parser.h"
-#include "include/image_subscriber.h"
+#include "util/image_subscriber.h"
 #ifdef CV_BRIDGE_PKG_ENABLED
 #include <cv_bridge/cv_bridge.h>
 #endif
@@ -31,12 +31,14 @@ FasterRcnnBodyDetNode::FasterRcnnBodyDetNode(
   this->declare_parameter<int>("image_type", image_type_);
   this->declare_parameter<int>("dump_render_img", dump_render_img_);
   this->declare_parameter<int>("is_sync_mode", is_sync_mode_);
+  this->declare_parameter<int>("is_shared_mem_sub", is_shared_mem_sub_);
 
   this->get_parameter<int>("feed_type", feed_type_);
   this->get_parameter<std::string>("image", image_);
   this->get_parameter<int>("image_type", image_type_);
   this->get_parameter<int>("dump_render_img", dump_render_img_);
   this->get_parameter<int>("is_sync_mode", is_sync_mode_);
+  this->get_parameter<int>("is_shared_mem_sub", is_shared_mem_sub_);
 
   std::stringstream ss;
   ss << "Parameter:"
@@ -44,7 +46,8 @@ FasterRcnnBodyDetNode::FasterRcnnBodyDetNode(
   << "\n image: " << image_
   << "\n image_type: " << image_type_
   << "\n dump_render_img: " << dump_render_img_
-  << "\n is_sync_mode_: " << is_sync_mode_;
+  << "\n is_sync_mode_: " << is_sync_mode_
+  << "\n is_shared_mem_sub: " << is_shared_mem_sub_;
   RCLCPP_WARN(rclcpp::get_logger("example"), "%s", ss.str().c_str());
 }
 
@@ -127,27 +130,6 @@ int FasterRcnnBodyDetNode::SetOutputParser() {
   model_manage->SetOutputParser(kps_output_index_, kps_out_parser);
 
   return 0;
-}
-
-int FasterRcnnBodyDetNode::PreProcess(
-  std::vector<std::shared_ptr<DNNInput>> &inputs,
-  const TaskId& task_id,
-  const std::shared_ptr<std::vector<hbDNNRoi>> rois) {
-  std::shared_ptr<ModelInferTask> infer_task =
-    std::dynamic_pointer_cast<ModelInferTask>(GetTask(task_id));
-  if (!infer_task) {
-    RCLCPP_ERROR(rclcpp::get_logger("example"), "Invalid infer task");
-    return -1;
-  }
-  uint32_t ret = infer_task->SetInputs(inputs);
-  if (ret != 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("example"), "Failed to set inputs");
-    return ret;
-  }
-  if (rois) {
-    // set roi
-  }
-  return ret;
 }
 
 int FasterRcnnBodyDetNode::PostProcess(
@@ -245,32 +227,8 @@ int FasterRcnnBodyDetNode::Predict(
   std::shared_ptr<DnnNodeOutput> dnn_output) {
   RCLCPP_INFO(rclcpp::get_logger("example"), "task_num: %d",
   dnn_node_para_ptr_->task_num);
-  // 1. 申请预测task
-  auto task_id = AllocTask();
-  uint32_t ret = 0;
-  // 2. 将准备好的数据通过前处理接口输入给模型
-  ret = PreProcess(inputs, task_id, rois);
-  if (ret != 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("example"), "Run PreProcess failed!");
-    return ret;
-  }
 
-  // 3. 模型推理
-  ret = RunInferTask(dnn_output, task_id, is_sync_mode_);
-  if (ret != 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("example"), "Run RunInferTask failed!");
-    ReleaseTask(task_id);
-    return ret;
-  }
-  if (is_sync_mode_) {
-    ReleaseTask(task_id);
-    // 4. 通过后处理接口处理模型输出
-    ret = PostProcess(dnn_output);
-    if (ret != 0) {
-      RCLCPP_ERROR(rclcpp::get_logger("example"), "Run PostProcess failed!");
-    }
-  }
-  return ret;
+  return Run(inputs, dnn_output, rois, is_sync_mode_ == 1 ? true : false);
 }
 
 int FasterRcnnBodyDetNode::FeedFromLocal() {
@@ -279,9 +237,6 @@ int FasterRcnnBodyDetNode::FeedFromLocal() {
       "Image: %s not exist!", image_.c_str());
     return -1;
   }
-
-  RCLCPP_INFO(rclcpp::get_logger("example"),
-    "Dnn node feed with local image: %s", image_.c_str());
 
   // 1. 将图片处理成模型输入数据类型DNNInput
   // 使用图片生成pym，NV12PyramidInput为DNNInput的子类
@@ -364,10 +319,11 @@ int FasterRcnnBodyDetNode::FeedFromSubscriber() {
   RCLCPP_INFO(rclcpp::get_logger("example"), "%s", ss.str().c_str());
 
   while (rclcpp::ok()) {
-    RCLCPP_INFO(rclcpp::get_logger("example"), "Get img start");
+    RCLCPP_DEBUG(rclcpp::get_logger("example"), "Get img start");
     // 1. 订阅图片消息，如果无publisher，阻塞在GetImg调用
     auto img_msg = image_subscriber_->GetImg();
     if (!img_msg) {
+      RCLCPP_DEBUG(rclcpp::get_logger("example"), "Get img failed");
       continue;
     }
 
@@ -445,7 +401,7 @@ int FasterRcnnBodyDetNode::FeedFromSubscriber() {
       RCLCPP_ERROR(rclcpp::get_logger("example"), "Unsupport cv bridge");
 #endif
     } else if ("nv12" == img_msg->encoding) {
-      pyramid = ImageUtils::GetNV12PyramidFromNV12Img(
+      pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromNV12Img(
         reinterpret_cast<const char*>(img_msg->data.data()),
         img_msg->height, img_msg->width,
         model_input_height_, model_input_width_);
@@ -576,10 +532,10 @@ void FasterRcnnBodyDetNode::SharedMemImgProcess(
 
   // 1. 将图片处理成模型输入数据类型DNNInput
   // 使用图片生成pym，NV12PyramidInput为DNNInput的子类
-  std::shared_ptr<hobot::easy_dnn::NV12PyramidInput> pyramid = nullptr;
+  std::shared_ptr<hobot::dnn_node::NV12PyramidInput> pyramid = nullptr;
   if ("nv12" ==
   std::string(reinterpret_cast<const char*>(img_msg->encoding.data()))) {
-    pyramid = ImageUtils::GetNV12PyramidFromNV12Img(
+    pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromNV12Img(
       reinterpret_cast<const char*>(img_msg->data.data()),
       img_msg->height, img_msg->width,
       model_input_height_, model_input_width_);
@@ -699,7 +655,17 @@ int FasterRcnnBodyDetNode::Render(
   return 0;
 }
 
-int FasterRcnnBodyDetNode::Run() {
+int FasterRcnnBodyDetNode::Start() {
+  if (GetModelInputSize(0, model_input_width_, model_input_height_) < 0) {
+    RCLCPP_ERROR(rclcpp::get_logger("example"),
+      "Get model input size fail!");
+    return -1;
+  } else {
+    RCLCPP_INFO(rclcpp::get_logger("example"),
+    "The model input width is %d and height is %d",
+    model_input_width_, model_input_height_);
+  }
+
   if (static_cast<int>(DnnFeedType::FROM_LOCAL) == feed_type_) {
     RCLCPP_INFO(rclcpp::get_logger("example"),
       "Dnn node feed with local image: %s", image_.c_str());
@@ -709,23 +675,25 @@ int FasterRcnnBodyDetNode::Run() {
       "Dnn node feed with subscription");
 
     rclcpp::executors::SingleThreadedExecutor exec;
+    if (1 == is_shared_mem_sub_) {
 #ifdef SHARED_MEM_ENABLED
-    image_subscriber_ = std::make_shared<ImageSubscriber>(
-      std::bind(&FasterRcnnBodyDetNode::SharedMemImgProcess, this,
-                std::placeholders::_1));
-    exec.add_node(image_subscriber_);
+      image_subscriber_ = std::make_shared<ImageSubscriber>(
+        std::bind(&FasterRcnnBodyDetNode::SharedMemImgProcess, this,
+                  std::placeholders::_1));
+      exec.add_node(image_subscriber_);
+      exec.spin();
 #else
-    image_subscriber_ = std::make_shared<ImageSubscriber>();
-    exec.add_node(image_subscriber_);
-    auto predict_task = std::make_shared<std::thread>(
-      std::bind(&FasterRcnnBodyDetNode::FeedFromSubscriber, this));
-    exec.spin();
-    if (predict_task && predict_task->joinable()) {
-      predict_task.reset();
-    }
+      RCLCPP_ERROR(rclcpp::get_logger("example"),
+        "Unsupport shared mem");
+      return -1;
 #endif
-
-    exec.spin();
+    } else {
+      image_subscriber_ = std::make_shared<ImageSubscriber>();
+      exec.add_node(image_subscriber_);
+      auto predict_task = std::make_shared<std::thread>(
+        std::bind(&FasterRcnnBodyDetNode::FeedFromSubscriber, this));
+      exec.spin();
+    }
   } else {
     RCLCPP_ERROR(rclcpp::get_logger("example"),
       "Invalid feed_type:%d", feed_type_);

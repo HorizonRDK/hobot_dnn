@@ -6,6 +6,9 @@
 // reproduced, copied, transmitted, or used in any way for any purpose,
 // without the express written permission of Horizon Robotics Inc.
 
+#ifndef IMAGE_SUBSCRIBER_H_
+#define IMAGE_SUBSCRIBER_H_
+
 #include <string>
 #include <queue>
 #include <mutex>
@@ -17,11 +20,14 @@
 #include "hbm_img_msgs/msg/hbm_msg1080_p.hpp"
 #endif
 
-#ifndef IMAGE_SUBSCRIBER_H_
+namespace hobot {
+namespace dnn_node {
 
+// ROS标准图片消息订阅回调
 using ImgCbType =
   std::function<void(const sensor_msgs::msg::Image::ConstSharedPtr &msg)>;
 
+// 用于shared mem传输方式，自定义的图片消息订阅回调
 #ifdef SHARED_MEM_ENABLED
 using SharedMemImgCbType =
   std::function<void(
@@ -32,7 +38,7 @@ struct SubMsgInfo {
   std::queue<sensor_msgs::msg::Image::ConstSharedPtr> msg_queue;
   std::mutex msg_mtx;
   std::condition_variable cond;
-  size_t msg_q_len_limit = 2;
+  size_t msg_q_len_limit = 5;
 };
 
 class ImageSubscriber : public rclcpp::Node {
@@ -46,7 +52,9 @@ class ImageSubscriber : public rclcpp::Node {
 
   ~ImageSubscriber();
 
-  sensor_msgs::msg::Image::ConstSharedPtr GetImg();
+  // 从订阅到的图片数据缓存队列中获取图片
+  // 阻塞接口调用，只对非shared mem通信方式有效
+  sensor_msgs::msg::Image::ConstSharedPtr GetImg(int timeout_ms = 1000);
 
  private:
   rclcpp::Subscription<sensor_msgs::msg::Image>::ConstSharedPtr
@@ -74,6 +82,7 @@ class ImageSubscriber : public rclcpp::Node {
   void topic_callback(const sensor_msgs::msg::Image::ConstSharedPtr msg);
 };
 
-#define IMAGE_SUBSCRIBER_H_
+}  // namespace dnn_node
+}  // namespace hobot
 
 #endif  // IMAGE_SUBSCRIBER_H_

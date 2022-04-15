@@ -62,7 +62,6 @@ src/example.cpp
 src/fasterrcnn_body_det_node.cpp
 src/image_utils.cpp
 src/fasterrcnn_kps_output_parser.cpp
-src/image_subscriber.cpp
 )
 
 ament_target_dependencies(

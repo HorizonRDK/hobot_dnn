@@ -16,7 +16,8 @@
 #endif
 #include "include/image_utils.h"
 #include "dnn_node/dnn_node.h"
-#include "include/image_subscriber.h"
+#include "util/image_subscriber.h"
+#include "util/image_proc.h"
 
 #ifndef FASTERRCNN_BODY_DET_NODE_H_
 #define FASTERRCNN_BODY_DET_NODE_H_
@@ -32,6 +33,7 @@ using hobot::dnn_node::ModelTaskType;
 using hobot::dnn_node::DNNInput;
 using hobot::dnn_node::DNNResult;
 using hobot::dnn_node::NV12PyramidInput;
+using hobot::dnn_node::ImageSubscriber;
 
 enum class DnnFeedType {
   // 用于预测的图片来源，0：本地图片；1：订阅到的image msg
@@ -51,16 +53,11 @@ class FasterRcnnBodyDetNode : public DnnNode {
   const NodeOptions & options = NodeOptions());
   ~FasterRcnnBodyDetNode() override;
 
-  int Run();
+  int Start();
 
  protected:
   int SetNodePara() override;
   int SetOutputParser() override;
-
-  int PreProcess(std::vector<std::shared_ptr<DNNInput>> &inputs,
-                const TaskId& task_id,
-                const std::shared_ptr<std::vector<hbDNNRoi>> rois = nullptr)
-                override;
 
   int PostProcess(const std::shared_ptr<DnnNodeOutput> &outputs)
     override;
@@ -70,8 +67,8 @@ class FasterRcnnBodyDetNode : public DnnNode {
   std::string model_name_ = "multitask_body_kps_960x544";
   ModelTaskType model_task_type_ = ModelTaskType::ModelInferType;
 
-  const int model_input_width_ = 960;
-  const int model_input_height_ = 544;
+  int model_input_width_ = -1;
+  int model_input_height_ = -1;
   const int32_t model_output_count_ = 3;
   // box output index is 1
   const int32_t box_output_index_ = 1;
@@ -85,6 +82,8 @@ class FasterRcnnBodyDetNode : public DnnNode {
   int image_type_ = 0;
   int dump_render_img_ = 0;
   int is_sync_mode_ = 1;
+  // 使用shared mem通信方式订阅图片
+  int is_shared_mem_sub_ = 0;
 
   std::shared_ptr<ImageSubscriber> image_subscriber_ = nullptr;
 

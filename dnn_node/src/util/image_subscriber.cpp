@@ -8,16 +8,14 @@
 
 #include <string>
 #include "rclcpp/rclcpp.hpp"
-#include "include/image_subscriber.h"
+#include "util/image_subscriber.h"
+
+namespace hobot {
+namespace dnn_node {
 
 ImageSubscriber::ImageSubscriber(ImgCbType sub_cb_fn,
   std::string node_name, std::string topic_name)
     : Node(node_name), img_cb_(sub_cb_fn) {
-  // this->declare_parameter("sub_img_topic", topic_name_);
-  // if (this->get_parameter("sub_img_topic", topic_name_)) {
-  //   RCLCPP_WARN(rclcpp::get_logger("ImageSubscriber"),
-  //   "Update sub_img_topic with topic_name: %s", topic_name_.c_str());
-  // }
   if (!topic_name.empty()) {
     topic_name_ = topic_name;
   }
@@ -51,14 +49,17 @@ ImageSubscriber::ImageSubscriber(SharedMemImgCbType sub_cb_fn,
 
 ImageSubscriber::~ImageSubscriber() {}
 
-sensor_msgs::msg::Image::ConstSharedPtr ImageSubscriber::GetImg() {
+sensor_msgs::msg::Image::ConstSharedPtr
+ImageSubscriber::GetImg(int timeout_ms) {
   std::unique_lock<std::mutex> lg(sub_msg_info_.msg_mtx);
-  sub_msg_info_.cond.wait(lg, [&](){
+  sub_msg_info_.cond.wait_for(lg, std::chrono::milliseconds(timeout_ms),
+    [&, this](){
       return !sub_msg_info_.msg_queue.empty() || !rclcpp::ok();
   });
+
   sensor_msgs::msg::Image::ConstSharedPtr img_msg = nullptr;
   if (!rclcpp::ok() || sub_msg_info_.msg_queue.empty()) {
-      return img_msg;
+    return img_msg;
   }
   img_msg = sub_msg_info_.msg_queue.front();
   sub_msg_info_.msg_queue.pop();
@@ -67,7 +68,7 @@ sensor_msgs::msg::Image::ConstSharedPtr ImageSubscriber::GetImg() {
 
 void ImageSubscriber::topic_callback(
     const sensor_msgs::msg::Image::ConstSharedPtr msg) {
-  RCLCPP_INFO(rclcpp::get_logger("img_sub"), "Recv img");
+  RCLCPP_DEBUG(rclcpp::get_logger("img_sub"), "Recv img");
 
   {
     auto tp_now = std::chrono::system_clock::now();
@@ -85,22 +86,23 @@ void ImageSubscriber::topic_callback(
 
   if (img_cb_) {
     img_cb_(msg);
+  } else {
+    std::unique_lock<std::mutex> lg(sub_msg_info_.msg_mtx);
+    if (sub_msg_info_.msg_queue.size() >= sub_msg_info_.msg_q_len_limit) {
+      RCLCPP_INFO(rclcpp::get_logger("img_sub"),
+      "Drop img! Sub msg queue len: %d exceeds limit: %d",
+      sub_msg_info_.msg_queue.size(), sub_msg_info_.msg_q_len_limit);
+      sub_msg_info_.msg_queue.pop();
+    }
+    sub_msg_info_.msg_queue.push(msg);
+    sub_msg_info_.cond.notify_one();
   }
-  std::unique_lock<std::mutex> lg(sub_msg_info_.msg_mtx);
-  if (sub_msg_info_.msg_queue.size() >= sub_msg_info_.msg_q_len_limit) {
-    RCLCPP_WARN(rclcpp::get_logger("img_sub"),
-    "Drop img! Sub msg queue len: %d exceeds limit: %d",
-    sub_msg_info_.msg_queue.size(), sub_msg_info_.msg_q_len_limit);
-    sub_msg_info_.msg_queue.pop();
-  }
-  sub_msg_info_.msg_queue.push(msg);
-  sub_msg_info_.cond.notify_one();
 }
 
 #ifdef SHARED_MEM_ENABLED
 void ImageSubscriber::sharedmem_topic_callback(
     const hbm_img_msgs::msg::HbmMsg1080P::ConstSharedPtr msg) {
-  RCLCPP_INFO(rclcpp::get_logger("img_sub"), "Recv img");
+  RCLCPP_DEBUG(rclcpp::get_logger("img_sub"), "Recv img");
   {
     auto tp_now = std::chrono::system_clock::now();
     std::unique_lock<std::mutex> lk(frame_stat_mtx_);
@@ -124,10 +126,13 @@ void ImageSubscriber::sharedmem_topic_callback(
   << ", index: " << img_msg->index
   << ", stamp: " << img_msg->time_stamp
   << ", data size: " << img_msg->data_size;
-  RCLCPP_INFO(rclcpp::get_logger("img_sub"), "%s", ss.str().c_str());
+  RCLCPP_DEBUG(rclcpp::get_logger("img_sub"), "%s", ss.str().c_str());
 
   if (sharedmem_img_cb_) {
     sharedmem_img_cb_(msg);
   }
 }
 #endif
+
+}  // namespace dnn_node
+}  // namespace hobot
