@@ -122,7 +122,7 @@ class DnnNodeImpl {
   int GetModelInputSize(int32_t input_index, int& w, int& h);
 
  private:
-  std::shared_ptr<DnnNodePara> dnn_node_para_ptr_ = nullptr;;
+  std::shared_ptr<DnnNodePara> dnn_node_para_ptr_ = nullptr;
   std::shared_ptr<DnnNodeRunTimePara> dnn_rt_para_ = nullptr;
   std::shared_ptr<ThreadPool> thread_pool_ = nullptr;
 };

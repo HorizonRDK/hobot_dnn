@@ -31,6 +31,12 @@ struct DnnNodePara {
   
   // 创建的task数量，一个model支持由多个task执行
   int task_num = 1;
+  
+  // 模型输出索引和对应的解析方式
+  // 如果用户子类中没有override SetOutputParser接口，
+  // dnn_node基类的SetOutputParser将使用output_parsers_设置模型解析方式
+  std::vector<std::pair<int32_t, std::shared_ptr<OutputParser>>>
+  output_parsers_;
 };
 ```
 
@@ -68,44 +74,51 @@ int Init();
 - 返回值
     - 0成功，非0失败。
 
-## 3.2 PreProcess()
+## 3.2 Run()
 ```cpp
-virtual int PreProcess(std::vector<std::shared_ptr<DNNInput>> &inputs,
-                         const TaskId& task_id,
-                         const std::shared_ptr<std::vector<hbDNNRoi>> rois = nullptr) = 0;
+int Run(std::vector<std::shared_ptr<DNNInput>> &inputs,
+            const std::shared_ptr<DnnNodeOutput>& output = nullptr,
+            const std::shared_ptr<std::vector<hbDNNRoi>> rois = nullptr,
+            const bool is_sync_mode = true,
+            const int alloctask_timeout_ms = -1,
+            const int infer_timeout_ms = 1000);
 ```
-1. 批量配置预测任务的输入数据。
-2. 更新模型输入描述InputDescription/SetInputProcessor（如果需要，例如需要为crop检测模型指定抠图方法，全图检测不需要更新）。
-3. 如果是抠图检测模型，还需要指定抠图区域roi数据（hbDNNRoi类型）。
-4. DNNInput是easy dnn中定义的模型输入数据类型，用户必须根据实际使用的模型数据输入，继承DNNInput并定义模型输入数据类型。
-5. easy dnn中定义了一些常用模型的输入数据类型，如pym输入类型NV12PyramidInput。
+1. 执行推理流程，只做pipeline的串联，具体的每个推理步骤由用户（子类中）实现。
+2. 用户可以继承DnnNodeOutput来扩展输出数据智能指针output，例如增加推理结果对应的图片数据、图片名、时间戳、ID等。
+3. 如果不需要扩展输出内容，可以不传入output。
 
 - 参数
-    - [in] inputs 输入数据智能指针列表。
-    - [in] task_id 预测任务ID。
-    - [in] rois 抠图roi数据，只对抠图检测模型有效。
-    
+    - [in] inputs 输入数据智能指针列表
+    - [in] outputs 输出数据智能指针
+    - [in] rois 抠图roi数据，只对ModelRoiInferType模型有效
+    - [in] is_sync_mode 预测模式，true为同步模式，false为异步模式
+    - [in] alloctask_timeout_ms 申请推理任务超时时间，单位毫秒
+                                默认一直等待直到申请成功
+    - [in] infer_timeout_ms 推理超时时间，单位毫秒，默认1000毫秒推理超时
+
 - 返回值
     - 0成功，非0失败。
 
-## 3.3 RunInferTask()
+## 3.3 SetNodePara()
 ```cpp
-int RunInferTask(std::shared_ptr<DnnNodeOutput> &sync_output,
-                   const TaskId& task_id,
-                   const bool is_sync_mode = true,
-                   const int timeout_ms = 1000);
+virtual int SetNodePara() = 0;
 ```
-执行推理任务。
+设置DnnNodePara类型的node para。
 
-- 参数
-    - [out] sync_output 输出数据智能指针。
-    - [in] task_id 预测任务ID。
-    - [in] is_sync_mode 预测模式，true为同步模式，false为异步模式。
-    - [in] timeout_ms 预测推理超时时间。
 - 返回值
     - 0成功，非0失败。
 
-## 3.4 PostProcess()
+## 3.4 SetOutputParser()
+```cpp
+virtual int SetOutputParser() = 0;
+```
+
+配置模型输出的解析方式。
+
+- 返回值
+  - 0成功，非0失败。
+
+## 3.5 PostProcess()
 ```cpp
 virtual int PostProcess(const std::shared_ptr<DnnNodeOutput> &output) = 0;
 ```
@@ -122,7 +135,7 @@ DNNResult是easy dnn中定义的模型输出数据类型，用户必须根据实
 - 返回值
     - 0成功，非0失败。
 
-## 3.5 GetModel()
+## 3.6 GetModel()
 ```cpp
 Model* GetModel();
 ```
@@ -131,55 +144,15 @@ Model* GetModel();
 - 返回值
     - 返回已加载的模型指针。
 
-## 3.6 SetNodePara()
+## 3.7 GetModelInputSize()
 ```cpp
-virtual int SetNodePara() = 0;
+int GetModelInputSize(int32_t input_index, int& w, int& h);
 ```
-设置DnnNodePara类型的node para。
-
+获取模型的输入size。
+    
+ - 参数
+   - [in] input_index 获取的输入索引，一个模型可能有多个输入。
+   - [out] w 模型输入的宽度。
+   - [out] h 模型输入的高度。
 - 返回值
-    - 0成功，非0失败。
-
-## 3.7 SetOutputParser()
-```cpp
-virtual int SetOutputParser() = 0;
-```
-
-配置模型输出的解析方式。
-
-- 返回值
-  - 0成功，非0失败。
-
-## 3.8 AllocTask()
-```cpp
-TaskId AllocTask(int timeout_ms = -1);
-```
-申请模型预测任务。
-
-- 参数
-    - [in] timeout_ms 申请超时时间。
-- 返回值
-    - 返回申请到的task id，小于0为无效id。
-
-## 3.9 ReleaseTask()
-```cpp
-int ReleaseTask(const TaskId& task_id);
-```
-释放模型预测任务。
-
-- 参数
-    - [in] task_id 需要释放的task id。
-- 返回值
-    - 0成功，非0失败。
-
-## 3.10 GetTask()
-```cpp
-std::shared_ptr<Task> GetTask(const TaskId& task_id);
-```
-根据预测任务ID获取任务task。
-
-- 参数
-    - [in] task_id 预测任务ID。
-- 返回值
-    - 返回预测任务task。
-
+    - 返回已加载的模型指针。

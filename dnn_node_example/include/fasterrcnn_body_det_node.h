@@ -16,8 +16,12 @@
 #endif
 #include "include/image_utils.h"
 #include "dnn_node/dnn_node.h"
-#include "util/image_subscriber.h"
 #include "util/image_proc.h"
+#include "sensor_msgs/msg/image.hpp"
+
+#ifdef SHARED_MEM_ENABLED
+#include "hbm_img_msgs/msg/hbm_msg1080_p.hpp"
+#endif
 
 #ifndef FASTERRCNN_BODY_DET_NODE_H_
 #define FASTERRCNN_BODY_DET_NODE_H_
@@ -33,7 +37,6 @@ using hobot::dnn_node::ModelTaskType;
 using hobot::dnn_node::DNNInput;
 using hobot::dnn_node::DNNResult;
 using hobot::dnn_node::NV12PyramidInput;
-using hobot::dnn_node::ImageSubscriber;
 
 enum class DnnFeedType {
   // 用于预测的图片来源，0：本地图片；1：订阅到的image msg
@@ -52,8 +55,6 @@ class FasterRcnnBodyDetNode : public DnnNode {
   const std::string & node_name,
   const NodeOptions & options = NodeOptions());
   ~FasterRcnnBodyDetNode() override;
-
-  int Start();
 
  protected:
   int SetNodePara() override;
@@ -85,8 +86,6 @@ class FasterRcnnBodyDetNode : public DnnNode {
   // 使用shared mem通信方式订阅图片
   int is_shared_mem_sub_ = 0;
 
-  std::shared_ptr<ImageSubscriber> image_subscriber_ = nullptr;
-
   std::chrono::high_resolution_clock::time_point output_tp_;
   int output_frameCount_ = 0;
   std::mutex frame_stat_mtx_;
@@ -100,9 +99,23 @@ class FasterRcnnBodyDetNode : public DnnNode {
   const float& model_input_h, const float& model_input_w);
 
 #ifdef SHARED_MEM_ENABLED
+  rclcpp::SubscriptionHbmem<hbm_img_msgs::msg::HbmMsg1080P>::ConstSharedPtr
+      sharedmem_img_subscription_ = nullptr;
+  std::string sharedmem_img_topic_name_ = "/hbmem_img";
   void SharedMemImgProcess(
-    const hbm_img_msgs::msg::HbmMsg1080P::ConstSharedPtr &msg);
+    const hbm_img_msgs::msg::HbmMsg1080P::ConstSharedPtr msg);
 #endif
+
+  rclcpp::Subscription<sensor_msgs::msg::Image>::ConstSharedPtr
+    ros_img_subscription_ = nullptr;
+  // 目前只支持订阅原图，可以使用压缩图"/image_raw/compressed" topic
+  // 和sensor_msgs::msg::CompressedImage格式扩展订阅压缩图
+  std::string ros_img_topic_name_ = "/image_raw";
+  void RosImgProcess(const sensor_msgs::msg::Image::ConstSharedPtr msg);
+
+  std::chrono::high_resolution_clock::time_point sub_img_tp_;
+  int sub_img_frameCount_ = 0;
+  std::mutex sub_frame_stat_mtx_;
 };
 
 #endif  // FASTERRCNN_BODY_DET_NODE_H_

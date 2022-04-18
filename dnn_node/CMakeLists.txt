@@ -35,7 +35,6 @@ add_library(${PROJECT_NAME} SHARED
   src/dnn_node.cpp
   src/dnn_node_impl.cpp
   src/util/image_proc.cpp
-  src/util/image_subscriber.cpp
   src/util/threads/threadpool.cpp
 )
 
@@ -71,7 +70,7 @@ install(
 )
 
 install(
-  FILES include/util/image_proc.h include/util/image_subscriber.h
+  FILES include/util/image_proc.h
   DESTINATION include/util/
 )
 

@@ -102,8 +102,10 @@ int DnnNode::Init() {
 
 int DnnNode::PostProcess(
   const std::shared_ptr<DnnNodeOutput> &output) {
-  RCLCPP_INFO(rclcpp::get_logger("dnn"),
-    "Post process in dnn node");
+  if (output) {
+    RCLCPP_INFO(rclcpp::get_logger("dnn"),
+      "Post process in dnn node");
+  }
   return 0;
 }
 

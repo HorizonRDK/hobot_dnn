@@ -17,7 +17,6 @@
 #include "include/fasterrcnn_body_det_node.h"
 #include "include/image_utils.h"
 #include "include/fasterrcnn_kps_output_parser.h"
-#include "util/image_subscriber.h"
 #ifdef CV_BRIDGE_PKG_ENABLED
 #include <cv_bridge/cv_bridge.h>
 #endif
@@ -49,6 +48,56 @@ FasterRcnnBodyDetNode::FasterRcnnBodyDetNode(
   << "\n is_sync_mode_: " << is_sync_mode_
   << "\n is_shared_mem_sub: " << is_shared_mem_sub_;
   RCLCPP_WARN(rclcpp::get_logger("example"), "%s", ss.str().c_str());
+
+  if (Init() != 0) {
+    RCLCPP_ERROR(rclcpp::get_logger("example"),
+      "Init failed!");
+  }
+
+  if (GetModelInputSize(0, model_input_width_, model_input_height_) < 0) {
+    RCLCPP_ERROR(rclcpp::get_logger("example"),
+      "Get model input size fail!");
+  } else {
+    RCLCPP_INFO(rclcpp::get_logger("example"),
+    "The model input width is %d and height is %d",
+    model_input_width_, model_input_height_);
+  }
+
+  if (static_cast<int>(DnnFeedType::FROM_LOCAL) == feed_type_) {
+    RCLCPP_INFO(rclcpp::get_logger("example"),
+      "Dnn node feed with local image: %s", image_.c_str());
+    FeedFromLocal();
+  } else if (static_cast<int>(DnnFeedType::FROM_SUB) == feed_type_) {
+    RCLCPP_INFO(rclcpp::get_logger("example"),
+      "Dnn node feed with subscription");
+
+    if (is_shared_mem_sub_) {
+  #ifdef SHARED_MEM_ENABLED
+      RCLCPP_WARN(rclcpp::get_logger("example"),
+        "Create hbmem_subscription with topic_name: %s",
+        sharedmem_img_topic_name_.c_str());
+      sharedmem_img_subscription_ =
+          this->create_subscription_hbmem<hbm_img_msgs::msg::HbmMsg1080P>(
+              sharedmem_img_topic_name_, 10,
+              std::bind(&FasterRcnnBodyDetNode::SharedMemImgProcess, this,
+                        std::placeholders::_1));
+  #else
+        RCLCPP_ERROR(rclcpp::get_logger("example"),
+          "Unsupport shared mem");
+  #endif
+    } else {
+      RCLCPP_WARN(rclcpp::get_logger("example"),
+        "Create subscription with topic_name: %s", ros_img_topic_name_.c_str());
+      ros_img_subscription_ =
+      this->create_subscription<sensor_msgs::msg::Image>(
+          ros_img_topic_name_, 10,
+          std::bind(&FasterRcnnBodyDetNode::RosImgProcess, this,
+                    std::placeholders::_1));
+    }
+  } else {
+    RCLCPP_ERROR(rclcpp::get_logger("example"),
+      "Invalid feed_type:%d", feed_type_);
+  }
 }
 
 FasterRcnnBodyDetNode::~FasterRcnnBodyDetNode() {
@@ -295,166 +344,195 @@ int FasterRcnnBodyDetNode::FeedFromLocal() {
   return 0;
 }
 
-int FasterRcnnBodyDetNode::FeedFromSubscriber() {
-  RCLCPP_INFO(rclcpp::get_logger("example"),
-    "Dnn node feed with img subscriber");
-  if (!image_subscriber_) {
-    RCLCPP_ERROR(rclcpp::get_logger("example"), "Invalid img subscriber");
-    return -1;
+void FasterRcnnBodyDetNode::RosImgProcess(
+  const sensor_msgs::msg::Image::ConstSharedPtr img_msg) {
+  if (!img_msg) {
+    RCLCPP_DEBUG(rclcpp::get_logger("example"), "Get img failed");
+    return;
   }
 
-  auto topics = this->get_topic_names_and_types();
-  std::stringstream ss;
-  ss << "\n";
-  for (const auto& topic : topics) {
-    ss << "topic name: " << topic.first
-    << " has sub count: " << count_subscribers(topic.first)
-    << " has pub count: " << count_publishers(topic.first)
-    << ", type:";
-    for (const auto& type : topic.second) {
-      ss << " " << type;
-    }
-    ss << "\n";
+  if (!rclcpp::ok()) {
+    return;
   }
+
+  {
+    auto tp_now = std::chrono::system_clock::now();
+    std::unique_lock<std::mutex> lk(sub_frame_stat_mtx_);
+    sub_img_frameCount_++;
+    auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(
+                        tp_now - sub_img_tp_).count();
+    if (interval >= 1000) {
+      RCLCPP_WARN(rclcpp::get_logger("img_sub"),
+      "Sub img fps = %d", sub_img_frameCount_);
+      sub_img_frameCount_ = 0;
+      sub_img_tp_ = std::chrono::system_clock::now();
+    }
+  }
+
+  std::stringstream ss;
+  ss << "Recved img encoding: " << img_msg->encoding
+  << ", h: " << img_msg->height
+  << ", w: " << img_msg->width
+  << ", step: " << img_msg->step
+  << ", frame_id: " << img_msg->header.frame_id
+  << ", stamp: " << img_msg->header.stamp.sec
+  << "." << img_msg->header.stamp.nanosec
+  << ", data size: " << img_msg->data.size();
   RCLCPP_INFO(rclcpp::get_logger("example"), "%s", ss.str().c_str());
 
-  while (rclcpp::ok()) {
-    RCLCPP_DEBUG(rclcpp::get_logger("example"), "Get img start");
-    // 1. 订阅图片消息，如果无publisher，阻塞在GetImg调用
-    auto img_msg = image_subscriber_->GetImg();
-    if (!img_msg) {
-      RCLCPP_DEBUG(rclcpp::get_logger("example"), "Get img failed");
-      continue;
+  // dump recved img msg
+  // std::ofstream ofs("img." + img_msg->encoding);
+  // ofs.write(reinterpret_cast<const char*>(img_msg->data.data()),
+  //   img_msg->data.size());
+
+  auto tp_start = std::chrono::system_clock::now();
+
+  // 1. 将图片处理成模型输入数据类型DNNInput
+  // 使用图片生成pym，NV12PyramidInput为DNNInput的子类
+  std::shared_ptr<hobot::easy_dnn::NV12PyramidInput> pyramid = nullptr;
+  if ("rgb8" == img_msg->encoding) {
+#ifdef CV_BRIDGE_PKG_ENABLED
+    auto cv_img = cv_bridge::cvtColorForDisplay(
+      cv_bridge::toCvShare(img_msg),
+      "bgr8");
+    // dump recved img msg after convert
+    // cv::imwrite("dump_raw_" +
+    //     std::to_string(img_msg->header.stamp.sec) + "." +
+    //     std::to_string(img_msg->header.stamp.nanosec) + ".jpg",
+    //     cv_img->image);
+
+    {
+      auto tp_now = std::chrono::system_clock::now();
+      auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(
+                          tp_now - tp_start).count();
+      RCLCPP_DEBUG(rclcpp::get_logger("example"),
+        "after cvtColorForDisplay cost ms: %d", interval);
     }
 
-    if (!rclcpp::ok()) {
-      return 0;
+    pyramid = ImageUtils::GetNV12Pyramid(cv_img->image,
+      model_input_height_, model_input_width_);
+#else
+    RCLCPP_ERROR(rclcpp::get_logger("example"), "Unsupport cv bridge");
+#endif
+  } else if ("bgr8" == img_msg->encoding) {
+#ifdef CV_BRIDGE_PKG_ENABLED
+    auto cv_img = cv_bridge::cvtColorForDisplay(
+      cv_bridge::toCvShare(img_msg),
+      "bgr8");
+    // dump recved img msg after convert
+    // cv::imwrite("dump_raw_" +
+    //     std::to_string(img_msg->header.stamp.sec) + "." +
+    //     std::to_string(img_msg->header.stamp.nanosec) + ".jpg",
+    //     cv_img->image);
+
+    {
+      auto tp_now = std::chrono::system_clock::now();
+      auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(
+                          tp_now - tp_start).count();
+      RCLCPP_DEBUG(rclcpp::get_logger("example"),
+        "after cvtColorForDisplay cost ms: %d", interval);
     }
 
-    std::stringstream ss;
-    ss << "Recved img encoding: " << img_msg->encoding
-    << ", h: " << img_msg->height
-    << ", w: " << img_msg->width
-    << ", step: " << img_msg->step
-    << ", frame_id: " << img_msg->header.frame_id
-    << ", stamp: " << img_msg->header.stamp.sec
-    << "." << img_msg->header.stamp.nanosec
-    << ", data size: " << img_msg->data.size();
-    RCLCPP_INFO(rclcpp::get_logger("example"), "%s", ss.str().c_str());
+    pyramid = ImageUtils::GetNV12Pyramid(cv_img->image,
+      model_input_height_, model_input_width_);
+#else
+    RCLCPP_ERROR(rclcpp::get_logger("example"), "Unsupport cv bridge");
+#endif
+  } else if ("nv12" == img_msg->encoding) {
+    pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromNV12Img(
+      reinterpret_cast<const char*>(img_msg->data.data()),
+      img_msg->height, img_msg->width,
+      model_input_height_, model_input_width_);
+  }
 
-    // dump recved img msg
-    // std::ofstream ofs("img." + img_msg->encoding);
-    // ofs.write(reinterpret_cast<const char*>(img_msg->data.data()),
-    //   img_msg->data.size());
+  if (!pyramid) {
+    RCLCPP_ERROR(rclcpp::get_logger("example"),
+      "Get Nv12 pym fail");
+    return;
+  }
 
-    auto tp_start = std::chrono::system_clock::now();
+  {
+    auto tp_now = std::chrono::system_clock::now();
+    auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(
+                        tp_now - tp_start).count();
+    RCLCPP_DEBUG(rclcpp::get_logger("example"),
+      "after GetNV12Pyramid cost ms: %d", interval);
+  }
 
-    // 1. 将图片处理成模型输入数据类型DNNInput
-    // 使用图片生成pym，NV12PyramidInput为DNNInput的子类
-    std::shared_ptr<hobot::easy_dnn::NV12PyramidInput> pyramid = nullptr;
+  // 2. 使用pyramid创建DNNInput对象inputs
+  // inputs将会作为模型的输入通过RunInferTask接口传入
+  auto inputs = std::vector<std::shared_ptr<DNNInput>>{pyramid};
+  auto dnn_output = std::make_shared<FasterRcnnOutput>();
+  dnn_output->image_msg_header = std::make_shared<std_msgs::msg::Header>();
+  dnn_output->image_msg_header->set__frame_id(img_msg->header.frame_id);
+  dnn_output->image_msg_header->set__stamp(img_msg->header.stamp);
+  uint32_t ret = 0;
+  // 3. 开始预测
+  ret = Predict(inputs, nullptr, dnn_output);
+
+  {
+    auto tp_now = std::chrono::system_clock::now();
+    auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(
+                        tp_now - tp_start).count();
+    RCLCPP_DEBUG(rclcpp::get_logger("example"),
+      "after Predict cost ms: %d", interval);
+  }
+
+  // 4. 处理预测结果，如渲染到图片或者发布预测结果
+  if (ret != 0) {
+    RCLCPP_ERROR(rclcpp::get_logger("example"), "Run predict failed!");
+    return;
+  } else if (dump_render_img_ && is_sync_mode_) {
+    std::string result_image = "render_" +
+      std::to_string(img_msg->header.stamp.sec) + "." +
+      std::to_string(img_msg->header.stamp.nanosec) + ".jpg";
+
     if ("rgb8" == img_msg->encoding) {
 #ifdef CV_BRIDGE_PKG_ENABLED
       auto cv_img = cv_bridge::cvtColorForDisplay(
         cv_bridge::toCvShare(img_msg),
         "bgr8");
-      // dump recved img msg after convert
-      // cv::imwrite("dump_raw_" +
-      //     std::to_string(img_msg->header.stamp.sec) + "." +
-      //     std::to_string(img_msg->header.stamp.nanosec) + ".jpg",
-      //     cv_img->image);
-
-      {
-        auto tp_now = std::chrono::system_clock::now();
-        auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(
-                            tp_now - tp_start).count();
-        RCLCPP_DEBUG(rclcpp::get_logger("example"),
-          "after cvtColorForDisplay cost ms: %d", interval);
-      }
-
-      pyramid = ImageUtils::GetNV12Pyramid(cv_img->image,
-        model_input_height_, model_input_width_);
-#else
-      RCLCPP_ERROR(rclcpp::get_logger("example"), "Unsupport cv bridge");
+      auto mat = cv_img->image;
+      Render(mat,
+            dynamic_cast<Filter2DResult *>(
+              dnn_output->outputs[box_output_index_].get()),
+            dynamic_cast<LandmarksResult *>(
+              dnn_output->outputs[kps_output_index_].get()),
+            model_input_height_, model_input_width_);
+      RCLCPP_INFO(rclcpp::get_logger("example"),
+        "Draw result to file: %s", result_image.c_str());
+      cv::imwrite(result_image, mat);
 #endif
     } else if ("bgr8" == img_msg->encoding) {
 #ifdef CV_BRIDGE_PKG_ENABLED
       auto cv_img = cv_bridge::cvtColorForDisplay(
         cv_bridge::toCvShare(img_msg),
         "bgr8");
-      // dump recved img msg after convert
-      // cv::imwrite("dump_raw_" +
-      //     std::to_string(img_msg->header.stamp.sec) + "." +
-      //     std::to_string(img_msg->header.stamp.nanosec) + ".jpg",
-      //     cv_img->image);
-
-      {
-        auto tp_now = std::chrono::system_clock::now();
-        auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(
-                            tp_now - tp_start).count();
-        RCLCPP_DEBUG(rclcpp::get_logger("example"),
-          "after cvtColorForDisplay cost ms: %d", interval);
-      }
-
-      pyramid = ImageUtils::GetNV12Pyramid(cv_img->image,
-        model_input_height_, model_input_width_);
-#else
-      RCLCPP_ERROR(rclcpp::get_logger("example"), "Unsupport cv bridge");
+      auto mat = cv_img->image;
+      Render(mat,
+            dynamic_cast<Filter2DResult *>(
+              dnn_output->outputs[box_output_index_].get()),
+            dynamic_cast<LandmarksResult *>(
+              dnn_output->outputs[kps_output_index_].get()),
+            model_input_height_, model_input_width_);
+      RCLCPP_INFO(rclcpp::get_logger("example"),
+        "Draw result to file: %s", result_image.c_str());
+      cv::imwrite(result_image, mat);
 #endif
     } else if ("nv12" == img_msg->encoding) {
-      pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromNV12Img(
-        reinterpret_cast<const char*>(img_msg->data.data()),
-        img_msg->height, img_msg->width,
-        model_input_height_, model_input_width_);
-    }
-
-    if (!pyramid) {
-      RCLCPP_ERROR(rclcpp::get_logger("example"),
-        "Get Nv12 pym fail");
-      continue;
-    }
-
-    {
-      auto tp_now = std::chrono::system_clock::now();
-      auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(
-                          tp_now - tp_start).count();
-      RCLCPP_DEBUG(rclcpp::get_logger("example"),
-        "after GetNV12Pyramid cost ms: %d", interval);
-    }
-
-    // 2. 使用pyramid创建DNNInput对象inputs
-    // inputs将会作为模型的输入通过RunInferTask接口传入
-    auto inputs = std::vector<std::shared_ptr<DNNInput>>{pyramid};
-    auto dnn_output = std::make_shared<FasterRcnnOutput>();
-    dnn_output->image_msg_header = std::make_shared<std_msgs::msg::Header>();
-    dnn_output->image_msg_header->set__frame_id(img_msg->header.frame_id);
-    dnn_output->image_msg_header->set__stamp(img_msg->header.stamp);
-    uint32_t ret = 0;
-    // 3. 开始预测
-    ret = Predict(inputs, nullptr, dnn_output);
-
-    {
-      auto tp_now = std::chrono::system_clock::now();
-      auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(
-                          tp_now - tp_start).count();
-      RCLCPP_DEBUG(rclcpp::get_logger("example"),
-        "after Predict cost ms: %d", interval);
-    }
-
-    // 4. 处理预测结果，如渲染到图片或者发布预测结果
-    if (ret != 0) {
-      RCLCPP_ERROR(rclcpp::get_logger("example"), "Run predict failed!");
-      return ret;
-    } else if (dump_render_img_ && is_sync_mode_) {
-      std::string result_image = "render_" +
-        std::to_string(img_msg->header.stamp.sec) + "." +
-        std::to_string(img_msg->header.stamp.nanosec) + ".jpg";
-
-      if ("rgb8" == img_msg->encoding) {
-#ifdef CV_BRIDGE_PKG_ENABLED
-        auto cv_img = cv_bridge::cvtColorForDisplay(
-          cv_bridge::toCvShare(img_msg),
-          "bgr8");
-        auto mat = cv_img->image;
+        char* y_img = reinterpret_cast<char*>(pyramid->y_vir_addr);
+        char* uv_img = reinterpret_cast<char*>(pyramid->uv_vir_addr);
+        auto height = pyramid->height;
+        auto width = pyramid->width;
+        auto img_y_size = height * width;
+        auto img_uv_size = img_y_size / 2;
+        char* buf = new char[img_y_size + img_uv_size];
+        memcpy(buf, y_img, img_y_size);
+        memcpy(buf + img_y_size, uv_img, img_uv_size);
+        cv::Mat nv12(height *3 / 2, width, CV_8UC1, buf);
+        cv::Mat bgr;
+        cv::cvtColor(nv12, bgr, CV_YUV2BGR_NV12);
+        auto& mat = bgr;
         Render(mat,
               dynamic_cast<Filter2DResult *>(
                 dnn_output->outputs[box_output_index_].get()),
@@ -464,62 +542,33 @@ int FasterRcnnBodyDetNode::FeedFromSubscriber() {
         RCLCPP_INFO(rclcpp::get_logger("example"),
           "Draw result to file: %s", result_image.c_str());
         cv::imwrite(result_image, mat);
-#endif
-      } else if ("bgr8" == img_msg->encoding) {
-#ifdef CV_BRIDGE_PKG_ENABLED
-        auto cv_img = cv_bridge::cvtColorForDisplay(
-          cv_bridge::toCvShare(img_msg),
-          "bgr8");
-        auto mat = cv_img->image;
-        Render(mat,
-              dynamic_cast<Filter2DResult *>(
-                dnn_output->outputs[box_output_index_].get()),
-              dynamic_cast<LandmarksResult *>(
-                dnn_output->outputs[kps_output_index_].get()),
-              model_input_height_, model_input_width_);
-        RCLCPP_INFO(rclcpp::get_logger("example"),
-          "Draw result to file: %s", result_image.c_str());
-        cv::imwrite(result_image, mat);
-#endif
-      } else if ("nv12" == img_msg->encoding) {
-          char* y_img = reinterpret_cast<char*>(pyramid->y_vir_addr);
-          char* uv_img = reinterpret_cast<char*>(pyramid->uv_vir_addr);
-          auto height = pyramid->height;
-          auto width = pyramid->width;
-          auto img_y_size = height * width;
-          auto img_uv_size = img_y_size / 2;
-          char* buf = new char[img_y_size + img_uv_size];
-          memcpy(buf, y_img, img_y_size);
-          memcpy(buf + img_y_size, uv_img, img_uv_size);
-          cv::Mat nv12(height *3 / 2, width, CV_8UC1, buf);
-          cv::Mat bgr;
-          cv::cvtColor(nv12, bgr, CV_YUV2BGR_NV12);
-          auto& mat = bgr;
-          Render(mat,
-                dynamic_cast<Filter2DResult *>(
-                  dnn_output->outputs[box_output_index_].get()),
-                dynamic_cast<LandmarksResult *>(
-                  dnn_output->outputs[kps_output_index_].get()),
-                model_input_height_, model_input_width_);
-          RCLCPP_INFO(rclcpp::get_logger("example"),
-            "Draw result to file: %s", result_image.c_str());
-          cv::imwrite(result_image, mat);
-      }
     }
   }
-  RCLCPP_WARN(rclcpp::get_logger("example"), "FeedFromSubscriber done");
-  return 0;
 }
 
 #ifdef SHARED_MEM_ENABLED
 void FasterRcnnBodyDetNode::SharedMemImgProcess(
-  const hbm_img_msgs::msg::HbmMsg1080P::ConstSharedPtr &img_msg) {
+  const hbm_img_msgs::msg::HbmMsg1080P::ConstSharedPtr img_msg) {
   if (!img_msg) {
     return;
   }
 
   if (!rclcpp::ok()) {
     return;
+  }
+
+  {
+    auto tp_now = std::chrono::system_clock::now();
+    std::unique_lock<std::mutex> lk(sub_frame_stat_mtx_);
+    sub_img_frameCount_++;
+    auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(
+                        tp_now - sub_img_tp_).count();
+    if (interval >= 1000) {
+      RCLCPP_WARN(rclcpp::get_logger("img_sub"),
+      "Sub img fps = %d", sub_img_frameCount_);
+      sub_img_frameCount_ = 0;
+      sub_img_tp_ = std::chrono::system_clock::now();
+    }
   }
 
   // dump recved img msg
@@ -652,53 +701,5 @@ int FasterRcnnBodyDetNode::Render(
       }
     }
   }
-  return 0;
-}
-
-int FasterRcnnBodyDetNode::Start() {
-  if (GetModelInputSize(0, model_input_width_, model_input_height_) < 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("example"),
-      "Get model input size fail!");
-    return -1;
-  } else {
-    RCLCPP_INFO(rclcpp::get_logger("example"),
-    "The model input width is %d and height is %d",
-    model_input_width_, model_input_height_);
-  }
-
-  if (static_cast<int>(DnnFeedType::FROM_LOCAL) == feed_type_) {
-    RCLCPP_INFO(rclcpp::get_logger("example"),
-      "Dnn node feed with local image: %s", image_.c_str());
-    return FeedFromLocal();
-  } else if (static_cast<int>(DnnFeedType::FROM_SUB) == feed_type_) {
-    RCLCPP_INFO(rclcpp::get_logger("example"),
-      "Dnn node feed with subscription");
-
-    rclcpp::executors::SingleThreadedExecutor exec;
-    if (1 == is_shared_mem_sub_) {
-#ifdef SHARED_MEM_ENABLED
-      image_subscriber_ = std::make_shared<ImageSubscriber>(
-        std::bind(&FasterRcnnBodyDetNode::SharedMemImgProcess, this,
-                  std::placeholders::_1));
-      exec.add_node(image_subscriber_);
-      exec.spin();
-#else
-      RCLCPP_ERROR(rclcpp::get_logger("example"),
-        "Unsupport shared mem");
-      return -1;
-#endif
-    } else {
-      image_subscriber_ = std::make_shared<ImageSubscriber>();
-      exec.add_node(image_subscriber_);
-      auto predict_task = std::make_shared<std::thread>(
-        std::bind(&FasterRcnnBodyDetNode::FeedFromSubscriber, this));
-      exec.spin();
-    }
-  } else {
-    RCLCPP_ERROR(rclcpp::get_logger("example"),
-      "Invalid feed_type:%d", feed_type_);
-    return -1;
-  }
-
   return 0;
 }

@@ -16,20 +16,7 @@ int main(int argc, char** argv) {
   rclcpp::init(argc, argv);
   RCLCPP_WARN(rclcpp::get_logger("example"), "This is dnn node example!");
 
-  std::string node_name = "body_det";
-  FasterRcnnBodyDetNode body_det_node(node_name);
-  if (body_det_node.Init() == 0) {
-    if (body_det_node.Start() != 0) {
-      RCLCPP_ERROR(rclcpp::get_logger("example"),
-        "Start FasterRcnnBodyDetNode failed!");
-    } else {
-      RCLCPP_INFO(rclcpp::get_logger("example"),
-        "Start FasterRcnnBodyDetNode done!");
-    }
-  } else {
-    RCLCPP_ERROR(rclcpp::get_logger("example"),
-      "Init FasterRcnnBodyDetNode failed!");
-  }
+  rclcpp::spin(std::make_shared<FasterRcnnBodyDetNode>("body_det"));
 
   rclcpp::shutdown();
   return 0;
