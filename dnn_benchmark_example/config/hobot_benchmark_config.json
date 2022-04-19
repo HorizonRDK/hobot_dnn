@@ -1,0 +1,13 @@
+{
+"input_config": {
+      "input_type": "image",
+      "height": 544,
+      "width": 960,
+      "data_type": 1,
+      "image_list_file": "config/image.list",
+      "need_pre_load": true,
+      "limit": 2,
+      "need_loop": true,
+      "max_cache": 10
+    }
+}
