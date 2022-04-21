@@ -9,7 +9,7 @@
 #include <string>
 #include <memory>
 #include "rclcpp/rclcpp.hpp"
-#include "include/plugin/workflow_plugin.h"
+#include "include/workflow.h"
 
 int main(int argc, char **argv)
 {

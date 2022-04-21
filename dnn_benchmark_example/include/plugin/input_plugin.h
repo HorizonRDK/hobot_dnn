@@ -17,7 +17,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "base_plugin.h"
 #include "input/data_iterator.h"
-#include "plugin/workflow_plugin.h"
+#include "workflow.h"
 
 /**
  * Plugin for input producer

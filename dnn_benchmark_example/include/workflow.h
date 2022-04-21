@@ -6,8 +6,8 @@
 // reproduced, copied, transmitted, or used in any way for any purpose,
 // without the express written permission of Horizon Robotics Inc.
 
-#ifndef _PLUGIN_WORKFLOW_PLUGIN_H_
-#define _PLUGIN_WORKFLOW_PLUGIN_H_
+#ifndef _WORKFLOW_H_
+#define _WORKFLOW_H_
 
 #include <memory>
 #include <string>
@@ -101,4 +101,4 @@ class Workflow : public DnnNode
     std::shared_ptr<DnnNodeOutput> dnn_output);
 };
 
-#endif  // _PLUGIN_WORKFLOW_PLUGIN_H_
+#endif  // _WORKFLOW_H_
