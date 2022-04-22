@@ -36,6 +36,7 @@ using rclcpp::NodeOptions;
 using hobot::easy_dnn::Model;
 using hobot::easy_dnn::DNNInput;
 using hobot::easy_dnn::DNNResult;
+using hobot::easy_dnn::DNNTensor;
 using hobot::easy_dnn::Task;
 using hobot::easy_dnn::ModelTask;
 using hobot::easy_dnn::ModelInferTask;
@@ -52,6 +53,10 @@ using hobot::easy_dnn::CropProcessor;
 using hobot::easy_dnn::CropDescription;
 using hobot::easy_dnn::Filter2DResult;
 using hobot::easy_dnn::FaceHandDetectionOutputParser;
+
+using hobot::easy_dnn::SingleBranchOutputParser;
+using hobot::easy_dnn::MultiBranchOutputParser;
+using hobot::easy_dnn::OutputDescription;
 
 using TaskId = int;
 

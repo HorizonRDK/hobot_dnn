@@ -132,16 +132,17 @@ int DnnNodeImpl::PreProcess(
       RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid infer task");
       return -1;
     }
-    ret = infer_task->SetInputs(inputs);
-    if (ret != 0) {
-      RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Failed to set inputs");
-      return ret;
-    }
 
     // set roi
     ret = infer_task->SetInputRois(*rois);
     if (ret != 0) {
       RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Failed to set roi inputs");
+      return ret;
+    }
+
+    ret = infer_task->SetInputs(inputs);
+    if (ret != 0) {
+      RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Failed to set inputs");
       return ret;
     }
   } else if (ModelTaskType::ModelInferType ==
