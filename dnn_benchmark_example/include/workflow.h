@@ -83,11 +83,11 @@ class Workflow : public DnnNode
 
   int model_input_width_ = -1;
   int model_input_height_ = -1;
-  const int32_t model_output_count_ = 3;
+  int32_t model_output_count_ = 1;
   // box output index is 1
-  const int32_t box_output_index_ = 1;
+  // const int32_t box_output_index_ = 1;
   // kps output index is 2
-  const int32_t kps_output_index_ = 2;
+  const int32_t output_index_ = 1;
 
   int show_fps_log = 1;
   int show_latency_log = 1;

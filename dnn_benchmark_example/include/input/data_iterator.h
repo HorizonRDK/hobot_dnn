@@ -47,6 +47,9 @@ class DataIterator {
    */
   virtual bool HasNext() = 0;
 
+  virtual void set_model_input_width_height(int model_input_w,
+                                    int model_input_h) = 0;
+
   /**
    * Get next frame id
    * @return next frame id
@@ -61,13 +64,6 @@ class DataIterator {
   static DataIterator *GetImpl(const std::string &module_name);
 
   virtual ~DataIterator() = default;
-
-  void set_model_input_width_height(int model_input_w,
-                                    int model_input_h)
-  {
-    this->model_input_width_ = model_input_w;
-    this->model_input_height_ = model_input_h;
-  }
 
  protected:
   virtual int LoadConfig(std::string &config_string)

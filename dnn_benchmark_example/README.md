@@ -93,7 +93,13 @@ ros2 run dnn_benchmark_example dnn_benchmark_example --ros-args --log-level warn
   5、config_file(配置文件路径)默认为"config/hobot_benchmark_config.json"
   6、model_file_name(模型文件)默认为"config/multitask_body_kps_960x544.hbm"
   7、model_name(模型名称)默认为"multitask_body_kps_960x544"
+运行默认模型评测，关闭fsp信息输出，处理周期图片个数更改为1000
 ros2 run dnn_benchmark_example dnn_benchmark_example --ros-args --log-level warn -p show_fps_log:=0 -p statistic_cycle:=1000
+
+# 更换评测模型
+dnn_benchmark_example在config/runtime下提供了一些测试模型，在运行时通过-p选项更换评测模型。如果用户需要评测自己的模型，将模型放在config文件夹下，同样将模型文件路径和模型名通过-p重新配置即可。例如，对fcos模型进行评测，通过配置参数-p model_file_name:=config/runtime/fcos/fcos_512x512_nv12.bin更改模型文件，-p model_name:=fcos_512x512_nv12更改模型名称，-p statistic_cycle:=50将处理周期图片个数更改为50个(即评测fcos_512x512_nv12.bin模型，每处理50张图片输出一次性能指标)
+ros2 run dnn_benchmark_example dnn_benchmark_example --ros-args --log-level warn -p model_file_name:=config/runtime/fcos/fcos_512x512_nv12.bin -p model_name:=fcos_512x512_nv12 -p statistic_cycle:=50
+
 
 # 配置文件hobot_benchmark_config.json
 {

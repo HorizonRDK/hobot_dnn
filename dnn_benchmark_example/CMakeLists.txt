@@ -23,6 +23,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(dnn_node REQUIRED)
 
+
 include_directories(include
 ${PROJECT_SOURCE_DIR}
 )
@@ -30,6 +31,7 @@ ${PROJECT_SOURCE_DIR}
 set(SYS_ROOT ${CMAKE_SYSROOT})
 message("SYS_ROOT is " ${SYS_ROOT})
 include_directories(
+  ${SYS_ROOT}/usr/include/
   ${SYS_ROOT}/usr/include/opencv/
 )
 
@@ -46,7 +48,7 @@ add_executable(${PROJECT_NAME}
   src/plugin/input_plugin.cpp
   src/utils/image_utils.cpp
   src/utils/utils.cpp
-  src/utils/fasterrcnn_kps_output_parser.cpp
+  src/utils/null_output_parser.cpp
 )
 
 ament_target_dependencies(

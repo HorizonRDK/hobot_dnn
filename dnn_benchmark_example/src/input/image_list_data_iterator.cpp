@@ -61,6 +61,12 @@ NV12PyramidInputPtr ImageListDataIterator::PraseLocalImageToMemory(
     return nullptr;
   }
 
+  std::stringstream ss;
+  ss << "PraseLocalImageToMemory model_input_height_: "
+  << model_input_height_ << "model_input_width_: " << model_input_width_;
+
+  RCLCPP_INFO(rclcpp::get_logger("example"), "%s", ss.str().c_str());
+
   NV12PyramidInputPtr pyramid = nullptr;
   if (static_cast<int>(ImageType::BGR) == image_type)
   {
@@ -126,6 +132,13 @@ int ImageListDataIterator::Init(std::string config_file,
   return 0;
 }
 
+void ImageListDataIterator::set_model_input_width_height(int model_input_w,
+                                  int model_input_h)
+{
+  this->model_input_width_ = model_input_w;
+  this->model_input_height_ = model_input_h;
+}
+
 bool ImageListDataIterator::Next(NV12PyramidInputPtr &pyramid)
 {
   if (last_frame_id + 1 >= max_frame_count_)
@@ -179,16 +192,6 @@ int ImageListDataIterator::LoadConfig(std::string &config_string)
     image_list_file_ = document["image_list_file"].GetString();
     RCLCPP_DEBUG(rclcpp::get_logger("example"),
         "image_list_file: %s", image_list_file_.c_str());
-  }
-
-  if (document.HasMember("width"))
-  {
-    width_ = document["width"].GetInt();
-  }
-
-  if (document.HasMember("height"))
-  {
-    height_ = document["height"].GetInt();
   }
 
   if (document.HasMember("need_pre_load"))

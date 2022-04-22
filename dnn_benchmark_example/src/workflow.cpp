@@ -14,7 +14,7 @@
 #include "rapidjson/istreamwrapper.h"
 #include "rapidjson/writer.h"
 #include "include/plugin/input_plugin.h"
-#include "include/utils/fasterrcnn_kps_output_parser.h"
+#include "include/utils/null_output_parser.h"
 
 Workflow::Workflow(const std::string node_name,
                                const NodeOptions &options) :
@@ -83,13 +83,18 @@ int Workflow::WorkflowInit()
     return -2;
   }
 // Input plugin
-  RCLCPP_INFO(rclcpp::get_logger("example"), "this is input_plg init!!!");
+  RCLCPP_DEBUG(rclcpp::get_logger("example"), "this is input_plg init!!!");
   auto input_plg = InputProducerPlugin::GetInstance();
+  if (!input_plg)
+  {
+    RCLCPP_ERROR(rclcpp::get_logger("example"), "get input_plg failed!!!");
+  }
+  input_plg->set_model_input_width_height(model_input_width_,
+                                         model_input_height_);
   int ret_code =
       input_plg->Init(EMPTY, json_to_string(document["input_config"]));
   input_plg->registerWork(this);
-  input_plg->set_model_input_width_height(model_input_width_,
-                                         model_input_height_);
+
   if (0 != ret_code)
   {
     RCLCPP_ERROR(rclcpp::get_logger("example"), "Input plugin init failed");
@@ -178,68 +183,16 @@ int Workflow::SetOutputParser()
   RCLCPP_INFO(rclcpp::get_logger("example"), "Set output parser.");
   // set output parser
   auto model_manage = GetModel();
-  if (!model_manage || !dnn_node_para_ptr_)
-  {
+  if (!model_manage || !dnn_node_para_ptr_) {
     RCLCPP_ERROR(rclcpp::get_logger("example"), "Invalid model");
     return -1;
   }
 
-  if (model_manage->GetOutputCount() < model_output_count_)
-  {
-    RCLCPP_ERROR(rclcpp::get_logger("example"),
-                 "Error! Model %s output count is %d, unmatch with count %d",
-                 dnn_node_para_ptr_->model_name.c_str(),
-                 model_manage->GetOutputCount(),
-                 model_output_count_);
-    return -1;
-  }
+  model_output_count_ = model_manage->GetOutputCount();
 
-  // set box paser
-  // 使用easy dnn中定义的FaceHandDetectionOutputParser后处理进行更新
   std::shared_ptr<OutputParser> box_out_parser =
-      std::make_shared<hobot::easy_dnn::FaceHandDetectionOutputParser>();
-  model_manage->SetOutputParser(box_output_index_, box_out_parser);
-
-  // set kps paser
-  auto output_desc =
-      std::make_shared<OutputDescription>(model_manage, kps_output_index_,
-                                          "body_kps_branch");
-  output_desc->GetDependencies().push_back(box_output_index_);
-  output_desc->SetType("body_kps");
-  model_manage->SetOutputDescription(output_desc);
-  auto parser_para = std::make_shared<FasterRcnnKpsParserPara>();
-  // get kps parser para from model
-  hbDNNTensorProperties tensor_properties;
-  model_manage->GetOutputTensorProperties(tensor_properties,
-                                          kps_output_index_);
-  parser_para->aligned_kps_dim.clear();
-  parser_para->kps_shifts_.clear();
-  for (int i = 0; i < tensor_properties.alignedShape.numDimensions; i++)
-  {
-    parser_para->aligned_kps_dim.push_back(
-        tensor_properties.alignedShape.dimensionSize[i]);
-  }
-  for (int i = 0; i < tensor_properties.shift.shiftLen; i++)
-  {
-    parser_para->kps_shifts_.push_back(static_cast<uint8_t>(
-        tensor_properties.shift.shiftData[i]));
-  }
-
-  std::stringstream ss;
-  ss << "aligned_kps_dim:";
-  for (const auto& val : parser_para->aligned_kps_dim) {
-    ss << " " << val;
-  }
-  ss << "\nkps_shifts: ";
-  for (const auto& val : parser_para->kps_shifts_) {
-    ss << " " << val;
-  }
-  ss << "\n";
-  RCLCPP_INFO(rclcpp::get_logger("example"), "%s", ss.str().c_str());
-
-  std::shared_ptr<OutputParser> kps_out_parser =
-      std::make_shared<FasterRcnnKpsOutputParser>(parser_para);
-  model_manage->SetOutputParser(kps_output_index_, kps_out_parser);
+      std::make_shared<nullOutputParser>();
+  model_manage->SetOutputParser(0, box_out_parser);
 
   return 0;
 }

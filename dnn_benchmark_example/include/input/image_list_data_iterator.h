@@ -51,6 +51,9 @@ class ImageListDataIterator : public DataIterator {
    */
   bool HasNext() override;
 
+  void set_model_input_width_height(int model_input_w,
+                                    int model_input_h) override;
+
   ~ImageListDataIterator() override;
 
  private:
@@ -61,8 +64,6 @@ class ImageListDataIterator : public DataIterator {
  private:
   std::string image_list_file_;
   std::vector<std::string> image_files_;
-  int width_;
-  int height_;
   bool cache_able_ = false;
   bool loop_able_ = true;
   size_t max_cache_size_ = 10;

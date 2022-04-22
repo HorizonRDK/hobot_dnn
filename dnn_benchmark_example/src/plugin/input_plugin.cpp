@@ -23,7 +23,8 @@ void InputProducerPlugin::registerWork(Workflow *work_)
 void InputProducerPlugin::set_model_input_width_height(int model_input_w,
                                                       int model_input_h)
 {
-  data_iterator_->set_model_input_width_height(model_input_w, model_input_h);
+  model_input_width_ = model_input_w;
+  model_input_height_ = model_input_h;
 }
 
 void InputProducerPlugin::Run()
@@ -110,6 +111,8 @@ int InputProducerPlugin::LoadConfig(std::string &config_string)
   {
     std::string input_type = document["input_type"].GetString();
     data_iterator_ = DataIterator::GetImpl(input_type);
+    data_iterator_->set_model_input_width_height(model_input_width_,
+                          model_input_height_);
   } else {
     RCLCPP_ERROR(rclcpp::get_logger("example"),
       "input config don not have parameter input_type! please check!");

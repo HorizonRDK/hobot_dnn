@@ -78,6 +78,9 @@ class InputProducerPlugin : public BasePlugin {
   int limit_ = 3;
   Workflow *work = nullptr;
 
+  int model_input_width_ = -1;
+  int model_input_height_ = -1;
+
   std::condition_variable cv_;
   std::mutex m_;
 };
