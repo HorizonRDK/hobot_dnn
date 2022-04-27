@@ -1,0 +1,6 @@
+{
+    "score_threshold": 0.5,
+    "det_name_list": "coco_detlist.list",
+    "det_type_list": "detlist.list",
+    "desc":"det_name_list:object types supported for detection; det_type_list:the type of object that the user wants to detect"
+}
