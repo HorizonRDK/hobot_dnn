@@ -10,13 +10,13 @@
 #include <memory>
 
 #include "rclcpp/rclcpp.hpp"
-#include "include/fasterrcnn_body_det_node.h"
+#include "include/dnn_example_node.h"
 
 int main(int argc, char** argv) {
   rclcpp::init(argc, argv);
   RCLCPP_WARN(rclcpp::get_logger("example"), "This is dnn node example!");
 
-  rclcpp::spin(std::make_shared<FasterRcnnBodyDetNode>("body_det"));
+  rclcpp::spin(std::make_shared<DnnExampleNode>("body_det"));
 
   rclcpp::shutdown();
   return 0;

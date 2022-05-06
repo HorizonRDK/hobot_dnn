@@ -1,0 +1,6 @@
+{
+	"model_file": "config/runtime/yolov5/yolov5_672x672_nv12.bin",
+	"model_name": "yolov5_672x672_nv12",
+	"dnnParser": "yolov5",
+	"model_output_count": 3
+}
