@@ -532,6 +532,7 @@ void FasterRcnnBodyDetNode::RosImgProcess(
         cv::Mat nv12(height *3 / 2, width, CV_8UC1, buf);
         cv::Mat bgr;
         cv::cvtColor(nv12, bgr, CV_YUV2BGR_NV12);
+        delete []buf;
         auto& mat = bgr;
         Render(mat,
               dynamic_cast<Filter2DResult *>(
@@ -650,6 +651,7 @@ void FasterRcnnBodyDetNode::SharedMemImgProcess(
         cv::Mat nv12(height *3 / 2, width, CV_8UC1, buf);
         cv::Mat bgr;
         cv::cvtColor(nv12, bgr, CV_YUV2BGR_NV12);
+        delete []buf;
         auto& mat = bgr;
         Render(mat,
               dynamic_cast<Filter2DResult *>(

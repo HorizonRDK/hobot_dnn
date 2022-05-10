@@ -11,6 +11,7 @@
 
 #include <memory>
 #include <vector>
+#include <string>
 
 #include "dnn_node/dnn_node_data.h"
 
@@ -22,20 +23,19 @@ class DnnNodeImpl;
 class DnnNode : public rclcpp::Node {
  public:
   // node_name为创建的节点名，options为选项，用法和ROS Node相同
-  DnnNode(
-    const std::string & node_name,
-    const NodeOptions & options = NodeOptions());
+  DnnNode(const std::string &node_name,
+          const NodeOptions &options = NodeOptions());
 
-  DnnNode(
-    const std::string & node_name,
-    const std::string & namespace_,
-    const NodeOptions & options = NodeOptions());
+  DnnNode(const std::string &node_name,
+          const std::string &namespace_,
+          const NodeOptions &options = NodeOptions());
 
   virtual ~DnnNode();
 
   // 执行初始化流程，只做pipeline的串联，具体的每个初始化步骤由用户（子类中）实现。
   int Init();
 
+  // 使用DNNInput类型数据进行推理，一般除了DDR模型之外，都使用此方式推理
   // 执行推理流程，只做pipeline的串联，具体的每个推理步骤由用户（子类中）实现。
   // 用户可以继承DnnNodeOutput来扩展输出数据智能指针output
   // 例如增加推理结果对应的图片数据、图片名、时间戳、ID等
@@ -49,11 +49,49 @@ class DnnNode : public rclcpp::Node {
   //                               默认一直等待直到申请成功
   //   - [in] infer_timeout_ms 推理超时时间，单位毫秒，默认1000毫秒推理超时
   int Run(std::vector<std::shared_ptr<DNNInput>> &inputs,
-            const std::shared_ptr<DnnNodeOutput>& output = nullptr,
-            const std::shared_ptr<std::vector<hbDNNRoi>> rois = nullptr,
-            const bool is_sync_mode = true,
-            const int alloctask_timeout_ms = -1,
-            const int infer_timeout_ms = 1000);
+          const std::shared_ptr<DnnNodeOutput> &output = nullptr,
+          const std::shared_ptr<std::vector<hbDNNRoi>> rois = nullptr,
+          const bool is_sync_mode = true,
+          const int alloctask_timeout_ms = -1,
+          const int infer_timeout_ms = 1000);
+
+  // 使用DNNInput类型数据并指定输出描述进行推理
+  // 执行推理流程，只做pipeline的串联，具体的每个推理步骤由用户（子类中）实现。
+  // 用户可以继承DnnNodeOutput来扩展输出数据智能指针output
+  // 例如增加推理结果对应的图片数据、图片名、时间戳、ID等
+  // 如果不需要扩展输出内容，可以不传入output
+  // - 参数
+  //   - [in] inputs 输入数据智能指针列表
+  //   - [in] output_descs 输出描述智能指针列表
+  //   - [in] outputs 输出数据智能指针
+  //   - [in] rois 抠图roi数据，只对ModelRoiInferType模型有效
+  //   - [in] is_sync_mode 预测模式，true为同步模式，false为异步模式
+  //   - [in] alloctask_timeout_ms 申请推理任务超时时间，单位毫秒
+  //                               默认一直等待直到申请成功
+  //   - [in] infer_timeout_ms 推理超时时间，单位毫秒，默认1000毫秒推理超时
+  int Run(std::vector<std::shared_ptr<DNNInput>> &inputs,
+          std::vector<std::shared_ptr<OutputDescription>> &output_descs,
+          const std::shared_ptr<DnnNodeOutput> &output = nullptr,
+          const std::shared_ptr<std::vector<hbDNNRoi>> rois = nullptr,
+          const bool is_sync_mode = true,
+          const int alloctask_timeout_ms = -1,
+          const int infer_timeout_ms = 1000);
+
+  // 使用DNNTensor类型数据并指定输出描述进行推理，一般DDR模型使用此方式推理
+  // - 参数
+  //   - [in] inputs 输入数据智能指针列表
+  //   - [in] output_descs 输出描述智能指针列表
+  //   - [in] outputs 输出数据智能指针
+  //   - [in] is_sync_mode 预测模式，true为同步模式，false为异步模式
+  //   - [in] alloctask_timeout_ms 申请推理任务超时时间，单位毫秒
+  //                               默认一直等待直到申请成功
+  //   - [in] infer_timeout_ms 推理超时时间，单位毫秒，默认1000毫秒推理超时
+  int Run(std::vector<std::shared_ptr<DNNTensor>> &inputs,
+          std::vector<std::shared_ptr<OutputDescription>> &output_descs,
+          const std::shared_ptr<DnnNodeOutput> &output = nullptr,
+          const bool is_sync_mode = true,
+          const int alloctask_timeout_ms = -1,
+          const int infer_timeout_ms = 1000);
 
  protected:
   // 设置DnnNodePara类型的dnn_node_para_ptr_
@@ -67,22 +105,21 @@ class DnnNode : public rclcpp::Node {
   // 如果子类没有override此接口，使用默认的处理方法
   // - 参数
   //   - [in] outputs 输出数据智能指针
-  virtual int PostProcess(
-    const std::shared_ptr<DnnNodeOutput> &output);
+  virtual int PostProcess(const std::shared_ptr<DnnNodeOutput> &output);
 
  protected:
   // 模型管理和推理参数，需要用户配置模型文件名和模型类型
   std::shared_ptr<DnnNodePara> dnn_node_para_ptr_ = nullptr;
 
   // 获取dnn node管理和推理使用的模型。
-  Model* GetModel();
+  Model *GetModel();
 
   // 获取模型的输入size
   // - 参数
   //   - [in] input_index 获取的输入索引，一个模型可能有多个输入。
   //   - [out] w 模型输入的宽度。
   //   - [out] h 模型输入的高度。
-  int GetModelInputSize(int32_t input_index, int& w, int& h);
+  int GetModelInputSize(int32_t input_index, int &w, int &h);
 
  private:
   // dnn node的实现类

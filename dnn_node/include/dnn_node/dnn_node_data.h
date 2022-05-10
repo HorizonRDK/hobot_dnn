@@ -9,54 +9,52 @@
 #ifndef DNN_NODE_DATA_H_
 #define DNN_NODE_DATA_H_
 
-#include <string>
 #include <memory>
-#include <vector>
+#include <string>
 #include <utility>
-
-#include "rclcpp/rclcpp.hpp"
-
-#include "easy_dnn/model.h"
-#include "easy_dnn/data_structure.h"
-#include "easy_dnn/model_manager.h"
-#include "easy_dnn/input_processor.h"
-#include "easy_dnn/input_process/crop.h"
-#include "easy_dnn/task.h"
-#include "easy_dnn/task_manager.h"
-#include "easy_dnn/output_parser.h"
-#include "easy_dnn/output_parser/parsing/parsing_output_parser.h"
-#include "easy_dnn/output_parser/detection/facehand_detect_output_parser.h"
+#include <vector>
 
 #include "dnn/hb_dnn.h"
+#include "easy_dnn/data_structure.h"
+#include "easy_dnn/input_process/crop.h"
+#include "easy_dnn/input_processor.h"
+#include "easy_dnn/model.h"
+#include "easy_dnn/model_manager.h"
+#include "easy_dnn/output_parser.h"
+#include "easy_dnn/output_parser/detection/facehand_detect_output_parser.h"
+#include "easy_dnn/output_parser/parsing/parsing_output_parser.h"
+#include "easy_dnn/task.h"
+#include "easy_dnn/task_manager.h"
+#include "rclcpp/rclcpp.hpp"
 
 namespace hobot {
 namespace dnn_node {
 
-using rclcpp::NodeOptions;
-using hobot::easy_dnn::Model;
+using hobot::easy_dnn::CropDescription;
+using hobot::easy_dnn::CropProcessor;
 using hobot::easy_dnn::DNNInput;
 using hobot::easy_dnn::DNNResult;
 using hobot::easy_dnn::DNNTensor;
-using hobot::easy_dnn::Task;
-using hobot::easy_dnn::ModelTask;
-using hobot::easy_dnn::ModelInferTask;
-using hobot::easy_dnn::ModelRoiInferTask;
-using hobot::easy_dnn::MultiModelTask;
-using hobot::easy_dnn::ModelManager;
-using hobot::easy_dnn::NV12PyramidInput;
-using hobot::easy_dnn::TaskManager;
-using hobot::easy_dnn::ParsingResult;
-using hobot::easy_dnn::InputProcessor;
-using hobot::easy_dnn::InputDescription;
-using hobot::easy_dnn::OutputParser;
-using hobot::easy_dnn::CropProcessor;
-using hobot::easy_dnn::CropDescription;
-using hobot::easy_dnn::Filter2DResult;
 using hobot::easy_dnn::FaceHandDetectionOutputParser;
+using hobot::easy_dnn::Filter2DResult;
+using hobot::easy_dnn::InputDescription;
+using hobot::easy_dnn::InputProcessor;
+using hobot::easy_dnn::Model;
+using hobot::easy_dnn::ModelInferTask;
+using hobot::easy_dnn::ModelManager;
+using hobot::easy_dnn::ModelRoiInferTask;
+using hobot::easy_dnn::ModelTask;
+using hobot::easy_dnn::MultiModelTask;
+using hobot::easy_dnn::NV12PyramidInput;
+using hobot::easy_dnn::OutputParser;
+using hobot::easy_dnn::ParsingResult;
+using hobot::easy_dnn::Task;
+using hobot::easy_dnn::TaskManager;
+using rclcpp::NodeOptions;
 
-using hobot::easy_dnn::SingleBranchOutputParser;
 using hobot::easy_dnn::MultiBranchOutputParser;
 using hobot::easy_dnn::OutputDescription;
+using hobot::easy_dnn::SingleBranchOutputParser;
 
 using TaskId = int;
 
@@ -91,15 +89,13 @@ struct DnnNodePara {
   // 如果用户子类中没有override SetOutputParser接口，
   // dnn_node基类的SetOutputParser将使用output_parsers_设置模型解析方式
   std::vector<std::pair<int32_t, std::shared_ptr<OutputParser>>>
-  output_parsers_;
+      output_parsers_;
 };
 
 // 用户可以继承DnnNodeOutput来扩展输出内容
 // 例如增加推理结果对应的图片数据、图片名、时间戳、ID等
 struct DnnNodeOutput {
-  DnnNodeOutput() {
-    outputs.clear();
-  }
+  DnnNodeOutput() { outputs.clear(); }
   virtual ~DnnNodeOutput() {}
   // 输出数据智能指针列表
   std::vector<std::shared_ptr<DNNResult>> outputs;
