@@ -1,14 +1,10 @@
-Getting Started with Dnn benchmark Example
-=======
-
-
-# Intro
+# 功能介绍
 
 Dnn Benchmark example package是Dnn Node package的性能评测示例，通过继承DnnNode虚基类，使用模型和图像数据利用BPU处理器进行模型推理，输出帧率fps和单帧延迟latency性能指标。图像数据来源于本地图片回灌。
 
-# Build
+# 编译
 
-## Dependency
+## 依赖库
 
 依赖库：
 
@@ -32,7 +28,7 @@ ros package：
 
 支持在X3 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式，并支持通过编译选项控制编译pkg的依赖和pkg的功能。
 
-### X3 Ubuntu系统上编译
+### Ubuntu系统上编译
 
 1、编译环境确认
 
@@ -68,11 +64,23 @@ ros package：
      -DCMAKE_TOOLCHAIN_FILE=`pwd`/robot_dev_config/aarch64_toolchainfile.cmake
   ```
 
-# Usage
+## 参数
+
+| 参数名         | 解释         | 是否必须   | 默认值        | 备注         |
+| ----------- | ---------- | ------ | ---------- | ---------- |
+| show_fps_log | fps开关 0:关闭 1:打开| 否      | 1 |            |
+| show_latency_log | latency开关  0:关闭 1:打开   | 否  | 1 |  |
+| statistic_cycle | 处理周期图片个数 | 否  | 500 |  |
+| is_sync_mode | 同步或异步模式 0: 异步 1: 同步| 否  |  1  |  |
+| config_file | 配置文件路径 | 否 | config/hobot_benchmark_config.json | |
+| model_file_name | 模型文件 | 否  |  config/multitask_body_kps_960x544.hbm   |  |
+| model_name | 模型名称 | 否  | multitask_body_kps_960x544 |  |
+
+## 运行
 
 编译成功后，将生成的install路径拷贝到地平线X3开发板上（如果是在X3上编译，忽略拷贝步骤），并执行如下命令运行。
 
-## X3 Ubuntu系统上运行
+### **Ubuntu**
 
 ```
 export COLCON_CURRENT_PREFIX=./install
@@ -85,23 +93,43 @@ cp -r install/dnn_benchmark_example/lib/dnn_benchmark_example/config/ .
 # 运行：使用本地jpg格式图片通过同步模式进行回灌预测，通过日志输出性能指标fps和latency，并设置log级别为warn
 ros2 run dnn_benchmark_example dnn_benchmark_example --ros-args --log-level warn
 
-# 运行参数配置：通过运行时-p选项更改配置参数
-  1、show_fps_log(fps开关)默认为1(0:关闭 1:打开)
-  2、show_latency_log(latency开关)默认为1(0:关闭 1:打开)
-  3、statistic_cycle(处理周期图片个数)默认为500(即每处理500张图片输出一次性能指标)
-  4、is_sync_mode(同步或异步模式)默认为1(0:异步 1:同步)
-  5、config_file(配置文件路径)默认为"config/hobot_benchmark_config.json"
-  6、model_file_name(模型文件)默认为"config/multitask_body_kps_960x544.hbm"
-  7、model_name(模型名称)默认为"multitask_body_kps_960x544"
 运行默认模型评测，关闭fsp信息输出，处理周期图片个数更改为1000
 ros2 run dnn_benchmark_example dnn_benchmark_example --ros-args --log-level warn -p show_fps_log:=0 -p statistic_cycle:=1000
 
 # 更换评测模型
 dnn_benchmark_example在config/runtime下提供了一些测试模型，在运行时通过-p选项更换评测模型。如果用户需要评测自己的模型，将模型放在config文件夹下，同样将模型文件路径和模型名通过-p重新配置即可。例如，对fcos模型进行评测，通过配置参数-p model_file_name:=config/runtime/fcos/fcos_512x512_nv12.bin更改模型文件，-p model_name:=fcos_512x512_nv12更改模型名称，-p statistic_cycle:=50将处理周期图片个数更改为50个(即评测fcos_512x512_nv12.bin模型，每处理50张图片输出一次性能指标)
 ros2 run dnn_benchmark_example dnn_benchmark_example --ros-args --log-level warn -p model_file_name:=config/runtime/fcos/fcos_512x512_nv12.bin -p model_name:=fcos_512x512_nv12 -p statistic_cycle:=50
+```
 
+### **Linux**
 
-# 配置文件hobot_benchmark_config.json
+```
+export ROS_LOG_DIR=/userdata/
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:./install/lib/
+
+# config中为示例使用的模型，根据实际安装路径进行拷贝
+cp -r install/dnn_benchmark_example/lib/dnn_benchmark_example/config/ .
+
+# 运行：使用本地jpg格式图片通过同步模式进行回灌预测，通过日志输出性能指标fps和latency，并设置log级别为warn
+./install/lib/dnn_benchmark_example/dnn_benchmark_example --ros-args --log-level warn
+
+运行默认模型评测，关闭fsp信息输出，处理周期图片个数更改为1000
+./install/lib/dnn_benchmark_example/dnn_benchmark_example --ros-args --log-level warn -p show_fps_log:=0 -p statistic_cycle:=1000
+
+# 更换评测模型
+dnn_benchmark_example在config/runtime下提供了一些测试模型，在运行时通过-p选项更换评测模型。如果用户需要评测自己的模型，将模型放在config文件夹下，同样将模型文件路径和模型名通过-p重新配置即可。例如，对fcos模型进行评测，通过配置参数-p model_file_name:=config/runtime/fcos/fcos_512x512_nv12.bin更改模型文件，-p model_name:=fcos_512x512_nv12更改模型名称，-p statistic_cycle:=50将处理周期图片个数更改为50个(即评测fcos_512x512_nv12.bin模型，每处理50张图片输出一次性能指标)
+./install/lib/dnn_benchmark_example/dnn_benchmark_example --ros-args --log-level warn -p model_file_name:=config/runtime/fcos/fcos_512x512_nv12.bin -p model_name:=fcos_512x512_nv12 -p statistic_cycle:=50
+```
+
+## 注意事项
+
+运行时需要注意锁频：
+```
+echo performance > /sys/class/devfreq/devfreq0/governor
+echo performance > /sys/devices/system/cpu/cpufreq/policy0/scaling_governor
+```
+
+配置文件hobot_benchmark_config.json
 {
 "input_config": {
       "input_type": "image",

@@ -83,6 +83,7 @@ int Run(std::vector<std::shared_ptr<DNNInput>> &inputs,
             const int alloctask_timeout_ms = -1,
             const int infer_timeout_ms = 1000);
 ```
+1. 使用DNNInput类型数据进行推理，一般除了DDR模型之外，都使用此方式推理。
 1. 执行推理流程，只做pipeline的串联，具体的每个推理步骤由用户（子类中）实现。
 2. 用户可以继承DnnNodeOutput来扩展输出数据智能指针output，例如增加推理结果对应的图片数据、图片名、时间戳、ID等。
 3. 如果不需要扩展输出内容，可以不传入output。
@@ -156,3 +157,58 @@ int GetModelInputSize(int32_t input_index, int& w, int& h);
    - [out] h 模型输入的高度。
 - 返回值
     - 返回已加载的模型指针。
+
+## 3.8 Run()
+```cpp
+int Run(std::vector<std::shared_ptr<DNNInput>> &inputs,
+        std::vector<std::shared_ptr<OutputDescription>> &output_descs,
+        const std::shared_ptr<DnnNodeOutput> &output = nullptr,
+        const std::shared_ptr<std::vector<hbDNNRoi>> rois = nullptr,
+        const bool is_sync_mode = true,
+        const int alloctask_timeout_ms = -1,
+        const int infer_timeout_ms = 1000);
+```
+1. 使用DNNInput类型数据并指定输出描述进行推理。
+2. 执行推理流程，只做pipeline的串联，具体的每个推理步骤由用户（子类中）实现。
+3. 用户可以继承DnnNodeOutput来扩展输出数据智能指针output，例如增加推理结果对应的图片数据、图片名、时间戳、ID等。
+4. 如果不需要扩展输出内容，可以不传入output。
+
+- 参数
+    - [in] inputs 输入数据智能指针列表
+    - [in] output_descs 输出描述智能指针列表
+    - [in] outputs 输出数据智能指针
+    - [in] rois 抠图roi数据，只对ModelRoiInferType模型有效
+    - [in] is_sync_mode 预测模式，true为同步模式，false为异步模式
+    - [in] alloctask_timeout_ms 申请推理任务超时时间，单位毫秒
+                                默认一直等待直到申请成功
+    - [in] infer_timeout_ms 推理超时时间，单位毫秒，默认1000毫秒推理超时
+
+- 返回值
+    - 0成功，非0失败。
+
+
+## 3.9 Run()
+```cpp
+int Run(std::vector<std::shared_ptr<DNNTensor>> &inputs,
+        std::vector<std::shared_ptr<OutputDescription>> &output_descs,
+        const std::shared_ptr<DnnNodeOutput> &output = nullptr,
+        const bool is_sync_mode = true,
+        const int alloctask_timeout_ms = -1,
+        const int infer_timeout_ms = 1000);
+```
+1. 使用DNNTensor类型数据并指定输出描述进行推理，一般DDR模型使用此方式推理
+2. 执行推理流程，只做pipeline的串联，具体的每个推理步骤由用户（子类中）实现。
+3. 用户可以继承DnnNodeOutput来扩展输出数据智能指针output，例如增加推理结果对应的图片数据、图片名、时间戳、ID等。
+4. 如果不需要扩展输出内容，可以不传入output。
+
+- 参数
+    - [in] inputs 输入数据智能指针列表
+    - [in] output_descs 输出描述智能指针列表
+    - [in] outputs 输出数据智能指针
+    - [in] is_sync_mode 预测模式，true为同步模式，false为异步模式
+    - [in] alloctask_timeout_ms 申请推理任务超时时间，单位毫秒
+                                默认一直等待直到申请成功
+    - [in] infer_timeout_ms 推理超时时间，单位毫秒，默认1000毫秒推理超时
+
+- 返回值
+    - 0成功，非0失败。

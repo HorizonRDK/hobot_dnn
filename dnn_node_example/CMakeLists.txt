@@ -23,6 +23,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(ai_msgs REQUIRED)
 find_package(dnn_node REQUIRED)
 
 option(CV_BRIDGE_PKG "using cv_bridge pkg" OFF)
@@ -59,9 +60,13 @@ link_directories(
 
 add_executable(example
 src/example.cpp
-src/fasterrcnn_body_det_node.cpp
+src/dnn_example_node.cpp
 src/image_utils.cpp
-src/fasterrcnn_kps_output_parser.cpp
+src/post_process/post_process_base.cpp
+src/post_process/post_process_fasterrcnn.cpp
+src/post_process/post_process_yolov2.cpp
+src/post_process/post_process_yolov3.cpp
+src/post_process/post_process_yolov5.cpp
 )
 
 ament_target_dependencies(
@@ -69,6 +74,7 @@ ament_target_dependencies(
   rclcpp
   dnn_node
   sensor_msgs
+  ai_msgs
 )
 
 if (${SHARED_MEM})

@@ -1,0 +1,6 @@
+{
+	"model_file": "config/runtime/yolov3/yolov3_416x416_nv12.bin",
+	"model_name": "yolov3_416x416_nv12",
+	"dnnParser": "yolov3",
+	"model_output_count": 3
+}

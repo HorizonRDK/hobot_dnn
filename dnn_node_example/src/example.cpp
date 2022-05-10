@@ -6,17 +6,17 @@
 // reproduced, copied, transmitted, or used in any way for any purpose,
 // without the express written permission of Horizon Robotics Inc.
 
-#include <string>
 #include <memory>
+#include <string>
 
+#include "include/dnn_example_node.h"
 #include "rclcpp/rclcpp.hpp"
-#include "include/fasterrcnn_body_det_node.h"
 
 int main(int argc, char** argv) {
   rclcpp::init(argc, argv);
   RCLCPP_WARN(rclcpp::get_logger("example"), "This is dnn node example!");
 
-  rclcpp::spin(std::make_shared<FasterRcnnBodyDetNode>("body_det"));
+  rclcpp::spin(std::make_shared<DnnExampleNode>("body_det"));
 
   rclcpp::shutdown();
   return 0;

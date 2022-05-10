@@ -9,9 +9,9 @@
 #ifndef DNN_NODE_IMPL_H_
 #define DNN_NODE_IMPL_H_
 
-#include <vector>
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
 #include "dnn_node/dnn_node_data.h"
 #include "util/threads/threadpool.h"
@@ -21,6 +21,8 @@ namespace dnn_node {
 
 struct DnnNodeRunTimePara;
 struct ThreadPool;
+
+enum class InputType { DNN_INPUT = 0, DNN_TENSOR };
 
 struct DnnNodeTask {
   explicit DnnNodeTask(TaskId id) {
@@ -36,7 +38,7 @@ struct DnnNodeRunTimePara {
   std::vector<Model *> models_load;
 
   // 根据model_name解析出的需要管理和推理使用的模型
-  Model* model_manage = nullptr;
+  Model *model_manage = nullptr;
 
   // 一个DNNNode实例只支持一种ModelTask类型
   std::vector<std::shared_ptr<Task>> tasks{};
@@ -58,7 +60,7 @@ struct ThreadPool {
 
 class DnnNodeImpl {
  public:
-  explicit DnnNodeImpl(std::shared_ptr<DnnNodePara>& dnn_node_para_ptr);
+  explicit DnnNodeImpl(std::shared_ptr<DnnNodePara> &dnn_node_para_ptr);
 
   ~DnnNodeImpl();
 
@@ -75,23 +77,38 @@ class DnnNodeImpl {
   // 释放模型预测任务。
   // - 参数
   //   - [in] task_id 需要释放的task id。
-  int ReleaseTask(const TaskId&);
+  int ReleaseTask(const TaskId &);
 
   // 根据预测任务ID获取任务task。
   // - 参数
   //   - [in] task_id 预测任务ID。
-  std::shared_ptr<Task> GetTask(const TaskId&);
+  std::shared_ptr<Task> GetTask(const TaskId &);
 
   int TaskInit();
+
+  // 启动推理
+  int Run(
+      std::vector<std::shared_ptr<DNNInput>> &dnn_inputs,
+      std::vector<std::shared_ptr<DNNTensor>> &tensor_inputs,
+      InputType input_type,
+      std::vector<std::shared_ptr<OutputDescription>> &output_descs,
+      const std::shared_ptr<DnnNodeOutput> &output,
+      std::function<int(const std::shared_ptr<DnnNodeOutput> &)> post_process,
+      const std::shared_ptr<std::vector<hbDNNRoi>> rois,
+      const bool is_sync_mode,
+      const int alloctask_timeout_ms,
+      const int infer_timeout_ms);
 
   // 配置预测任务的输入数据
   // - 参数
   //   - [in] inputs 输入数据智能指针列表。
   //   - [in] task_id 预测任务ID。
   //   - [in] rois 抠图roi数据，只对抠图检测模型有效。
-  int PreProcess(std::vector<std::shared_ptr<DNNInput>> &inputs,
-            const TaskId& task_id,
-            const std::shared_ptr<std::vector<hbDNNRoi>> rois = nullptr);
+  int PreProcess(std::vector<std::shared_ptr<DNNInput>> &dnn_inputs,
+                 std::vector<std::shared_ptr<DNNTensor>> &tensor_inputs,
+                 InputType input_type,
+                 const TaskId &task_id,
+                 const std::shared_ptr<std::vector<hbDNNRoi>> rois = nullptr);
 
   // 执行推理任务
   // - 参数
@@ -99,8 +116,9 @@ class DnnNodeImpl {
   //   - [in] task_id 预测任务ID。
   //   - [in] is_sync_mode 预测模式，true为同步模式，false为异步模式。
   //   - [in] timeout_ms 预测推理超时时间。
-  int RunInferTask(std::shared_ptr<DnnNodeOutput> &sync_output,
-      const TaskId& task_id,
+  int RunInferTask(
+      std::shared_ptr<DnnNodeOutput> &sync_output,
+      const TaskId &task_id,
       std::function<int(const std::shared_ptr<DnnNodeOutput> &)> post_process,
       const bool is_sync_mode = true,
       const int timeout_ms = 1000);
@@ -108,18 +126,18 @@ class DnnNodeImpl {
   // 使用通过SetInputs输入给模型的数据进行推理
   // outputs为模型输出，timeout_ms为推理超时时间
   int RunInfer(std::vector<std::shared_ptr<DNNResult>> &outputs,
-                   const std::shared_ptr<Task>& task,
-                   const int timeout_ms);
+               const std::shared_ptr<Task> &task,
+               const int timeout_ms);
 
   // 获取dnn node管理和推理使用的模型。
-  Model* GetModel();
+  Model *GetModel();
 
   // 获取模型的输入size
   // - 参数
   //   - [in] input_index 获取的输入索引，一个模型可能有多个输入。
   //   - [out] w 模型输入的宽度。
   //   - [out] h 模型输入的高度。
-  int GetModelInputSize(int32_t input_index, int& w, int& h);
+  int GetModelInputSize(int32_t input_index, int &w, int &h);
 
  private:
   std::shared_ptr<DnnNodePara> dnn_node_para_ptr_ = nullptr;

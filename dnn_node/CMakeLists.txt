@@ -23,6 +23,9 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 
 include_directories(include include/util/)
+include_directories(include
+${PROJECT_SOURCE_DIR}
+)
 
 set(SYS_ROOT ${CMAKE_SYSROOT})
 message("SYS_ROOT is " ${SYS_ROOT})
@@ -35,7 +38,13 @@ add_library(${PROJECT_NAME} SHARED
   src/dnn_node.cpp
   src/dnn_node_impl.cpp
   src/util/image_proc.cpp
+  src/util/output_parser/detection/nms.cpp
+  src/util/output_parser/utils.cpp
   src/util/threads/threadpool.cpp
+  src/util/output_parser/detection/ptq_yolo3_darknet_output_parser.cpp
+  src/util/output_parser/detection/ptq_yolo2_output_parser.cpp
+  src/util/output_parser/detection/ptq_yolo5_output_parser.cpp
+  src/util/output_parser/detection/fasterrcnn_kps_output_parser.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -71,7 +80,12 @@ install(
 
 install(
   FILES include/util/image_proc.h
-  DESTINATION include/util/
+  DESTINATION include/dnn_node/util/
+)
+
+install(
+  DIRECTORY include/util/output_parser/
+  DESTINATION include/util/output_parser/
 )
 
 # Causes the visibility macros to use dllexport rather than dllimport,
@@ -85,7 +99,7 @@ install(
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
-    
+
 # specific order: dependents before dependencies
 ament_export_include_directories(include)
 ament_export_libraries(${PROJECT_NAME})
