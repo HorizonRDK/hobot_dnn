@@ -79,7 +79,7 @@ install(
 
 install(
   FILES include/util/image_proc.h
-  DESTINATION include/util/
+  DESTINATION include/dnn_node/util/
 )
 
 install(

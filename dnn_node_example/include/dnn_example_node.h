@@ -16,7 +16,7 @@
 #endif
 #include "include/image_utils.h"
 #include "dnn_node/dnn_node.h"
-#include "util/image_proc.h"
+#include "dnn_node/util/image_proc.h"
 #include "sensor_msgs/msg/image.hpp"
 
 #include "util/output_parser/detection/ptq_yolo5_output_parser.h"
