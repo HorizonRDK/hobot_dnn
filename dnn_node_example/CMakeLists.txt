@@ -62,7 +62,11 @@ add_executable(example
 src/example.cpp
 src/dnn_example_node.cpp
 src/image_utils.cpp
-src/fasterrcnn_kps_output_parser.cpp
+src/post_process/post_process_base.cpp
+src/post_process/post_process_fasterrcnn.cpp
+src/post_process/post_process_yolov2.cpp
+src/post_process/post_process_yolov3.cpp
+src/post_process/post_process_yolov5.cpp
 )
 
 ament_target_dependencies(

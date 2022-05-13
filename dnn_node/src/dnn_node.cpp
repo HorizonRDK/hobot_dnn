@@ -68,6 +68,7 @@ int DnnNode::Init() {
   // 1. set model info in node para
   ret = SetNodePara();
   if (ret != 0) {
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Set node para failed!");
     return ret;
   }
 
@@ -80,18 +81,21 @@ int DnnNode::Init() {
   // 2. model init
   ret = dnn_node_impl_->ModelInit();
   if (ret != 0) {
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Model init failed!");
     return ret;
   }
 
   // 3. set output parser
   ret = SetOutputParser();
   if (ret != 0) {
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Set output parser failed!");
     return ret;
   }
 
   // 4. task init
   ret = dnn_node_impl_->TaskInit();
   if (ret != 0) {
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Task init failed!");
     return ret;
   }
 

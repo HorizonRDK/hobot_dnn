@@ -6,19 +6,22 @@
 // reproduced, copied, transmitted, or used in any way for any purpose,
 // without the express written permission of Horizon Robotics Inc.
 
-#include <iostream>
+#include "include/image_utils.h"
+
+#include <algorithm>
 #include <fstream>
+#include <iostream>
+#include <memory>
 #include <string>
 #include <vector>
-#include <algorithm>
-#include <memory>
 
-#include "include/image_utils.h"
 #include "dnn/hb_sys.h"
 
 std::shared_ptr<NV12PyramidInput> ImageUtils::GetNV12Pyramid(
-    const std::string &image_file, ImageType image_type,
-    int scaled_img_height, int scaled_img_width) {
+    const std::string &image_file,
+    ImageType image_type,
+    int scaled_img_height,
+    int scaled_img_width) {
   if (ImageType::BGR == image_type) {
     int original_img_height = 0, original_img_width = 0;
     return GetNV12Pyramid(image_file,
@@ -48,10 +51,9 @@ std::shared_ptr<NV12PyramidInput> ImageUtils::GetNV12Pyramid(
     hbSysAllocCachedMem(y, scaled_img_height * w_stride);
     hbSysAllocCachedMem(uv, scaled_img_height / 2 * w_stride);
 
-    memcpy(reinterpret_cast<uint8_t *>(y->virAddr), data,
-          y_img_len);
-    memcpy(reinterpret_cast<uint8_t *>(uv->virAddr),
-          data + y_img_len, uv_img_len);
+    memcpy(reinterpret_cast<uint8_t *>(y->virAddr), data, y_img_len);
+    memcpy(
+        reinterpret_cast<uint8_t *>(uv->virAddr), data + y_img_len, uv_img_len);
 
     hbSysFlushMem(y, HB_SYS_MEM_CACHE_CLEAN);
     hbSysFlushMem(uv, HB_SYS_MEM_CACHE_CLEAN);
@@ -138,21 +140,19 @@ std::shared_ptr<NV12PyramidInput> ImageUtils::GetNV12Pyramid(
   pyramid->uv_vir_addr = uv->virAddr;
   pyramid->uv_phy_addr = uv->phyAddr;
   pyramid->uv_stride = w_stride;
-  return std::shared_ptr<NV12PyramidInput>(
-      pyramid, [y, uv](NV12PyramidInput *pyramid) {
-        // Release memory after deletion
-        hbSysFreeMem(y);
-        hbSysFreeMem(uv);
-        delete y;
-        delete uv;
-        delete pyramid;
-      });
+  return std::shared_ptr<NV12PyramidInput>(pyramid,
+                                           [y, uv](NV12PyramidInput *pyramid) {
+                                             // Release memory after deletion
+                                             hbSysFreeMem(y);
+                                             hbSysFreeMem(uv);
+                                             delete y;
+                                             delete uv;
+                                             delete pyramid;
+                                           });
 }
 
 std::shared_ptr<NV12PyramidInput> ImageUtils::GetNV12Pyramid(
-    const cv::Mat &bgr_mat,
-    int scaled_img_height,
-    int scaled_img_width) {
+    const cv::Mat &bgr_mat, int scaled_img_height, int scaled_img_width) {
   cv::Mat nv12_mat;
   cv::Mat mat_tmp;
   mat_tmp.create(scaled_img_height, scaled_img_width, bgr_mat.type());
@@ -203,15 +203,15 @@ std::shared_ptr<NV12PyramidInput> ImageUtils::GetNV12Pyramid(
   pyramid->uv_vir_addr = uv->virAddr;
   pyramid->uv_phy_addr = uv->phyAddr;
   pyramid->uv_stride = w_stride;
-  return std::shared_ptr<NV12PyramidInput>(
-      pyramid, [y, uv](NV12PyramidInput *pyramid) {
-        // Release memory after deletion
-        hbSysFreeMem(y);
-        hbSysFreeMem(uv);
-        delete y;
-        delete uv;
-        delete pyramid;
-      });
+  return std::shared_ptr<NV12PyramidInput>(pyramid,
+                                           [y, uv](NV12PyramidInput *pyramid) {
+                                             // Release memory after deletion
+                                             hbSysFreeMem(y);
+                                             hbSysFreeMem(uv);
+                                             delete y;
+                                             delete uv;
+                                             delete pyramid;
+                                           });
 }
 
 int32_t ImageUtils::BGRToNv12(cv::Mat &bgr_mat, cv::Mat &img_nv12) {
@@ -308,49 +308,65 @@ void ImageUtils::GetNV12Tensor(std::string &image_file,
   hbSysFlushMem(&dnn_tensor->sysMem[1], HB_SYS_MEM_CACHE_CLEAN);
 }
 
-void ImageUtils::RenderingFilter2d(const std::string &image_file,
-                                   const std::string &saving_path,
-                                   std::vector<PerceptionRect> &boxes,
-                                   int scaled_height,
-                                   int scaled_width) {
-  cv::Mat mat = cv::imread(image_file, cv::IMREAD_COLOR);
+int ImageUtils::Render(
+    const std::shared_ptr<hobot::easy_dnn::NV12PyramidInput> &pyramid,
+    const ai_msgs::msg::PerceptionTargets::UniquePtr &ai_msg) {
+  if (!pyramid || !ai_msg) return -1;
 
-  float height_scale = !scaled_height ? 1.0f : mat.rows * 1.0f / scaled_height;
-  float width_scale = !scaled_width ? 1.0f : mat.cols * 1.0f / scaled_width;
+  char *y_img = reinterpret_cast<char *>(pyramid->y_vir_addr);
+  char *uv_img = reinterpret_cast<char *>(pyramid->uv_vir_addr);
+  auto height = pyramid->height;
+  auto width = pyramid->width;
+  auto img_y_size = height * width;
+  auto img_uv_size = img_y_size / 2;
+  char *buf = new char[img_y_size + img_uv_size];
+  memcpy(buf, y_img, img_y_size);
+  memcpy(buf + img_y_size, uv_img, img_uv_size);
+  cv::Mat nv12(height * 3 / 2, width, CV_8UC1, buf);
+  cv::Mat mat;
+  cv::cvtColor(nv12, mat, CV_YUV2BGR_NV12);
+  delete[] buf;
 
-  for (auto &rect : boxes) {
-    auto &color = colors[rect.perception_type % 4];
-    cv::rectangle(
-        mat,
-        cv::Point(rect.left * width_scale, rect.top * height_scale),
-        cv::Point(rect.right * width_scale, rect.bottom * height_scale),
-        color, 3);
-  }
-  std::cout << "Draw filter2d result to file: " << saving_path << std::endl;
-  cv::imwrite(saving_path, mat);
-}
+  RCLCPP_INFO(rclcpp::get_logger("ImageUtils"),
+              "target size: %d",
+              ai_msg->targets.size());
+  for (size_t idx = 0; idx < ai_msg->targets.size(); idx++) {
+    const auto &target = ai_msg->targets.at(idx);
+    RCLCPP_INFO(rclcpp::get_logger("ImageUtils"),
+                "target.rois.size: %d",
+                target.rois.size());
+    auto &color = colors[idx % colors.size()];
+    for (const auto &roi : target.rois) {
+      RCLCPP_INFO(
+          rclcpp::get_logger("ImageUtils"), "roi.type: %s", roi.type.c_str());
+      RCLCPP_INFO(rclcpp::get_logger("ImageUtils"),
+                  "roi x_offset: %d y_offset: %d width: %d height: %d",
+                  roi.rect.x_offset,
+                  roi.rect.y_offset,
+                  roi.rect.width,
+                  roi.rect.height);
+      cv::rectangle(mat,
+                    cv::Point(roi.rect.x_offset, roi.rect.y_offset),
+                    cv::Point(roi.rect.x_offset + roi.rect.width,
+                              roi.rect.y_offset + roi.rect.height),
+                    color,
+                    3);
+    }
 
-void ImageUtils::RenderingLmk(const std::string &image_file,
-                                   const std::string &saving_path,
-                                   std::vector<Landmarks> &lmks,
-                                   int scaled_height,
-                                   int scaled_width) {
-  cv::Mat mat = cv::imread(image_file, cv::IMREAD_COLOR);
-
-  float height_scale = !scaled_height ? 1.0f : mat.rows * 1.0f / scaled_height;
-  float width_scale = !scaled_width ? 1.0f : mat.cols * 1.0f / scaled_width;
-
-  size_t lmk_num = lmks.size();
-  for (size_t idx = 0; idx < lmk_num; idx++) {
-    const auto& lmk = lmks.at(idx);
-    auto &color = colors[idx % 4];
-    for (const auto& point : lmk) {
-      cv::circle(
-          mat,
-          cv::Point(point.x * width_scale, point.y * height_scale),
-          3, color, 3);
+    for (const auto &lmk : target.points) {
+      for (const auto &pt : lmk.point) {
+        cv::circle(mat, cv::Point(pt.x, pt.y), 3, color, 3);
+      }
     }
   }
-  std::cout << "Draw result to file: " << saving_path << std::endl;
+
+  std::string saving_path = "render_" + ai_msg->header.frame_id + "_" +
+                            std::to_string(ai_msg->header.stamp.sec) + "_" +
+                            std::to_string(ai_msg->header.stamp.nanosec) +
+                            ".jpeg";
+  RCLCPP_WARN(rclcpp::get_logger("ImageUtils"),
+              "Draw result to file: %s",
+              saving_path.c_str());
   cv::imwrite(saving_path, mat);
+  return 0;
 }

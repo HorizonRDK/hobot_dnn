@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "rclcpp/rclcpp.hpp"
-#include "include/fasterrcnn_kps_output_parser.h"
+#include "include/util/output_parser/detection/fasterrcnn_kps_output_parser.h"
 
 inline float SigMoid(const float &input) {
   return 1 / (1 + std::exp(-1 * input));
@@ -34,6 +34,9 @@ int32_t FasterRcnnKpsOutputParser::Parse(
     RCLCPP_ERROR(rclcpp::get_logger("fasterrcnn_parser"),
       "FasterRcnnKpsOutputParser para is not set");
     return -1;
+  }
+  if (!input_descriptions.empty()) {
+    // no need in desc
   }
   if (output_descriptions) {
     RCLCPP_INFO(rclcpp::get_logger("fasterrcnn_parser"),
