@@ -133,7 +133,7 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 | image_type | 图片格式，0：bgr，1：nv12 | 否  |  0   |  |
 | is_sync_mode | 同步或异步模式 0: 异步 1: 同步| 否  |  1  |  |
 | is_shared_mem_sub | 使用shared mem通信方式订阅图片 | 否  |  0   |  |
-| config_file | 配置文件路径 | 否 | "" | 更改配置文件配置不同模型调用不同后处理算法|
+| config_file | 配置文件路径 | 否 | "" | 更改配置文件配置不同模型调用不同后处理算法,默认启用fasterrcnn模型后处理|
 | dump_render_img | 是否进行渲染，0：否；1：是 | 否  |  0   |  |
 | msg_pub_topic_name | 发布智能结果的topicname,用于web端展示 | 否  | hobot_dnn_detection |  |
 
@@ -154,13 +154,13 @@ cp -r install/dnn_node_example/lib/dnn_node_example/config/ .
 使用本地jpg格式图片通过同步模式进行回灌预测，并存储渲染后的图片
 ros2 run dnn_node_example example --ros-args -p feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1
 配置使用yolov3模型和dnn_node中内置的yolov3后处理算法，使用本地jpg格式图片通过同步模式进行回灌预测，并存储渲染后的图片
-ros2 run dnn_node_example example --ros-args -p feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1 -p config_file:=config/yolov3/yolov3workconfig.json
+ros2 run dnn_node_example example --ros-args -p feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1 -p config_file:=config/yolov3workconfig.json
 
 # 运行模式2：
 使用订阅到的image msg(topic为/image_raw)通过异步模式进行预测，并设置log级别为warn
 ros2 run dnn_node_example example --ros-args -p feed_type:=1 -p is_sync_mode:=0 --ros-args --log-level warn
 配置使用yolov2模型和dnn_node中内置的yolov2后处理算法，使用订阅到的image msg(topic为/image_raw)通过异步模式进行预测，并设置log级别为warn
-ros2 run dnn_node_example example --ros-args -p feed_type:=1 -p is_sync_mode:=0 --ros-args --log-level warn -p config_file:=config/yolov2/yolov2workconfig.json
+ros2 run dnn_node_example example --ros-args -p feed_type:=1 -p is_sync_mode:=0 --ros-args --log-level warn -p config_file:=config/yolov2workconfig.json
 
 # 运行模式3：使用shared mem通信方式(topic为/hbmem_img)通过异步模式进行预测，并设置log级别为warn
 ros2 run dnn_node_example example --ros-args -p feed_type:=1 -p is_sync_mode:=0 -p is_shared_mem_sub:=1 --ros-args --log-level warn
@@ -210,7 +210,7 @@ config_file配置文件格式为json格式，以yolov5模型配置为例，具�
 log：
 
 ```
-root@ubuntu:~/hobot_dnn/dnn_node_example# ros2 run dnn_node_example example --ros-args -p config_file:=config/yolov3/yolov3workconfig.json -p dump_render_img:=1
+root@ubuntu:~/hobot_dnn/dnn_node_example# ros2 run dnn_node_example example --ros-args -p config_file:=config/yolov3workconfig.json -p dump_render_img:=1
 [WARN] [1650811880.359277035] [example]: This is dnn node example!
 [WARN] [1650811880.467918660] [example]: Parameter:
  feed_type(0:local, 1:sub): 0
@@ -219,7 +219,7 @@ root@ubuntu:~/hobot_dnn/dnn_node_example# ros2 run dnn_node_example example --ro
  dump_render_img: 1
  is_sync_mode_: 1
  is_shared_mem_sub: 0
- model_file_name: config/yolov3/yolov3_416x416_nv12.bin
+ model_file_name: config/yolov3_416x416_nv12.bin
  model_name: yolov3_416x416_nv12
  output_index: 2
 [INFO] [1650811880.488089160] [dnn]: Node init.
@@ -260,7 +260,7 @@ root@ubuntu:~/hobot_dnn/dnn_node_example# ros2 run dnn_node_example example --ro
 
 1.启动图片发布节点：ros2 run mipi_cam mipi_cam --ros-args -p video_device:=F37 -p out_format:=nv12 -p io_method:=hbmem -p image_width:=608 -p image_height:=608 --log-level warn
 
-2.使用订阅图片异步加载方式启动dnn_parser_node节点：ros2 run dnn_node_example example --ros-args -p feed_type:=1 -p is_sync_mode:=0 -p config_file:=config/yolov2/yolov2workconfig.json --ros-args --log-level warn
+2.使用订阅图片异步加载方式启动dnn_parser_node节点：ros2 run dnn_node_example example --ros-args -p feed_type:=1 -p is_sync_mode:=0 -p config_file:=config/yolov2workconfig.json --ros-args --log-level warn
 
 3.进入hobot_websocket/install/websocket/lib/websocket/webservice
 4.启动nginx：

@@ -37,7 +37,6 @@ ai_msgs::msg::PerceptionTargets::UniquePtr PostProcessBase::PostProcess(
 
   ai_msgs::msg::PerceptionTargets::UniquePtr pub_data(
       new ai_msgs::msg::PerceptionTargets());
-  ai_msgs::msg::Target target;
   auto *det_result =
       dynamic_cast<Dnn_Parser_Result *>(outputs[output_index_].get());
   if (!det_result) {
@@ -62,11 +61,11 @@ ai_msgs::msg::PerceptionTargets::UniquePtr PostProcessBase::PostProcess(
     roi.rect.set__width(rect.bbox.xmax - rect.bbox.xmin);
     roi.rect.set__height(rect.bbox.ymax - rect.bbox.ymin);
 
+    ai_msgs::msg::Target target;
     target.set__type(rect.class_name);
     target.rois.emplace_back(roi);
+    pub_data->targets.emplace_back(std::move(target));
   }
-
-  pub_data->targets.emplace_back(std::move(target));
 
   return pub_data;
 }
