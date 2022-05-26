@@ -40,20 +40,29 @@ ai_msgs::msg::PerceptionTargets::UniquePtr PostProcessBase::PostProcess(
   auto *det_result =
       dynamic_cast<Dnn_Parser_Result *>(outputs[output_index_].get());
   if (!det_result) {
-    RCLCPP_INFO(rclcpp::get_logger("example"), "invalid cast");
+    RCLCPP_INFO(rclcpp::get_logger("PostProcessBase"), "invalid cast");
     return 0;
   }
-  RCLCPP_INFO(rclcpp::get_logger("example"),
+  RCLCPP_INFO(rclcpp::get_logger("PostProcessBase"),
               "out box size: %d",
               det_result->perception.det.size());
   for (auto &rect : det_result->perception.det) {
     if (rect.bbox.xmin < 0) rect.bbox.xmin = 0;
     if (rect.bbox.ymin < 0) rect.bbox.ymin = 0;
+    if (rect.bbox.xmax >= model_input_width_)
+    {
+      rect.bbox.xmax = model_input_width_ - 1;
+    }
+    if (rect.bbox.ymax >= model_input_height_)
+    {
+      rect.bbox.ymax = model_input_height_ - 1;
+    }
+
     std::stringstream ss;
     ss << "det rect: " << rect.bbox.xmin << " " << rect.bbox.ymin << " "
        << rect.bbox.xmax << " " << rect.bbox.ymax
        << ", det type: " << rect.class_name << ", score:" << rect.score;
-    RCLCPP_INFO(rclcpp::get_logger("example"), "%s", ss.str().c_str());
+    RCLCPP_INFO(rclcpp::get_logger("PostProcessBase"), "%s", ss.str().c_str());
 
     ai_msgs::msg::Roi roi;
     roi.rect.set__x_offset(rect.bbox.xmin);

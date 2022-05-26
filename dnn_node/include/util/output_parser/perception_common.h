@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Horizon Robotics.All Rights Reserved.
+// Copyright (c) 2021 Horizon Robotics.All Rights Reserved.
 //
 // The material in this file is confidential and contains trade secrets
 // of Horizon Robotics Inc. This is proprietary information owned by
@@ -6,8 +6,8 @@
 // reproduced, copied, transmitted, or used in any way for any purpose,
 // without the express written permission of Horizon Robotics Inc.
 
-#ifndef _DETECTION_PERCEPTION_COMMON_H_
-#define _DETECTION_PERCEPTION_COMMON_H_
+#ifndef _OUTPUT_PARSER_PERCEPTION_COMMON_H_
+#define _OUTPUT_PARSER_PERCEPTION_COMMON_H_
 
 #include <algorithm>
 #include <iomanip>
@@ -206,4 +206,4 @@ class Dnn_Parser_Result : public DNNResult {
   void Reset() override { }
 };
 
-#endif  // _DETECTION_PERCEPTION_COMMON_H_
+#endif  // _OUTPUT_PARSER_PERCEPTION_COMMON_H_

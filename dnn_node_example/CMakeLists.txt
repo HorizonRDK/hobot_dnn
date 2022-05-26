@@ -67,6 +67,11 @@ src/post_process/post_process_fasterrcnn.cpp
 src/post_process/post_process_yolov2.cpp
 src/post_process/post_process_yolov3.cpp
 src/post_process/post_process_yolov5.cpp
+src/post_process/post_process_classification.cpp
+src/post_process/post_process_ssd.cpp
+src/post_process/post_process_efficientdet.cpp
+src/post_process/post_process_fcos.cpp
+src/post_process/post_process_unet.cpp
 )
 
 ament_target_dependencies(

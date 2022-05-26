@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Horizon Robotics.All Rights Reserved.
+// Copyright (c) 2021 Horizon Robotics.All Rights Reserved.
 //
 // The material in this file is confidential and contains trade secrets
 // of Horizon Robotics Inc. This is proprietary information owned by
@@ -6,11 +6,10 @@
 // reproduced, copied, transmitted, or used in any way for any purpose,
 // without the express written permission of Horizon Robotics Inc.
 
-#ifndef _UTIL_NMS_H_
-#define _UTIL_NMS_H_
+#ifndef _DETECTION_NMS_H_
+#define _DETECTION_NMS_H_
 
 #include <vector>
-
 #include "util/output_parser/perception_common.h"
 
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Horizon Robotics.All Rights Reserved.
+// Copyright (c) 2021 Horizon Robotics.All Rights Reserved.
 //
 // The material in this file is confidential and contains trade secrets
 // of Horizon Robotics Inc. This is proprietary information owned by
@@ -6,8 +6,8 @@
 // reproduced, copied, transmitted, or used in any way for any purpose,
 // without the express written permission of Horizon Robotics Inc.
 
-#ifndef _METHOD_PTQ_YOLO2_POST_PROCESS_METHOD_H_
-#define _METHOD_PTQ_YOLO2_POST_PROCESS_METHOD_H_
+#ifndef _DETECTION_PTQ_YOLO2_OUTPUT_PARSER_H_
+#define _DETECTION_PTQ_YOLO2_OUTPUT_PARSER_H_
 
 #include <string>
 #include <utility>
@@ -67,4 +67,4 @@ class Yolo2OutputParser : public SingleBranchOutputParser
 
 }  // namespace dnn_node
 }  // namespace hobot
-#endif  // _METHOD_PTQ_YOLO2_POST_PROCESS_METHOD_H_
+#endif  // _DETECTION_PTQ_YOLO2_OUTPUT_PARSER_H_

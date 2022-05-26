@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Horizon Robotics.All Rights Reserved.
+// Copyright (c) 2021 Horizon Robotics.All Rights Reserved.
 //
 // The material in this file is confidential and contains trade secrets
 // of Horizon Robotics Inc. This is proprietary information owned by
@@ -142,7 +142,7 @@ void Yolo5OutputParser::PostProcess(std::shared_ptr<DNNTensor> tensor,
 
   //  int *shape = tensor->data_shape.d;
   int height, width;
-  auto ret = get_tensor_hw(*(tensor.get()), &height, &width);
+  auto ret = get_tensor_hw(tensor, &height, &width);
   if (ret != 0)
   {
     RCLCPP_ERROR(rclcpp::get_logger("Yolo5_detection_parser"),

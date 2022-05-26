@@ -22,6 +22,11 @@
 #include "include/post_process/post_process_yolov2.h"
 #include "include/post_process/post_process_yolov3.h"
 #include "include/post_process/post_process_yolov5.h"
+#include "include/post_process/post_process_classification.h"
+#include "include/post_process/post_process_efficientdet.h"
+#include "include/post_process/post_process_ssd.h"
+#include "include/post_process/post_process_fcos.h"
+#include "include/post_process/post_process_unet.h"
 #include "rapidjson/document.h"
 #include "rapidjson/istreamwrapper.h"
 #include "rapidjson/writer.h"
@@ -37,6 +42,8 @@ DnnExampleNode::DnnExampleNode(const std::string &node_name,
   this->declare_parameter<int>("feed_type", feed_type_);
   this->declare_parameter<std::string>("image", image_);
   this->declare_parameter<int>("image_type", image_type_);
+  this->declare_parameter<int>("image_width", image_width);
+  this->declare_parameter<int>("image_height", image_height);
   this->declare_parameter<int>("dump_render_img", dump_render_img_);
   this->declare_parameter<int>("is_sync_mode", is_sync_mode_);
   this->declare_parameter<int>("is_shared_mem_sub", is_shared_mem_sub_);
@@ -47,6 +54,8 @@ DnnExampleNode::DnnExampleNode(const std::string &node_name,
   this->get_parameter<int>("feed_type", feed_type_);
   this->get_parameter<std::string>("image", image_);
   this->get_parameter<int>("image_type", image_type_);
+  this->get_parameter<int>("image_width", image_width);
+  this->get_parameter<int>("image_height", image_height);
   this->get_parameter<int>("dump_render_img", dump_render_img_);
   this->get_parameter<int>("is_sync_mode", is_sync_mode_);
   this->get_parameter<int>("is_shared_mem_sub", is_shared_mem_sub_);
@@ -85,6 +94,7 @@ DnnExampleNode::DnnExampleNode(const std::string &node_name,
                 "The model input width is %d and height is %d",
                 model_input_width_,
                 model_input_height_);
+    post_process_->SetModelInputWH(model_input_width_, model_input_height_);
   }
 
   if (static_cast<int>(DnnFeedType::FROM_LOCAL) == feed_type_) {
@@ -173,6 +183,28 @@ int DnnExampleNode::SetOutputParser() {
   } else if (parser == dnnParsers::FASTERRCNN_PARSER) {
     post_process_ = std::dynamic_pointer_cast<PostProcessBase>(
         std::make_shared<FasterRcnnPostProcess>(model_output_count_));
+  } else if (parser == dnnParsers::CLASSIFICATION_PARSER) {
+    auto clsPostProcess =
+        std::make_shared<ClassificationPostProcess>(model_output_count_);
+    clsPostProcess->SetClsNameFile(cls_name_file);
+    post_process_ = std::dynamic_pointer_cast<PostProcessBase>(clsPostProcess);
+  } else if (parser == dnnParsers::EFFICIENTDET_PARSER) {
+    auto efficientdetPostProcess =
+          std::make_shared<EfficientDetPostProcess>(model_output_count_);
+    if (!dequanti_file.empty()) {
+      efficientdetPostProcess->SetDequanti_file(dequanti_file);
+    }
+    post_process_ = std::dynamic_pointer_cast<PostProcessBase>(
+      efficientdetPostProcess);
+  } else if (parser == dnnParsers::SSD_PARSER) {
+    post_process_ = std::dynamic_pointer_cast<PostProcessBase>(
+        std::make_shared<SsdPostProcess>(model_output_count_));
+  } else if (parser == dnnParsers::FCOS_PARSER) {
+    post_process_ = std::dynamic_pointer_cast<PostProcessBase>(
+        std::make_shared<FcosPostProcess>(model_output_count_));
+  } else if (parser == dnnParsers::UNET_PARSER) {
+    post_process_ = std::dynamic_pointer_cast<PostProcessBase>(
+        std::make_shared<UnetPostProcess>(model_output_count_));
   } else {
     return -1;
   }
@@ -280,15 +312,28 @@ int DnnExampleNode::FeedFromLocal() {
       return -1;
     }
   } else if (static_cast<int>(ImageType::NV12) == image_type_) {
-    // nv12 img，不支持resize，图片size必须和模型输入size一致
-    pyramid = ImageUtils::GetNV12Pyramid(
-        image_, ImageType::NV12, model_input_height_, model_input_width_);
+    std::ifstream ifs(image_, std::ios::in | std::ios::binary);
+    if (!ifs) {
+      return -1;
+    }
+    ifs.seekg(0, std::ios::end);
+    int len = ifs.tellg();
+    ifs.seekg(0, std::ios::beg);
+    char *data = new char[len];
+    ifs.read(data, len);
+    pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromNV12Img(
+        data,
+        image_height,
+        image_width,
+        model_input_height_,
+        model_input_width_);
     if (!pyramid) {
       RCLCPP_ERROR(rclcpp::get_logger("example"),
                    "Get Nv12 pym fail with image: %s",
                    image_.c_str());
       return -1;
     }
+
   } else {
     RCLCPP_ERROR(
         rclcpp::get_logger("example"), "Invalid image type: %d", image_type_);
@@ -591,8 +636,16 @@ int DnnExampleNode::DnnParserInit() {
   if (document.HasMember("model_name")) {
     model_name_ = document["model_name"].GetString();
   }
-  if (document.HasMember("dnnParser")) {
-    std::string str_parser = document["dnnParser"].GetString();
+  if (document.HasMember("cls_names_list"))
+  {
+    cls_name_file = document["cls_names_list"].GetString();
+  }
+  if (document.HasMember("dequanti_file"))
+  {
+    dequanti_file = document["dequanti_file"].GetString();
+  }
+  if (document.HasMember("dnn_Parser")) {
+    std::string str_parser = document["dnn_Parser"].GetString();
     if ("yolov2" == str_parser) {
       parser = dnnParsers::YOLOV2_PARSER;
     } else if ("yolov3" == str_parser) {
@@ -601,10 +654,21 @@ int DnnExampleNode::DnnParserInit() {
       parser = dnnParsers::YOLOV5_PARSER;
     } else if ("kps_parser" == str_parser) {
       parser = dnnParsers::FASTERRCNN_PARSER;
+    } else if ("classification" == str_parser) {
+      parser = dnnParsers::CLASSIFICATION_PARSER;
+    } else if ("ssd" == str_parser) {
+      parser = dnnParsers::SSD_PARSER;
+    } else if ("efficient_det" == str_parser) {
+      parser = dnnParsers::EFFICIENTDET_PARSER;
+    } else if ("fcos" == str_parser) {
+      parser = dnnParsers::FCOS_PARSER;
+    } else if ("unet" == str_parser) {
+      parser = dnnParsers::UNET_PARSER;
     } else {
       std::stringstream ss;
       ss << "Error!Invalid parser: " << str_parser
-         << " . Only yolov2, yolov3, yolov5, kps_parser are supported";
+         << " . Only yolov2, yolov3, yolov5, kps_parser, ssd, fcos"
+         << " efficient_det, classification, unet are supported";
       RCLCPP_ERROR(rclcpp::get_logger("example"), "%s", ss.str().c_str());
       return -3;
     }

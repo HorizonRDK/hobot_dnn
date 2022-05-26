@@ -29,54 +29,10 @@ std::shared_ptr<NV12PyramidInput> ImageUtils::GetNV12Pyramid(
                           scaled_img_width,
                           original_img_height,
                           original_img_width);
-  } else if (ImageType::NV12 == image_type) {
-    std::shared_ptr<NV12PyramidInput> pyramid = nullptr;
-    std::ifstream ifs(image_file, std::ios::in | std::ios::binary);
-    if (!ifs) {
-      return pyramid;
-    }
-    ifs.seekg(0, std::ios::end);
-    int len = ifs.tellg();
-    ifs.seekg(0, std::ios::beg);
-    char *data = new char[len];
-    ifs.read(data, len);
-
-    int y_img_len = len / 3 * 2;
-    int uv_img_len = len / 3;
-
-    auto *y = new hbSysMem;
-    auto *uv = new hbSysMem;
-
-    auto w_stride = ALIGN_16(scaled_img_width);
-    hbSysAllocCachedMem(y, scaled_img_height * w_stride);
-    hbSysAllocCachedMem(uv, scaled_img_height / 2 * w_stride);
-
-    memcpy(reinterpret_cast<uint8_t *>(y->virAddr), data, y_img_len);
-    memcpy(
-        reinterpret_cast<uint8_t *>(uv->virAddr), data + y_img_len, uv_img_len);
-
-    hbSysFlushMem(y, HB_SYS_MEM_CACHE_CLEAN);
-    hbSysFlushMem(uv, HB_SYS_MEM_CACHE_CLEAN);
-    auto pym_in = new NV12PyramidInput;
-    pym_in->width = scaled_img_width;
-    pym_in->height = scaled_img_height;
-    pym_in->y_vir_addr = y->virAddr;
-    pym_in->y_phy_addr = y->phyAddr;
-    pym_in->y_stride = w_stride;
-    pym_in->uv_vir_addr = uv->virAddr;
-    pym_in->uv_phy_addr = uv->phyAddr;
-    pym_in->uv_stride = w_stride;
-    pyramid = std::shared_ptr<NV12PyramidInput>(
-        pym_in, [y, uv](NV12PyramidInput *pym_in) {
-          // Release memory after deletion
-          hbSysFreeMem(y);
-          hbSysFreeMem(uv);
-          delete y;
-          delete uv;
-          delete pym_in;
-        });
-    return pyramid;
   } else {
+    RCLCPP_ERROR(rclcpp::get_logger("ImageUtils"),
+      "Only BGR is supported!!!");
+    rclcpp::shutdown();
     return nullptr;
   }
 }

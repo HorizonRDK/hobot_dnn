@@ -25,7 +25,7 @@ int Yolov3PostProcess::SetOutParser(Model* model_manage) {
     model_manage->SetOutputParser(i, assist_parser);
   }
 
-  // set yolov5 paser
+  // set yolov3 paser
   auto output_desc = std::make_shared<OutputDescription>(
       model_manage, output_index_, "yolov3_branch");
   for (int i = 0; i < output_index_; ++i) {

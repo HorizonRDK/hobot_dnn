@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Horizon Robotics.All Rights Reserved.
+// Copyright (c) 2021 Horizon Robotics.All Rights Reserved.
 //
 // The material in this file is confidential and contains trade secrets
 // of Horizon Robotics Inc. This is proprietary information owned by
@@ -145,7 +145,7 @@ void Yolo3DarknetOutputParser::PostProcessNHWC(
 
   // int *shape = tensor->data_shape.d;
   int height, width;
-  auto ret = get_tensor_hw(*(tensor.get()), &height, &width);
+  auto ret = get_tensor_hw(tensor, &height, &width);
   if (ret != 0)
   {
     RCLCPP_WARN(rclcpp::get_logger("dnn_ptq_yolo3"), "get_tensor_hw failed");
@@ -226,7 +226,7 @@ void Yolo3DarknetOutputParser::PostProcessNCHW(
       yolo3_config_.anchors_table[layer];
 
   int height, width;
-  auto ret = get_tensor_hw(*(tensor.get()), &height, &width);
+  auto ret = get_tensor_hw(tensor, &height, &width);
   if (ret != 0)
   {
     RCLCPP_WARN(rclcpp::get_logger("dnn_ptq_yolo3"), "get_tensor_hw failed");

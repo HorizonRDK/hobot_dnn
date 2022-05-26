@@ -72,8 +72,9 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 
 1、编译环境确认
 
-- 当前编译终端已设置ROS环境变量：`source /opt/ros/foxy/setup.bash`。
-- 已安装ROS2编译工具colcon。安装的ROS不包含编译工具colcon，需要手动安装colcon。colcon安装命令：`apt update; apt install python3-colcon-common-extensions`
+- 板端已安装X3 Ubuntu系统。
+- 当前编译终端已设置TogetherROS环境变量：`source PATH/setup.bash`。其中PATH为TogetherROS的安装路径。
+- 已安装ROS2编译工具colcon。安装的ROS不包含编译工具colcon，需要手动安装colcon。colcon安装命令：`pip install -U colcon-common-extensions`
 - 已编译dnn node package
 - 已安装cv_bridge package（安装方法见Dependency部分）
 
@@ -86,7 +87,7 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 
 1、编译环境确认
 
-- 在docker中编译，并且docker中已经安装好tros。docker安装、交叉编译说明、tros编译和部署说明详见机器人开发平台robot_dev_config repo中的README.md。
+- 在docker中编译，并且docker中已经安装好TogetherROS。docker安装、交叉编译说明、TogetherROS编译和部署说明详见机器人开发平台robot_dev_config repo中的README.md。
 - 已编译dnn node package
 - 已编译hbm_img_msgs package（编译方法见Dependency部分）
 
@@ -115,14 +116,12 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 # 使用介绍
 
 ## package说明
-  源码包含**dnn_node_example package**，可通过配置文件配置使用dnn_node中内置的后处理算法，dnn_node中目前支持yolov2，yolov3和yolov5等检测模型的后处理算法。
+  源码包含**dnn_node_example package**，可通过配置文件配置使用dnn_node中内置的后处理算法，dnn_node中目前支持"yolov2","yolov3","yolov5","FasterRcnn","mobilenetv2","mobilenet_ssd","efficient_det","fcos","mobilenet_unet"等后处理算法。
 
 ## 依赖
 
-- dnn_node package
-- cv_bridge package
-- sensor_msgs package
-- hbm_img_msgs package
+- mipi_cam package：发布图片msg
+- websocket package：渲染图片和ai感知msg
 
 ## 参数
 
@@ -131,6 +130,8 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 | feed_type | 图片来源，0：本地；1：订阅 | 否      | 0 |            |
 | image      | 本地图片地址     | 否  |   config/test.jpg   |  |
 | image_type | 图片格式，0：bgr，1：nv12 | 否  |  0   |  |
+| image_width | 本地回灌nv12格式图片的宽度 | nv12格式图片必须设置  |  0   |  |
+| image_height | 本地回灌nv12格式图片的高度 | nv12格式图片必须设置  |  0  | |
 | is_sync_mode | 同步或异步模式 0: 异步 1: 同步| 否  |  1  |  |
 | is_shared_mem_sub | 使用shared mem通信方式订阅图片 | 否  |  0   |  |
 | config_file | 配置文件路径 | 否 | "" | 更改配置文件配置不同模型调用不同后处理算法,默认启用fasterrcnn模型后处理|
@@ -139,7 +140,8 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 
 ## 运行
 
-编译成功后，将生成的install路径拷贝到地平线X3开发板上（如果是在X3上编译，忽略拷贝步骤），并执行如下命令运行。
+- dnn_node_example使用到的模型，保存在dnn_benchmark_example/config/runtime/下，运行时需要将runtime文件夹拷贝到dnn_node_example/config中，或在配置文件中重新指定模型路径。
+- 编译成功后，将生成的install路径拷贝到地平线X3开发板上（如果是在X3上编译，忽略拷贝步骤），并执行如下命令运行。
 
 ## X3 Ubuntu系统上运行
 
@@ -149,6 +151,8 @@ source ./install/local_setup.bash
 # config中为example使用的模型，回灌使用的本地图片
 # 根据实际安装路径进行拷贝（docker中的安装路径为install/lib/dnn_node_example/config/，拷贝命令为cp -r install/lib/dnn_node_example/config/ .）。
 cp -r install/dnn_node_example/lib/dnn_node_example/config/ .
+# 将dnn_node_example使用到的模型文件拷贝到config下。
+cp -r PATH/lib/dnn_benchmark_example/config/runtime/ ./config (其中PATH为TogetherROS的安装路径)
 
 # 运行模式1：
 使用本地jpg格式图片通过同步模式进行回灌预测，并存储渲染后的图片
@@ -176,6 +180,9 @@ export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:./install/lib/
 # config中为example使用的模型，回灌使用的本地图片
 cp -r install/lib/dnn_node_example/config/ .
 
+# 将dnn_node_example使用到的模型文件拷贝到config下。
+cp -r PATH/lib/dnn_benchmark_example/config/runtime/ ./config (其中PATH为TogetherROS的安装路径)
+
 # 运行模式1：使用本地jpg格式图片通过同步模式进行回灌预测，并存储渲染后的图片
 ./install/lib/dnn_node_example/example --ros-args -p feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1
 
@@ -189,19 +196,33 @@ cp -r install/lib/dnn_node_example/config/ .
 
 ## 注意事项
 
-config_file配置文件格式为json格式，以yolov5模型配置为例，具体配置如下：
+- config_file配置文件格式为json格式，以yolov5模型配置为例，具体配置如下：
+  {
+    "model_file": "config/yolov5_672x672_nv12.bin",
+    "model_name": "yolov5_672x672_nv12",
+    "dnn_Parser": "yolov5",
+    "model_output_count": 3
+  }
+  "model_file"为模型文件的路径。
+  目前example支持的模型:
+  |         模型名称         |   模型类型 | 模型输出说明 | 渲染效果 |
+  | ------------------------| ------- | ------ | -----------------|
+  | yolov2_608x608_nv12 | 检测模型 | 输出检测到的物体和检测框 | ![image](./render/yolov2.jpeg) |
+  | yolov3_416x416_nv12 | 检测模型 | 输出检测到的物体和检测框 | ![image](./render/yolov3.jpeg) |
+  | yolov5_672x672_nv12 | 检测模型 | 输出检测到的物体和检测框 | ![image](./render/yolov5.jpeg) |
+  | mobilenet_ssd_300x300_nv12 | 检测模型 | 输出检测到的物体和检测框 | |
+  | fcos_512x512_nv12 | 检测模型 | 输出检测到的物体和检测框 | ![image](./render/fcos.jpeg)|
+  | efficient_det_no_dequanti_512x512_nv12|检测模型|输出检测到的物体和检测框| ![image](./render/efficient_det.jpeg)|
+  | multitask_body_kps_960x544.hbm | 检测模型 | 输出检测到body检测框和人体kps指标点| ![image](./render/body_kps.jpeg)|
+  | mobilenetv2_224x224_nv12.bin | 分类模型 | 输出置信度最大的分类结果| |
+  | mobilenet_unet_1024x2048_nv12.bin | 分割模型 | 语义分割，输出每个像素点对应其种类的图像 | ![image](./render/unet.jpeg)|
 
-{
-  "model_file": "config/yolov5_672x672_nv12.bin",
-  "model_name": "yolov5_672x672_nv12",
-  "dnnParser": "yolov5",
-  "model_output_count": 3
-}
+  "model_name"为模型名称
+  "dnn_Parser"设置选择内置的后处理算法，目前支持的配置有"yolov2","yolov3","yolov5","kps","classification","ssd","efficient_det","fcos","unet"。
+  "model_output_count"为模型输出branch个数。
 
-"model_file"为模型文件的路径，目前example支持的模型有yolov2_608x608_nv12.bin，yolov3_416x416_nv12.bin，yolov5_672x672_nv12.bin，multitask_body_kps_960x544.hbm。
-"model_name"为模型名称
-"dnnParser"设置选择内置的后处理算法，目前支持的配置有"yolov2","yolov3","yolov5","kps_parser"。
-"model_output_count"为模型输出branch个数。
+- 分割模型算法暂时只支持本地图片回灌，无web效果展示
+
 
 # 结果分析
 
