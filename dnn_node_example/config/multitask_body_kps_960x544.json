@@ -1,6 +1,6 @@
 {
 	"model_file": "config/multitask_body_kps_960x544.hbm",
     "model_name": "multitask_body_kps_960x544",
-    "dnnParser": "kps_parser",
+    "dnn_Parser": "kps",
     "model_output_count": 3
 }

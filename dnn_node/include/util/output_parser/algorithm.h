@@ -6,8 +6,8 @@
 // reproduced, copied, transmitted, or used in any way for any purpose,
 // without the express written permission of Horizon Robotics Inc.
 
-#ifndef _UTILS_ALGORITHM_H_
-#define _UTILS_ALGORITHM_H_
+#ifndef ALGORITHM_H
+#define ALGORITHM_H
 
 #include <algorithm>
 
@@ -35,4 +35,4 @@ inline size_t argmax(ForwardIterator first, ForwardIterator last) {
   return std::distance(first, std::max_element(first, last));
 }
 
-#endif  // _UTILS_ALGORITHM_H_
+#endif  // ALGORITHM_H

@@ -6,16 +6,17 @@
 // reproduced, copied, transmitted, or used in any way for any purpose,
 // without the express written permission of Horizon Robotics Inc.
 
-#ifndef _UTIL_UTILS_H_
-#define _UTIL_UTILS_H_
+#ifndef _OUTPUT_PARSER_UTILS_H_
+#define _OUTPUT_PARSER_UTILS_H_
 
 #include <string>
 #include <vector>
 #include <memory>
 
-#include "easy_dnn/data_structure.h"
+#include "dnn_node/dnn_node_data.h"
 
-using hobot::easy_dnn::DNNTensor;
+using hobot::dnn_node::DNNTensor;
+
 /**
  *
  * @param[in] tensor
@@ -24,6 +25,30 @@ using hobot::easy_dnn::DNNTensor;
  * @param[out] c_index
  * @return 0f if success
  */
-int get_tensor_hw(DNNTensor &tensor, int *height, int *width);
+int get_tensor_hwc_index(std::shared_ptr<DNNTensor> tensor,
+                         int *h_index,
+                         int *w_index,
+                         int *c_index);
 
-#endif  // _UTIL_UTILS_H_
+/**
+ *
+ * @param[in] tensor
+ * @param[out] h_index
+ * @param[out] w_index
+ * @param[out] c_index
+ * @return 0f if success
+ */
+int get_tensor_hw(std::shared_ptr<DNNTensor> tensor, int *height, int *width);
+
+
+/**
+ *
+ * @param tensor
+ * @param height
+ * @param width
+ * @return
+ */
+int get_tensor_aligned_hw(std::shared_ptr<DNNTensor> tensor,
+                          int *height, int *width);
+
+#endif  // _OUTPUT_PARSER_UTILS_H_

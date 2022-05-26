@@ -59,7 +59,12 @@ typedef enum {
   YOLOV2_PARSER = 0,  // 对应dnn_node中yolov2的output_parser算法
   YOLOV3_PARSER,      // 对应dnn_node中yolov3的output_parser算法
   YOLOV5_PARSER,      // 对应dnn_node中yolov5的output_parser算法
-  FASTERRCNN_PARSER   // 对应dnn_node中fasterRcnn的output_parser算法
+  FASTERRCNN_PARSER,   // 对应dnn_node中fasterRcnn的output_parser算法
+  CLASSIFICATION_PARSER,  // 对应dnn_node中classification的output_parser算法
+  SSD_PARSER,
+  EFFICIENTDET_PARSER,
+  FCOS_PARSER,
+  UNET_PARSER
   /*define more*/
 } dnnParsers;
 
@@ -86,8 +91,10 @@ class DnnExampleNode : public DnnNode {
   int DnnParserInit();
 
   std::string config_file = "";
+  std::string dequanti_file = "";
   int32_t output_index_ = 2;
   dnnParsers parser = dnnParsers::FASTERRCNN_PARSER;
+  std::string cls_name_file;
 
   std::string msg_pub_topic_name_ = "hobot_dnn_detection";
   rclcpp::Publisher<ai_msgs::msg::PerceptionTargets>::SharedPtr msg_publisher_ =
@@ -108,6 +115,8 @@ class DnnExampleNode : public DnnNode {
   std::string image_ = "config/test.jpg";
   // 0: bgr, 1: nv12
   int image_type_ = 0;
+  int image_width = 0;
+  int image_height = 0;
   int dump_render_img_ = 0;
   int is_sync_mode_ = 1;
   // 使用shared mem通信方式订阅图片

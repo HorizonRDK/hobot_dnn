@@ -1,7 +1,7 @@
 {
 	"model_file": "config/runtime/yolov2/yolov2_608x608_nv12.bin",
     "model_name": "yolov2_608x608_nv12",
-    "dnnParser": "yolov2",
+    "dnn_Parser": "yolov2",
     "model_output_count": 1
 }
 

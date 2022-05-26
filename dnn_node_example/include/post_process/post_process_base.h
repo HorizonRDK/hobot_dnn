@@ -41,9 +41,17 @@ class PostProcessBase {
 
   virtual int SetOutParser(Model* model_manage) = 0;
 
+  void SetModelInputWH(const int &width, const int &height)
+  {
+    model_input_height_ = height;
+    model_input_width_ = width;
+  }
+
  protected:
   int32_t model_output_count_ = 3;
   int32_t output_index_ = 2;
+  int model_input_width_ = 0;
+  int model_input_height_ = 0;
 };
 
 #endif  // POST_PROCESS_BASE_H_

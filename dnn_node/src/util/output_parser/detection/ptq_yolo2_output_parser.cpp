@@ -107,7 +107,7 @@ int Yolo2OutputParser::PostProcess(
   std::vector<float> class_pred(num_classes, 0.0);
 
   int height, width;
-  get_tensor_hw(*(tensors[0].get()), &height, &width);
+  get_tensor_hw(tensors[0], &height, &width);
   // int *shape = tensor->data_shape.d;
   for (int h = 0; h < height; h++)
   {
