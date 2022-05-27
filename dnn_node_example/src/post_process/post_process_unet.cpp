@@ -8,22 +8,15 @@
 
 #include "include/post_process/post_process_unet.h"
 #include "include/dnn_example_node.h"
+#include "include/image_utils.h"
 
 #include <unistd.h>
-
 #include <fstream>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 #include <iostream>
-
-#include "rclcpp/rclcpp.hpp"
-#include "opencv2/core/matx.hpp"
-#include "opencv2/core/mat.hpp"
-#include "opencv2/core/core.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/imgproc.hpp"
 
 int UnetPostProcess::SetOutParser(Model* model_manage)
 {
@@ -32,7 +25,6 @@ int UnetPostProcess::SetOutParser(Model* model_manage)
   std::shared_ptr<OutputParser> parser =
       std::make_shared<hobot::dnn_node::UnetOutputParser>();
   model_manage->SetOutputParser(output_index_, parser);
-
   return 0;
 }
 
@@ -51,6 +43,11 @@ UnetPostProcess::PostProcess(
                 "Invalid outputs");
     return nullptr;
   }
+
+  ai_msgs::msg::PerceptionTargets::UniquePtr pub_data(
+      new ai_msgs::msg::PerceptionTargets());
+  ai_msgs::msg::Capture capture;
+
   auto *det_result =
     dynamic_cast<Dnn_Parser_Result *>(outputs[output_index_].get());
   if (!det_result) {
@@ -58,19 +55,46 @@ UnetPostProcess::PostProcess(
                 "invalid cast");
     return 0;
   }
+  this->seg = det_result->perception.seg;
+  if (dump_render_img_)
+  {
+    RenderUnet(node_output);
+  }
+  capture.img.data.resize(seg.seg.size());
+  capture.img.height = seg.height;
+  capture.img.width = seg.width;
+  memcpy(&capture.img.data[0], &(seg.seg[0]), seg.seg.size());
+  ai_msgs::msg::Target target;
+  target.captures.emplace_back(std::move(capture));
+  pub_data->targets.emplace_back(std::move(target));
+  return pub_data;
+}
 
-  uint8_t bgr_putpalette[] = {
-      128, 64,  128, 244, 35,  232, 70,  70,  70,  102, 102, 156, 190, 153, 153,
-      153, 153, 153, 250, 170, 30,  220, 220, 0,   107, 142, 35,  152, 251, 152,
-      0,   130, 180, 220, 20,  60,  255, 0,   0,   0,   0,   142, 0,   0,   70,
-      0,   60,  100, 0,   80,  100, 0,   0,   230, 119, 11,  32};
+int UnetPostProcess::RenderUnet(
+  const std::shared_ptr<DnnNodeOutput>& node_output)
+{
+  static uint8_t bgr_putpalette[] = {
+        128, 64,  128, 244, 35,  232, 70,  70,
+        70,  102, 102, 156, 190, 153, 153,
+        153, 153, 153, 250, 170, 30,  220,
+        220, 0,   107, 142, 35,  152, 251, 152,
+        0,   130, 180, 220, 20,  60,  255, 0,
+        0,   0,   0,   142, 0,   0,   70,
+        0,   60,  100, 0,   80,  100, 0,   0,   230, 119, 11,  32};
 
+  auto dnnExampleOutput =
+    std::dynamic_pointer_cast<DnnExampleOutput>(node_output);
   auto pyramid =
-      std::dynamic_pointer_cast<DnnExampleOutput>(node_output)->pyramid;
+      dnnExampleOutput->pyramid;
   if (!pyramid)
   {
-    return nullptr;
+    RCLCPP_ERROR(rclcpp::get_logger("UnetPostProcess"),
+                 "Invalid pyramid!");
+    return -1;
   }
+  int parsing_width = seg.width;
+  int parsing_height = seg.height;
+
   char *y_img = reinterpret_cast<char *>(pyramid->y_vir_addr);
   char *uv_img = reinterpret_cast<char *>(pyramid->uv_vir_addr);
   auto height = pyramid->height;
@@ -84,10 +108,6 @@ UnetPostProcess::PostProcess(
   cv::Mat mat;  //  get bgr mat from pyramid
   cv::cvtColor(nv12, mat, CV_YUV2BGR_NV12);  //  nv12 to bgr
   delete[] buf;
-
-  auto seg = det_result->perception.seg;
-  int parsing_width = seg.width;
-  int parsing_height = seg.height;
 
   cv::Mat parsing_img(parsing_height, parsing_width, CV_8UC3);
   uint8_t *parsing_img_ptr = parsing_img.ptr<uint8_t>();
@@ -112,11 +132,10 @@ UnetPostProcess::PostProcess(
   cv::Mat dst;
   addWeighted(mat, alpha_f, parsing_img, 1 - alpha_f, 0.0, dst);
   mat = std::move(dst);
-
   std::string saving_path = "render_unet.jpeg";
-  RCLCPP_WARN(rclcpp::get_logger("UnetPostProcess"),
+  RCLCPP_INFO(rclcpp::get_logger("UnetPostProcess"),
               "Draw result to file: %s",
               saving_path.c_str());
   cv::imwrite(saving_path, mat);
-  return nullptr;
+  return 0;
 }

@@ -19,16 +19,16 @@
 
 class ClassificationPostProcess : public PostProcessBase {
  public:
-  explicit ClassificationPostProcess(int32_t model_output_count)
-      : PostProcessBase(model_output_count) {}
+  explicit ClassificationPostProcess(int32_t model_output_count,
+                                     std::string clsNameFile)
+      : PostProcessBase(model_output_count),
+      cls_name_file_(clsNameFile) {}
   ~ClassificationPostProcess() {}
 
   ai_msgs::msg::PerceptionTargets::UniquePtr PostProcess(
       const std::shared_ptr<DnnNodeOutput>& outputs) override;
 
   int SetOutParser(Model* model_manage) override;
-
-  void SetClsNameFile(const std::string &cls_name_file_);
 
  private:
   std::string cls_name_file_;

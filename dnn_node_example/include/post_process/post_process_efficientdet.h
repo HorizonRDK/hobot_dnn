@@ -16,16 +16,16 @@
 
 class EfficientDetPostProcess : public PostProcessBase {
  public:
-  explicit EfficientDetPostProcess(int32_t model_output_count)
-      : PostProcessBase(model_output_count) {}
+  explicit EfficientDetPostProcess(int32_t model_output_count,
+                                    std::string &dequanti_file)
+      : PostProcessBase(model_output_count),
+      dequanti_file_(dequanti_file) {}
   ~EfficientDetPostProcess() {}
 
   int SetOutParser(Model* model_manage) override;
 
-  void SetDequanti_file(const std::string &dequanti_file);
-
  private:
-  std::string dequanti_file_ = "";
+  std::string dequanti_file_;
 };
 
 #endif  // POST_PROCESS_EFFICIENTDET_H_
