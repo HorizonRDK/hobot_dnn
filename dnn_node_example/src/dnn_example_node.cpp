@@ -81,6 +81,8 @@ DnnExampleNode::DnnExampleNode(const std::string &node_name,
 
   msg_publisher_ = this->create_publisher<ai_msgs::msg::PerceptionTargets>(
       msg_pub_topic_name_, 10);
+  unet_publisher_ = this->create_publisher<sensor_msgs::msg::Image>(
+      unet_pub_topic_name_, 10);
 
   if (Init() != 0) {
     RCLCPP_ERROR(rclcpp::get_logger("example"), "Init failed!");
@@ -184,18 +186,13 @@ int DnnExampleNode::SetOutputParser() {
     post_process_ = std::dynamic_pointer_cast<PostProcessBase>(
         std::make_shared<FasterRcnnPostProcess>(model_output_count_));
   } else if (parser == dnnParsers::CLASSIFICATION_PARSER) {
-    auto clsPostProcess =
-        std::make_shared<ClassificationPostProcess>(model_output_count_);
-    clsPostProcess->SetClsNameFile(cls_name_file);
-    post_process_ = std::dynamic_pointer_cast<PostProcessBase>(clsPostProcess);
-  } else if (parser == dnnParsers::EFFICIENTDET_PARSER) {
-    auto efficientdetPostProcess =
-          std::make_shared<EfficientDetPostProcess>(model_output_count_);
-    if (!dequanti_file.empty()) {
-      efficientdetPostProcess->SetDequanti_file(dequanti_file);
-    }
     post_process_ = std::dynamic_pointer_cast<PostProcessBase>(
-      efficientdetPostProcess);
+      std::make_shared<ClassificationPostProcess>(model_output_count_,
+                                                  cls_name_file));
+  } else if (parser == dnnParsers::EFFICIENTDET_PARSER) {
+    post_process_ = std::dynamic_pointer_cast<PostProcessBase>(
+      std::make_shared<EfficientDetPostProcess>(model_output_count_,
+                                                    dequanti_file));
   } else if (parser == dnnParsers::SSD_PARSER) {
     post_process_ = std::dynamic_pointer_cast<PostProcessBase>(
         std::make_shared<SsdPostProcess>(model_output_count_));
@@ -204,7 +201,8 @@ int DnnExampleNode::SetOutputParser() {
         std::make_shared<FcosPostProcess>(model_output_count_));
   } else if (parser == dnnParsers::UNET_PARSER) {
     post_process_ = std::dynamic_pointer_cast<PostProcessBase>(
-        std::make_shared<UnetPostProcess>(model_output_count_));
+        std::make_shared<UnetPostProcess>(model_output_count_,
+                                          dump_render_img_));
   } else {
     return -1;
   }
@@ -223,11 +221,11 @@ int DnnExampleNode::SetOutputParser() {
 }
 
 int DnnExampleNode::PostProcess(
-    const std::shared_ptr<DnnNodeOutput> &node_output) {
+    const std::shared_ptr<DnnNodeOutput> &node_output)
+{
   if (!rclcpp::ok()) {
     return -1;
   }
-
   auto parser_output = std::dynamic_pointer_cast<DnnExampleOutput>(node_output);
   if (parser_output) {
     std::stringstream ss;
@@ -245,6 +243,7 @@ int DnnExampleNode::PostProcess(
   }
 
   auto pub_data = std::move(post_process_->PostProcess(node_output));
+
   if (!pub_data) {
     RCLCPP_ERROR(rclcpp::get_logger("example"), "Invalid pub_data");
     return -1;
@@ -272,12 +271,12 @@ int DnnExampleNode::PostProcess(
       output_tp_ = std::chrono::system_clock::now();
     }
   }
+
   if (smart_fps_ > 0) {
     pub_data->set__fps(smart_fps_);
   }
 
   msg_publisher_->publish(std::move(pub_data));
-
   return 0;
 }
 
@@ -675,6 +674,5 @@ int DnnExampleNode::DnnParserInit() {
   }
 
   model_output_count_ = document["model_output_count"].GetInt();
-
   return 0;
 }

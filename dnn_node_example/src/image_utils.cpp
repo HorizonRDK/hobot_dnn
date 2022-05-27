@@ -286,8 +286,14 @@ int ImageUtils::Render(
   RCLCPP_INFO(rclcpp::get_logger("ImageUtils"),
               "target size: %d",
               ai_msg->targets.size());
+  bool hasRois = false;
   for (size_t idx = 0; idx < ai_msg->targets.size(); idx++) {
     const auto &target = ai_msg->targets.at(idx);
+    if (target.rois.empty())
+    {
+      continue;
+    }
+    hasRois = true;
     RCLCPP_INFO(rclcpp::get_logger("ImageUtils"),
                 "target.rois.size: %d",
                 target.rois.size());
@@ -316,6 +322,10 @@ int ImageUtils::Render(
     }
   }
 
+  if (!hasRois)
+  {
+    return 0;
+  }
   std::string saving_path = "render_" + ai_msg->header.frame_id + "_" +
                             std::to_string(ai_msg->header.stamp.sec) + "_" +
                             std::to_string(ai_msg->header.stamp.nanosec) +

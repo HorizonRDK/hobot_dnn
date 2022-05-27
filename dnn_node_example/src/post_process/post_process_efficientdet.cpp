@@ -51,8 +51,3 @@ int EfficientDetPostProcess::SetOutParser(Model* model_manage)
   model_manage->SetOutputParser(output_index_, parser);
   return 0;
 }
-
-void EfficientDetPostProcess::SetDequanti_file(const std::string &dequanti_file)
-{
-  this->dequanti_file_ = dequanti_file;
-}

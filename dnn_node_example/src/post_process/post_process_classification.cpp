@@ -91,8 +91,3 @@ ClassificationPostProcess::PostProcess(
   }
   return pub_data;
 }
-
-void ClassificationPostProcess::SetClsNameFile(const std::string &clsNameFile)
-{
-  this->cls_name_file_ = clsNameFile;
-}

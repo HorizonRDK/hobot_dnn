@@ -100,6 +100,10 @@ class DnnExampleNode : public DnnNode {
   rclcpp::Publisher<ai_msgs::msg::PerceptionTargets>::SharedPtr msg_publisher_ =
       nullptr;
 
+  std::string unet_pub_topic_name_ = "hobot_dnn_unet";
+  rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr unet_publisher_ =
+      nullptr;
+
  private:
   std::shared_ptr<PostProcessBase> post_process_ = nullptr;
   std::string model_file_name_ = "config/multitask_body_kps_960x544.hbm";
