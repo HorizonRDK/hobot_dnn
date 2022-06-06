@@ -19,10 +19,6 @@
               "type": "golint",
               "include": "(\\.go$)"
         },
-        "python": {
-              "type": "pep8",
-              "include": "(\\.py$)"
-        },
         "c": {
             "type": "cpplint",
             "severity": {

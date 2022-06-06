@@ -344,6 +344,7 @@ int DnnExampleNode::FeedFromLocal() {
   auto inputs = std::vector<std::shared_ptr<DNNInput>>{pyramid};
   auto dnn_output = std::make_shared<DnnExampleOutput>();
   dnn_output->image_name = image_;
+  dnn_output->frame_id = "feedback";
   if (dump_render_img_) {
     dnn_output->pyramid = pyramid;
   }
