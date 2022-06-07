@@ -229,7 +229,7 @@ cp -r PATH/lib/dnn_benchmark_example/config/runtime/ ./config (其中PATH为Toge
   | fcos_512x512_nv12                      | 检测模型 | 输出检测到的物体和检测框                 | ![image](./render/fcos.jpeg)          |
   | efficient_det_no_dequanti_512x512_nv12 | 检测模型 | 输出检测到的物体和检测框                 | ![image](./render/efficient_det.jpeg) |
   | multitask_body_kps_960x544.hbm         | 检测模型 | 输出检测到body检测框和人体kps指标点      | ![image](./render/body_kps.jpeg)      |
-  | mobilenetv2_224x224_nv12.bin           | 分类模型 | 输出置信度最大的分类结果                 |                                       |
+  | mobilenetv2_224x224_nv12.bin           | 分类模型 | 输出置信度最大的分类结果                 | ![image](./render/mobilenetv2.jpeg)   |
   | mobilenet_unet_1024x2048_nv12.bin      | 分割模型 | 语义分割，输出每个像素点对应其种类的图像 | ![image](./render/unet.jpeg)          |
 
   "model_name"为模型名称
