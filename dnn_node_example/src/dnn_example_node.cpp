@@ -525,6 +525,15 @@ void DnnExampleNode::SharedMemImgProcess(
     return;
   }
 
+  std::stringstream ss;
+  ss << "Recved img encoding: "
+     << std::string(reinterpret_cast<const char*>(img_msg->encoding.data()))
+     << ", h: " << img_msg->height << ", w: " << img_msg->width
+     << ", step: " << img_msg->step << ", index: " << img_msg->index
+     << ", stamp: " << img_msg->time_stamp.sec << "_"
+     << img_msg->time_stamp.nanosec << ", data size: " << img_msg->data_size;
+  RCLCPP_INFO(rclcpp::get_logger("example"), "%s", ss.str().c_str());
+
   {
     auto tp_now = std::chrono::system_clock::now();
     std::unique_lock<std::mutex> lk(sub_frame_stat_mtx_);
