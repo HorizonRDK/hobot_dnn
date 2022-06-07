@@ -132,7 +132,12 @@ int UnetPostProcess::RenderUnet(
   cv::Mat dst;
   addWeighted(mat, alpha_f, parsing_img, 1 - alpha_f, 0.0, dst);
   mat = std::move(dst);
-  std::string saving_path = "render_unet.jpeg";
+  std::string saving_path = "render_unet_" +
+        dnnExampleOutput->frame_id +
+        "_" + std::to_string(dnnExampleOutput->stamp.sec) +
+        "_" + std::to_string(dnnExampleOutput->stamp.sec) +
+        ".jpeg";
+
   RCLCPP_INFO(rclcpp::get_logger("UnetPostProcess"),
               "Draw result to file: %s",
               saving_path.c_str());

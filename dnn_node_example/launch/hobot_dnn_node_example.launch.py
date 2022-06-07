@@ -7,20 +7,33 @@ from launch.substitutions import LaunchConfiguration
 def generate_launch_description():
     
     # args that can be set from the command line or a default will be used
-    launch_arg = DeclareLaunchArgument(
+    config_file_launch_arg = DeclareLaunchArgument(
         "config_file", default_value=TextSubstitution(text="config/fcosworkconfig.json")
     )
+    dump_render_launch_arg = DeclareLaunchArgument(
+        "dump_render_img", default_value=TextSubstitution(text="0")
+    )
+    image_width_launch_arg = DeclareLaunchArgument(
+        "image_width", default_value=TextSubstitution(text="960")
+    )
+    image_height_launch_arg = DeclareLaunchArgument(
+        "image_height", default_value=TextSubstitution(text="544")
+    )
+    
     return LaunchDescription([
-        launch_arg,
+        config_file_launch_arg,
+        dump_render_launch_arg,
+        image_width_launch_arg,
+        image_height_launch_arg,
         # 启动图片发布pkg
         Node(
             package='mipi_cam',
             executable='mipi_cam',
             output='screen',
             parameters=[
+                {"image_width": LaunchConfiguration('image_width')},
+                {"image_height": LaunchConfiguration('image_height')},
                 {"out_format": "nv12"},
-                {"image_width": 960},
-                {"image_height": 544},
                 {"io_method": "shared_mem"},
                 {"video_device": "F37"}
             ],
@@ -49,6 +62,7 @@ def generate_launch_description():
             output='screen',
             parameters=[
                 {"config_file": LaunchConfiguration('config_file')},
+                {"dump_render_img": LaunchConfiguration('dump_render_img')},
                 {"feed_type": 1},
                 {"is_sync_mode": 0},
                 {"is_shared_mem_sub": 1},
