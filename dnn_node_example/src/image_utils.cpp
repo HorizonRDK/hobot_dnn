@@ -30,8 +30,7 @@ std::shared_ptr<NV12PyramidInput> ImageUtils::GetNV12Pyramid(
                           original_img_height,
                           original_img_width);
   } else {
-    RCLCPP_ERROR(rclcpp::get_logger("ImageUtils"),
-      "Only BGR is supported!!!");
+    RCLCPP_ERROR(rclcpp::get_logger("ImageUtils"), "Only BGR is supported!!!");
     rclcpp::shutdown();
     return nullptr;
   }
@@ -45,11 +44,39 @@ std::shared_ptr<NV12PyramidInput> ImageUtils::GetNV12Pyramid(
     int &original_img_width) {
   cv::Mat nv12_mat;
   cv::Mat bgr_mat = cv::imread(image_file, cv::IMREAD_COLOR);
-  cv::Mat mat_tmp;
-  mat_tmp.create(scaled_img_height, scaled_img_width, bgr_mat.type());
-  cv::resize(bgr_mat, mat_tmp, mat_tmp.size(), 0, 0);
-  // cv::imwrite("resized_img.jpg", mat_tmp);
-  auto ret = ImageUtils::BGRToNv12(mat_tmp, nv12_mat);
+  original_img_width = bgr_mat.cols;
+  original_img_height = bgr_mat.rows;
+
+  cv::Mat pad_frame;
+  if (original_img_width != scaled_img_width ||
+      original_img_height != scaled_img_height) {
+    pad_frame = cv::Mat(
+        scaled_img_height, scaled_img_width, CV_8UC3, cv::Scalar::all(0));
+    if (original_img_width > scaled_img_width ||
+        original_img_height > scaled_img_height) {
+      float ratio_w = static_cast<float>(original_img_width) /
+                      static_cast<float>(scaled_img_width);
+      float ratio_h = static_cast<float>(original_img_height) /
+                      static_cast<float>(scaled_img_height);
+      float dst_ratio = std::max(ratio_w, ratio_h);
+      uint32_t resized_width =
+          static_cast<float>(original_img_width) / dst_ratio;
+      uint32_t resized_height =
+          static_cast<float>(original_img_height) / dst_ratio;
+      cv::resize(bgr_mat, bgr_mat, cv::Size(resized_width, resized_height));
+      std::cout << ratio_w << " " << ratio_h << "\n";
+    }
+
+    // 复制到目标图像中间
+    bgr_mat.copyTo(pad_frame(cv::Rect((scaled_img_width - bgr_mat.cols) / 2,
+                                      (scaled_img_height - bgr_mat.rows) / 2,
+                                      bgr_mat.cols,
+                                      bgr_mat.rows)));
+  } else {
+    pad_frame = bgr_mat;
+  }
+  // cv::imwrite("resized_img.jpg", pad_frame);
+  auto ret = ImageUtils::BGRToNv12(pad_frame, nv12_mat);
   if (ret) {
     std::cout << "get nv12 image failed " << std::endl;
     return nullptr;
@@ -289,8 +316,7 @@ int ImageUtils::Render(
   bool hasRois = false;
   for (size_t idx = 0; idx < ai_msg->targets.size(); idx++) {
     const auto &target = ai_msg->targets.at(idx);
-    if (target.rois.empty())
-    {
+    if (target.rois.empty()) {
       continue;
     }
     hasRois = true;
@@ -322,8 +348,7 @@ int ImageUtils::Render(
     }
   }
 
-  if (!hasRois)
-  {
+  if (!hasRois) {
     return 0;
   }
   std::string saving_path = "render_" + ai_msg->header.frame_id + "_" +
