@@ -299,7 +299,7 @@ int ImageUtils::Render(
   char *y_img = reinterpret_cast<char *>(pyramid->y_vir_addr);
   char *uv_img = reinterpret_cast<char *>(pyramid->uv_vir_addr);
   auto height = pyramid->height;
-  auto width = pyramid->width;
+  auto width = pyramid->y_stride;
   auto img_y_size = height * width;
   auto img_uv_size = img_y_size / 2;
   char *buf = new char[img_y_size + img_uv_size];
