@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+import time
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
@@ -35,24 +36,32 @@ def generate_launch_description():
     )
 
 
-    # config中模型太大，创建一个软连接
-    # 1. 创建config软连接
+    # 拷贝config中文件
     dnn_node_example_path = os.path.join(
         get_package_prefix('dnn_node_example'),
         "lib/dnn_node_example")
     print("dnn_node_example_path is ", dnn_node_example_path)
-    link_cmd = "ln -s " + dnn_node_example_path + "/config/ config"
-    print("link_cmd is ", link_cmd)
-    os.system(link_cmd)
+    cp_cmd = "cp -r " + dnn_node_example_path + "/config config"
+    print("cp_cmd is ", cp_cmd)
+    os.system(cp_cmd)
 
-    # 2.创建runtime软连接
-    dnn_benchmark_example_path = os.path.join(
-        get_package_prefix('dnn_benchmark_example'),
-        "lib/dnn_benchmark_example")
-    print("dnn_benchmark_example_path is ", dnn_benchmark_example_path)
-    link_cmd = "ln -s " + dnn_benchmark_example_path + "/config/runtime config/runtime"
-    print("link_cmd is ", link_cmd)
-    os.system(link_cmd)
+    # benchmark runtime中模型太大，创建一个软连接
+    if os.access("config/runtime", os.F_OK):
+        print("runtime path is existing")
+    else:
+        print("runtime path is not existing, creat soft link.")
+        # 创建runtime软连接
+        dnn_benchmark_example_path = os.path.join(
+            get_package_prefix('dnn_benchmark_example'),
+            "lib/dnn_benchmark_example")
+        print("dnn_benchmark_example_path is ", dnn_benchmark_example_path)
+        link_cmd = "ln -s " + dnn_benchmark_example_path + "/config/runtime config/runtime"
+        print("link_cmd is ", link_cmd)
+        os.system(link_cmd)
+        # 等待一段时间，避免link生效前被访问
+        time.sleep(0.5)
+        os.system("ls config")
+        os.system("ls config/runtime")
 
 
     # args that can be set from the command line or a default will be used
@@ -81,7 +90,7 @@ def generate_launch_description():
             {"io_method": "shared_mem"},
             {"video_device": "F37"}
         ],
-        arguments=['--ros-args', '--log-level', 'info']
+        arguments=['--ros-args', '--log-level', 'error']
     )
 
     # usb cam图片发布pkg
@@ -93,8 +102,10 @@ def generate_launch_description():
                     {"frame_id": "default_usb_cam"},
                     {"image_height": 480},
                     {"image_width": 640},
+                    {"zero_copy": False},
                     {"video_device": "/dev/video8"}
-                    ]
+                    ],
+        arguments=['--ros-args', '--log-level', 'error']
     )
 
     # jpeg图片编码&发布pkg
