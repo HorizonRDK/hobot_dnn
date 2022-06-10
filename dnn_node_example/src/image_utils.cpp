@@ -321,24 +321,38 @@ int ImageUtils::Render(
     }
     hasRois = true;
     RCLCPP_INFO(rclcpp::get_logger("ImageUtils"),
-                "target.rois.size: %d",
+                "target type: %s, rois.size: %d",
+                target.type.c_str(),
                 target.rois.size());
     auto &color = colors[idx % colors.size()];
     for (const auto &roi : target.rois) {
       RCLCPP_INFO(
-          rclcpp::get_logger("ImageUtils"), "roi.type: %s", roi.type.c_str());
-      RCLCPP_INFO(rclcpp::get_logger("ImageUtils"),
-                  "roi x_offset: %d y_offset: %d width: %d height: %d",
-                  roi.rect.x_offset,
-                  roi.rect.y_offset,
-                  roi.rect.width,
-                  roi.rect.height);
+          rclcpp::get_logger("ImageUtils"),
+          "roi.type: %s, x_offset: %d y_offset: %d width: %d height: %d",
+          roi.type.c_str(),
+          roi.rect.x_offset,
+          roi.rect.y_offset,
+          roi.rect.width,
+          roi.rect.height);
       cv::rectangle(mat,
                     cv::Point(roi.rect.x_offset, roi.rect.y_offset),
                     cv::Point(roi.rect.x_offset + roi.rect.width,
                               roi.rect.y_offset + roi.rect.height),
                     color,
                     3);
+      std::string roi_type = target.type;
+      if (!roi.type.empty()) {
+        roi_type = roi.type;
+      }
+      if (!roi_type.empty()) {
+        cv::putText(mat,
+                    roi_type,
+                    cv::Point2f(roi.rect.x_offset, roi.rect.y_offset - 10),
+                    cv::HersheyFonts::FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    color,
+                    1.5);
+      }
     }
 
     for (const auto &lmk : target.points) {
