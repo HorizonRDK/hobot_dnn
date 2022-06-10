@@ -28,12 +28,13 @@ ros package：
 
 支持在X3 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式，并支持通过编译选项控制编译pkg的依赖和pkg的功能。
 
-### Ubuntu系统上编译
+### X3 Ubuntu系统上编译
 
 1、编译环境确认
 
-- 当前编译终端已设置ROS环境变量：`source /opt/ros/foxy/setup.bash`。
-- 已安装ROS2编译工具colcon。安装的ROS不包含编译工具colcon，需要手动安装colcon。colcon安装命令：`apt update; apt install python3-colcon-common-extensions`
+- 板端已安装X3 Ubuntu系统。
+- 当前编译终端已设置TogetherROS环境变量：`source PATH/setup.bash`。其中PATH为TogetherROS的安装路径。
+- 已安装ROS2编译工具colcon。安装的ROS不包含编译工具colcon，需要手动安装colcon。colcon安装命令：`pip install -U colcon-common-extensions`
 - 已编译dnn node package
 
 2、编译
@@ -44,7 +45,7 @@ ros package：
 
 1、编译环境确认
 
-- 在docker中编译，并且docker中已经安装好tros。docker安装、交叉编译说明、tros编译和部署说明详见机器人开发平台robot_dev_config repo中的README.md。
+- 在docker中编译，并且docker中已经安装好TogetherROS。docker安装、交叉编译说明、TogetherROS编译和部署说明详见机器人开发平台robot_dev_config repo中的README.md。
 - 已编译dnn node package
 
 2、编译
@@ -63,6 +64,13 @@ ros package：
      --no-warn-unused-cli \
      -DCMAKE_TOOLCHAIN_FILE=`pwd`/robot_dev_config/aarch64_toolchainfile.cmake
   ```
+## 注意事项
+
+
+# 使用介绍
+
+## package说明
+  源码包含**dnn_benchmark_example package**，输出指定模型推理过程的帧率fps和单帧延迟latency性能指标。
 
 ## 参数
 
@@ -80,15 +88,15 @@ ros package：
 
 编译成功后，将生成的install路径拷贝到地平线X3开发板上（如果是在X3上编译，忽略拷贝步骤），并执行如下命令运行。
 
-### **Ubuntu**
+## X3 Ubuntu系统上运行
 
 ```
 export COLCON_CURRENT_PREFIX=./install
 source ./install/local_setup.bash
 
 # config中为example使用的模型，输入的配置文件，回灌使用的本地图片
-# 根据实际安装路径进行拷贝（docker中的安装路径为install/lib/dnn_benchmark_example/config/，拷贝命令为cp -r install/dnn_benchmark_example/lib/dnn_benchmark_example/config/ .）。
-cp -r install/dnn_benchmark_example/lib/dnn_benchmark_example/config/ .
+# 根据实际安装路径进行拷贝（docker中的安装路径为install/lib/dnn_benchmark_example/config/，拷贝命令为cp -r install/lib/dnn_benchmark_example/config/ .）。
+cp -r install/lib/dnn_benchmark_example/config/ .
 
 # 运行：使用本地jpg格式图片通过同步模式进行回灌预测，通过日志输出性能指标fps和latency，并设置log级别为warn
 ros2 run dnn_benchmark_example dnn_benchmark_example --ros-args --log-level warn
@@ -101,14 +109,14 @@ dnn_benchmark_example在config/runtime下提供了一些测试模型，在运行
 ros2 run dnn_benchmark_example dnn_benchmark_example --ros-args --log-level warn -p model_file_name:=config/runtime/fcos/fcos_512x512_nv12.bin -p model_name:=fcos_512x512_nv12 -p statistic_cycle:=50
 ```
 
-### **Linux**
+## X3 yocto系统上运行
 
 ```
 export ROS_LOG_DIR=/userdata/
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:./install/lib/
 
 # config中为示例使用的模型，根据实际安装路径进行拷贝
-cp -r install/dnn_benchmark_example/lib/dnn_benchmark_example/config/ .
+cp -r install/lib/dnn_benchmark_example/config/ .
 
 # 运行：使用本地jpg格式图片通过同步模式进行回灌预测，通过日志输出性能指标fps和latency，并设置log级别为warn
 ./install/lib/dnn_benchmark_example/dnn_benchmark_example --ros-args --log-level warn
@@ -143,3 +151,4 @@ echo performance > /sys/devices/system/cpu/cpufreq/policy0/scaling_governor
       "max_cache": 10
     }
 }
+
