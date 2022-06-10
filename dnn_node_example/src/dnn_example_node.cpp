@@ -18,15 +18,15 @@
 #include "dnn_node/dnn_node.h"
 #include "include/image_utils.h"
 #include "include/post_process/post_process_base.h"
+#include "include/post_process/post_process_classification.h"
+#include "include/post_process/post_process_efficientdet.h"
 #include "include/post_process/post_process_fasterrcnn.h"
+#include "include/post_process/post_process_fcos.h"
+#include "include/post_process/post_process_ssd.h"
+#include "include/post_process/post_process_unet.h"
 #include "include/post_process/post_process_yolov2.h"
 #include "include/post_process/post_process_yolov3.h"
 #include "include/post_process/post_process_yolov5.h"
-#include "include/post_process/post_process_classification.h"
-#include "include/post_process/post_process_efficientdet.h"
-#include "include/post_process/post_process_ssd.h"
-#include "include/post_process/post_process_fcos.h"
-#include "include/post_process/post_process_unet.h"
 #include "rapidjson/document.h"
 #include "rapidjson/istreamwrapper.h"
 #include "rapidjson/writer.h"
@@ -64,7 +64,9 @@ DnnExampleNode::DnnExampleNode(const std::string &node_name,
 
   auto ret = DnnParserInit();
   if (0 != ret) {
-    RCLCPP_ERROR(rclcpp::get_logger("example"), "dnn parse init failed!!!");
+    RCLCPP_ERROR(rclcpp::get_logger("example"),
+                 "dnn parse init failed!!! config_file: %s",
+                 config_file.data());
     rclcpp::shutdown();
   }
 
@@ -81,8 +83,8 @@ DnnExampleNode::DnnExampleNode(const std::string &node_name,
 
   msg_publisher_ = this->create_publisher<ai_msgs::msg::PerceptionTargets>(
       msg_pub_topic_name_, 10);
-  unet_publisher_ = this->create_publisher<sensor_msgs::msg::Image>(
-      unet_pub_topic_name_, 10);
+  unet_publisher_ =
+      this->create_publisher<sensor_msgs::msg::Image>(unet_pub_topic_name_, 10);
 
   if (Init() != 0) {
     RCLCPP_ERROR(rclcpp::get_logger("example"), "Init failed!");
@@ -187,12 +189,12 @@ int DnnExampleNode::SetOutputParser() {
         std::make_shared<FasterRcnnPostProcess>(model_output_count_));
   } else if (parser == dnnParsers::CLASSIFICATION_PARSER) {
     post_process_ = std::dynamic_pointer_cast<PostProcessBase>(
-      std::make_shared<ClassificationPostProcess>(model_output_count_,
-                                                  cls_name_file));
+        std::make_shared<ClassificationPostProcess>(model_output_count_,
+                                                    cls_name_file));
   } else if (parser == dnnParsers::EFFICIENTDET_PARSER) {
     post_process_ = std::dynamic_pointer_cast<PostProcessBase>(
-      std::make_shared<EfficientDetPostProcess>(model_output_count_,
-                                                    dequanti_file));
+        std::make_shared<EfficientDetPostProcess>(model_output_count_,
+                                                  dequanti_file));
   } else if (parser == dnnParsers::SSD_PARSER) {
     post_process_ = std::dynamic_pointer_cast<PostProcessBase>(
         std::make_shared<SsdPostProcess>(model_output_count_));
@@ -221,8 +223,7 @@ int DnnExampleNode::SetOutputParser() {
 }
 
 int DnnExampleNode::PostProcess(
-    const std::shared_ptr<DnnNodeOutput> &node_output)
-{
+    const std::shared_ptr<DnnNodeOutput> &node_output) {
   if (!rclcpp::ok()) {
     return -1;
   }
@@ -527,7 +528,7 @@ void DnnExampleNode::SharedMemImgProcess(
 
   std::stringstream ss;
   ss << "Recved img encoding: "
-     << std::string(reinterpret_cast<const char*>(img_msg->encoding.data()))
+     << std::string(reinterpret_cast<const char *>(img_msg->encoding.data()))
      << ", h: " << img_msg->height << ", w: " << img_msg->width
      << ", step: " << img_msg->step << ", index: " << img_msg->index
      << ", stamp: " << img_msg->time_stamp.sec << "_"
@@ -635,7 +636,9 @@ int DnnExampleNode::DnnParserInit() {
   rapidjson::Document document;
   document.ParseStream(isw);
   if (document.HasParseError()) {
-    RCLCPP_ERROR(rclcpp::get_logger("example"), "Parsing config file failed");
+    RCLCPP_ERROR(rclcpp::get_logger("example"),
+                 "Parsing config file %s failed",
+                 config_file.data());
     return -1;
   }
 
@@ -645,12 +648,10 @@ int DnnExampleNode::DnnParserInit() {
   if (document.HasMember("model_name")) {
     model_name_ = document["model_name"].GetString();
   }
-  if (document.HasMember("cls_names_list"))
-  {
+  if (document.HasMember("cls_names_list")) {
     cls_name_file = document["cls_names_list"].GetString();
   }
-  if (document.HasMember("dequanti_file"))
-  {
+  if (document.HasMember("dequanti_file")) {
     dequanti_file = document["dequanti_file"].GetString();
   }
   if (document.HasMember("dnn_Parser")) {
