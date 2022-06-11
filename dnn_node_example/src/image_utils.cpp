@@ -53,15 +53,16 @@ std::shared_ptr<NV12PyramidInput> ImageUtils::GetNV12Pyramid(
   original_img_width = bgr_mat.cols;
   original_img_height = bgr_mat.rows;
 
+  auto w_stride = ALIGN_16(scaled_img_width);
   cv::Mat pad_frame;
-  if (original_img_width != scaled_img_width ||
+  if (original_img_width != w_stride ||
       original_img_height != scaled_img_height) {
     pad_frame = cv::Mat(
-        scaled_img_height, scaled_img_width, CV_8UC3, cv::Scalar::all(0));
-    if (original_img_width > scaled_img_width ||
+        scaled_img_height, w_stride, CV_8UC3, cv::Scalar::all(0));
+    if (original_img_width > w_stride ||
         original_img_height > scaled_img_height) {
       float ratio_w = static_cast<float>(original_img_width) /
-                      static_cast<float>(scaled_img_width);
+                      static_cast<float>(w_stride);
       float ratio_h = static_cast<float>(original_img_height) /
                       static_cast<float>(scaled_img_height);
       float dst_ratio = std::max(ratio_w, ratio_h);
@@ -74,7 +75,7 @@ std::shared_ptr<NV12PyramidInput> ImageUtils::GetNV12Pyramid(
     }
 
     // 复制到目标图像中间
-    bgr_mat.copyTo(pad_frame(cv::Rect((scaled_img_width - bgr_mat.cols) / 2,
+    bgr_mat.copyTo(pad_frame(cv::Rect((w_stride - bgr_mat.cols) / 2,
                                       (scaled_img_height - bgr_mat.rows) / 2,
                                       bgr_mat.cols,
                                       bgr_mat.rows)));
@@ -93,7 +94,6 @@ std::shared_ptr<NV12PyramidInput> ImageUtils::GetNV12Pyramid(
   auto *y = new hbSysMem;
   auto *uv = new hbSysMem;
 
-  auto w_stride = ALIGN_16(scaled_img_width);
   hbSysAllocCachedMem(y, scaled_img_height * w_stride);
   hbSysAllocCachedMem(uv, scaled_img_height / 2 * w_stride);
 
@@ -104,16 +104,16 @@ std::shared_ptr<NV12PyramidInput> ImageUtils::GetNV12Pyramid(
   // padding y
   for (int h = 0; h < scaled_img_height; ++h) {
     auto *raw = hb_y_addr + h * w_stride;
-    for (int w = 0; w < scaled_img_width; ++w) {
+    for (int w = 0; w < w_stride; ++w) {
       *raw++ = *data++;
     }
   }
 
   // padding uv
-  auto uv_data = nv12_mat.data + scaled_img_height * scaled_img_width;
+  auto uv_data = nv12_mat.data + scaled_img_height * w_stride;
   for (int32_t h = 0; h < scaled_img_height / 2; ++h) {
     auto *raw = hb_uv_addr + h * w_stride;
-    for (int32_t w = 0; w < scaled_img_width; ++w) {
+    for (int32_t w = 0; w < w_stride; ++w) {
       *raw++ = *uv_data++;
     }
   }
@@ -121,7 +121,7 @@ std::shared_ptr<NV12PyramidInput> ImageUtils::GetNV12Pyramid(
   hbSysFlushMem(y, HB_SYS_MEM_CACHE_CLEAN);
   hbSysFlushMem(uv, HB_SYS_MEM_CACHE_CLEAN);
   auto pyramid = new NV12PyramidInput;
-  pyramid->width = scaled_img_width;
+  pyramid->width = w_stride;
   pyramid->height = scaled_img_height;
   pyramid->y_vir_addr = y->virAddr;
   pyramid->y_phy_addr = y->phyAddr;

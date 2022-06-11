@@ -38,7 +38,7 @@ def generate_launch_description():
         get_package_prefix('dnn_node_example'),
         "lib/dnn_node_example")
     print("dnn_node_example_path is ", dnn_node_example_path)
-    cp_cmd = "cp -r " + dnn_node_example_path + "/config config"
+    cp_cmd = "cp -r " + dnn_node_example_path + "/config ."
     print("cp_cmd is ", cp_cmd)
     os.system(cp_cmd)
 
