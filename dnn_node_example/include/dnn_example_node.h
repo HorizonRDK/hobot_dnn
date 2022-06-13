@@ -62,10 +62,10 @@ enum class DnnFeedType {
 };
 
 typedef enum {
-  YOLOV2_PARSER = 0,  // 对应dnn_node中yolov2的output_parser算法
-  YOLOV3_PARSER,      // 对应dnn_node中yolov3的output_parser算法
-  YOLOV5_PARSER,      // 对应dnn_node中yolov5的output_parser算法
-  FASTERRCNN_PARSER,   // 对应dnn_node中fasterRcnn的output_parser算法
+  YOLOV2_PARSER = 0,      // 对应dnn_node中yolov2的output_parser算法
+  YOLOV3_PARSER,          // 对应dnn_node中yolov3的output_parser算法
+  YOLOV5_PARSER,          // 对应dnn_node中yolov5的output_parser算法
+  FASTERRCNN_PARSER,      // 对应dnn_node中fasterRcnn的output_parser算法
   CLASSIFICATION_PARSER,  // 对应dnn_node中classification的output_parser算法
   SSD_PARSER,
   EFFICIENTDET_PARSER,
@@ -132,7 +132,8 @@ class DnnExampleNode : public DnnNode {
   // 使用shared mem通信方式订阅图片
   int is_shared_mem_sub_ = 0;
 
-  std::chrono::high_resolution_clock::time_point output_tp_;
+  std::shared_ptr<std::chrono::high_resolution_clock::time_point> output_tp_ =
+      nullptr;
   int output_frameCount_ = 0;
   int smart_fps_ = -1;
   std::mutex frame_stat_mtx_;
@@ -158,7 +159,9 @@ class DnnExampleNode : public DnnNode {
   std::string ros_img_topic_name_ = "/image_raw";
   void RosImgProcess(const sensor_msgs::msg::Image::ConstSharedPtr msg);
 
-  std::chrono::high_resolution_clock::time_point sub_img_tp_;
+  std::shared_ptr<std::chrono::high_resolution_clock::time_point> sub_img_tp_ =
+      nullptr;
+
   int sub_img_frameCount_ = 0;
   std::mutex sub_frame_stat_mtx_;
 };
