@@ -107,6 +107,10 @@ DnnExampleNode::DnnExampleNode(const std::string &node_name,
     post_process_->SetModelInputWH(model_input_width_, model_input_height_);
   }
 
+  RCLCPP_WARN(rclcpp::get_logger("example"),
+              "Create ai msg publisher with topic_name: %s",
+              msg_pub_topic_name_.c_str());
+
   if (static_cast<int>(DnnFeedType::FROM_LOCAL) == feed_type_) {
     RCLCPP_INFO(rclcpp::get_logger("example"),
                 "Dnn node feed with local image: %s",
@@ -119,7 +123,7 @@ DnnExampleNode::DnnExampleNode(const std::string &node_name,
     if (is_shared_mem_sub_) {
 #ifdef SHARED_MEM_ENABLED
       RCLCPP_WARN(rclcpp::get_logger("example"),
-                  "Create hbmem_subscription with topic_name: %s",
+                  "Create img hbmem_subscription with topic_name: %s",
                   sharedmem_img_topic_name_.c_str());
       sharedmem_img_subscription_ =
           this->create_subscription_hbmem<hbm_img_msgs::msg::HbmMsg1080P>(
@@ -133,7 +137,7 @@ DnnExampleNode::DnnExampleNode(const std::string &node_name,
 #endif
     } else {
       RCLCPP_WARN(rclcpp::get_logger("example"),
-                  "Create subscription with topic_name: %s",
+                  "Create img subscription with topic_name: %s",
                   ros_img_topic_name_.c_str());
       ros_img_subscription_ =
           this->create_subscription<sensor_msgs::msg::Image>(
@@ -264,18 +268,25 @@ int DnnExampleNode::PostProcess(
   }
 
   {
-    auto tp_now = std::chrono::system_clock::now();
     std::unique_lock<std::mutex> lk(frame_stat_mtx_);
+    if (!output_tp_) {
+      output_tp_ =
+          std::make_shared<std::chrono::high_resolution_clock::time_point>();
+      *output_tp_ = std::chrono::system_clock::now();
+    }
+    auto tp_now = std::chrono::system_clock::now();
     output_frameCount_++;
     auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(
-                        tp_now - output_tp_)
+                        tp_now - *output_tp_)
                         .count();
     if (interval >= 1000) {
-      RCLCPP_WARN(
-          rclcpp::get_logger("example"), "Smart fps = %d", output_frameCount_);
-      smart_fps_ = output_frameCount_;
+      float out_fps = static_cast<float>(output_frameCount_) /
+                      (static_cast<float>(interval) / 1000.0);
+      RCLCPP_WARN(rclcpp::get_logger("example"), "Smart fps %.2f", out_fps);
+
+      smart_fps_ = round(out_fps);
       output_frameCount_ = 0;
-      output_tp_ = std::chrono::system_clock::now();
+      *output_tp_ = std::chrono::system_clock::now();
     }
   }
 
@@ -378,18 +389,26 @@ void DnnExampleNode::RosImgProcess(
   }
 
   {
-    auto tp_now = std::chrono::system_clock::now();
     std::unique_lock<std::mutex> lk(sub_frame_stat_mtx_);
+    if (!sub_img_tp_) {
+      sub_img_tp_ =
+          std::make_shared<std::chrono::high_resolution_clock::time_point>();
+      *sub_img_tp_ = std::chrono::system_clock::now();
+    }
+    auto tp_now = std::chrono::system_clock::now();
+
     sub_img_frameCount_++;
     auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(
-                        tp_now - sub_img_tp_)
+                        tp_now - *sub_img_tp_)
                         .count();
     if (interval >= 1000) {
       RCLCPP_WARN(rclcpp::get_logger("img_sub"),
-                  "Sub img fps = %d",
-                  sub_img_frameCount_);
+                  "Sub img fps %.2f",
+                  static_cast<float>(sub_img_frameCount_) /
+                      (static_cast<float>(interval) / 1000.0));
+
       sub_img_frameCount_ = 0;
-      sub_img_tp_ = std::chrono::system_clock::now();
+      *sub_img_tp_ = std::chrono::system_clock::now();
     }
   }
 
@@ -542,21 +561,28 @@ void DnnExampleNode::SharedMemImgProcess(
   RCLCPP_INFO(rclcpp::get_logger("example"), "%s", ss.str().c_str());
 
   {
-    auto tp_now = std::chrono::system_clock::now();
     std::unique_lock<std::mutex> lk(sub_frame_stat_mtx_);
+    if (!sub_img_tp_) {
+      sub_img_tp_ =
+          std::make_shared<std::chrono::high_resolution_clock::time_point>();
+      *sub_img_tp_ = std::chrono::system_clock::now();
+    }
+    auto tp_now = std::chrono::system_clock::now();
+
     sub_img_frameCount_++;
     auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(
-                        tp_now - sub_img_tp_)
+                        tp_now - *sub_img_tp_)
                         .count();
     if (interval >= 1000) {
       RCLCPP_WARN(rclcpp::get_logger("img_sub"),
-                  "Sub img fps = %d",
-                  sub_img_frameCount_);
+                  "Sub img fps %.2f",
+                  static_cast<float>(sub_img_frameCount_) /
+                      (static_cast<float>(interval) / 1000.0));
+
       sub_img_frameCount_ = 0;
-      sub_img_tp_ = std::chrono::system_clock::now();
+      *sub_img_tp_ = std::chrono::system_clock::now();
     }
   }
-
   // dump recved img msg
   // std::ofstream ofs("img_" + std::to_string(img_msg->index) + "." +
   // std::string(reinterpret_cast<const char*>(img_msg->encoding.data())));

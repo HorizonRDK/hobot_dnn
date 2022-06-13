@@ -155,7 +155,7 @@ def generate_launch_description():
             {"is_shared_mem_sub": 1},
             {"msg_pub_topic_name": "hobot_dnn_detection"}
         ],
-        arguments=['--ros-args', '--log-level', 'info']
+        arguments=['--ros-args', '--log-level', 'warn']
     )
 
     # web展示pkg
