@@ -351,14 +351,20 @@ int DnnExampleNode::PostProcess(
   return 0;
 }
 
-int DnnExampleNode::Predict(std::vector<std::shared_ptr<DNNInput>> &inputs,
-                            const std::shared_ptr<std::vector<hbDNNRoi>> rois,
-                            std::shared_ptr<DnnNodeOutput> dnn_output) {
+int DnnExampleNode::Predict(
+    std::vector<std::shared_ptr<DNNInput>> &inputs,
+    std::vector<std::shared_ptr<OutputDescription>> &output_descs,
+    const std::shared_ptr<std::vector<hbDNNRoi>> rois,
+    std::shared_ptr<DnnNodeOutput> dnn_output) {
   RCLCPP_INFO(rclcpp::get_logger("example"),
               "task_num: %d",
               dnn_node_para_ptr_->task_num);
 
-  return Run(inputs, dnn_output, rois, is_sync_mode_ == 1 ? true : false);
+  return Run(inputs,
+             output_descs,
+             dnn_output,
+             rois,
+             is_sync_mode_ == 1 ? true : false);
 }
 
 int DnnExampleNode::FeedFromLocal() {
@@ -366,6 +372,19 @@ int DnnExampleNode::FeedFromLocal() {
     RCLCPP_ERROR(
         rclcpp::get_logger("example"), "Image: %s not exist!", image_.c_str());
     return -1;
+  }
+
+  std::vector<std::shared_ptr<OutputDescription>> output_descs{};
+  if (parser == dnnParsers::UNET_PARSER) {
+    RCLCPP_INFO(rclcpp::get_logger("example"), "Set unet model valid size!!!");
+    auto model_manage = GetModel();
+    auto unet_output_desc =
+        std::make_shared<hobot::dnn_node::UnetOutputDescription>(
+            model_manage, 0, "unet_branch");
+    unet_output_desc->parse_render = dump_render_img_;
+    auto output_desc =
+        std::dynamic_pointer_cast<OutputDescription>(unet_output_desc);
+    output_descs.push_back(output_desc);
   }
 
   // 1. 将图片处理成模型输入数据类型DNNInput
@@ -421,7 +440,7 @@ int DnnExampleNode::FeedFromLocal() {
   }
   uint32_t ret = 0;
   // 3. 开始预测
-  ret = Predict(inputs, nullptr, dnn_output);
+  ret = Predict(inputs, output_descs, nullptr, dnn_output);
   // 4. 处理预测结果，如渲染到图片或者发布预测结果
   if (ret != 0) {
     RCLCPP_ERROR(rclcpp::get_logger("example"), "Run predict failed!");
@@ -450,6 +469,22 @@ void DnnExampleNode::RosImgProcess(
      << img_msg->header.stamp.nanosec
      << ", data size: " << img_msg->data.size();
   RCLCPP_INFO(rclcpp::get_logger("example"), "%s", ss.str().c_str());
+
+  std::vector<std::shared_ptr<OutputDescription>> output_descs{};
+
+  if (parser == dnnParsers::UNET_PARSER) {
+    RCLCPP_INFO(rclcpp::get_logger("example"), "Set unet model valid size!!!");
+    auto model_manage = GetModel();
+    auto unet_output_desc =
+        std::make_shared<hobot::dnn_node::UnetOutputDescription>(
+            model_manage, 0, "unet_branch");
+    unet_output_desc->valid_w = img_msg->width;
+    unet_output_desc->valid_h = img_msg->height;
+    unet_output_desc->parse_render = dump_render_img_;
+    auto output_desc =
+        std::dynamic_pointer_cast<OutputDescription>(unet_output_desc);
+    output_descs.push_back(output_desc);
+  }
 
   // dump recved img msg
   // std::ofstream ofs("img_" + img_msg->header.frame_id +
@@ -551,7 +586,7 @@ void DnnExampleNode::RosImgProcess(
 
   uint32_t ret = 0;
   // 3. 开始预测
-  ret = Predict(inputs, nullptr, dnn_output);
+  ret = Predict(inputs, output_descs, nullptr, dnn_output);
 
   {
     auto tp_now = std::chrono::system_clock::now();
@@ -591,6 +626,22 @@ void DnnExampleNode::SharedMemImgProcess(
      << ", stamp: " << img_msg->time_stamp.sec << "_"
      << img_msg->time_stamp.nanosec << ", data size: " << img_msg->data_size;
   RCLCPP_INFO(rclcpp::get_logger("example"), "%s", ss.str().c_str());
+
+  std::vector<std::shared_ptr<OutputDescription>> output_descs{};
+
+  if (parser == dnnParsers::UNET_PARSER) {
+    RCLCPP_INFO(rclcpp::get_logger("example"), "Set unet model valid size!!!");
+    auto model_manage = GetModel();
+    auto unet_output_desc =
+        std::make_shared<hobot::dnn_node::UnetOutputDescription>(
+            model_manage, 0, "unet_branch");
+    unet_output_desc->valid_w = img_msg->width;
+    unet_output_desc->valid_h = img_msg->height;
+    unet_output_desc->parse_render = dump_render_img_;
+    auto output_desc =
+        std::dynamic_pointer_cast<OutputDescription>(unet_output_desc);
+    output_descs.push_back(output_desc);
+  }
 
   auto tp_start = std::chrono::system_clock::now();
 
@@ -647,7 +698,7 @@ void DnnExampleNode::SharedMemImgProcess(
 
   uint32_t ret = 0;
   // 3. 开始预测
-  ret = Predict(inputs, nullptr, dnn_output);
+  ret = Predict(inputs, output_descs, nullptr, dnn_output);
 
   {
     auto tp_now = std::chrono::system_clock::now();

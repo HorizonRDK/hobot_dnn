@@ -13,9 +13,10 @@
 // limitations under the License.
 
 #include "util/output_parser/segmentation/ptq_unet_output_parser.h"
-#include "rclcpp/rclcpp.hpp"
+
 #include <queue>
 
+#include "rclcpp/rclcpp.hpp"
 #include "util/output_parser/algorithm.h"
 #include "util/output_parser/utils.h"
 
@@ -23,21 +24,40 @@ namespace hobot {
 namespace dnn_node {
 
 int32_t UnetOutputParser::Parse(
-      std::shared_ptr<DNNResult>& output,
-      std::vector<std::shared_ptr<InputDescription>>& input_descriptions,
-      std::shared_ptr<OutputDescription>& output_description,
-      std::shared_ptr<DNNTensor>& output_tensor)
-{
-  if (!output_tensor)
-  {
+    std::shared_ptr<DNNResult>& output,
+    std::vector<std::shared_ptr<InputDescription>>& input_descriptions,
+    std::shared_ptr<OutputDescription>& output_description,
+    std::shared_ptr<DNNTensor>& output_tensor) {
+  if (!output_tensor) {
     RCLCPP_ERROR(rclcpp::get_logger("UnetOutputParser"),
                  "output_tensor invalid cast");
     return -1;
   }
 
+  if (!input_descriptions.empty()) {
+    RCLCPP_DEBUG(rclcpp::get_logger("UnetOutputParser"),
+                 "empty input_descriptions");
+  }
+
+  auto unet_output_desc =
+      std::dynamic_pointer_cast<UnetOutputDescription>(output_description);
+  if (unet_output_desc) {
+    valid_h = unet_output_desc->valid_h;
+    valid_w = unet_output_desc->valid_w;
+    parser_render = unet_output_desc->parse_render;
+    RCLCPP_INFO(rclcpp::get_logger("UnetOutputParser"),
+                "valid_w: %d valid_h: %d isdump: %d",
+                valid_w,
+                valid_h,
+                parser_render);
+  } else {
+    RCLCPP_ERROR(rclcpp::get_logger("UnetOutputParser"),
+                 "output_description invalid cast");
+    return -1;
+  }
+
   std::shared_ptr<Dnn_Parser_Result> result;
-  if (!output)
-  {
+  if (!output) {
     result = std::make_shared<Dnn_Parser_Result>();
     output = result;
   } else {
@@ -45,26 +65,27 @@ int32_t UnetOutputParser::Parse(
   }
 
   auto depend_output_tensors =
-          std::vector<std::shared_ptr<DNNTensor>>{output_tensor};
+      std::vector<std::shared_ptr<DNNTensor>>{output_tensor};
 
-  int ret = PostProcess(depend_output_tensors, result->perception);
-  if (ret != 0)
-  {
+  int ret = 0;
+  PostProcess(depend_output_tensors, result->perception);
+  if (1 == parser_render) {
+    ParseRenderPostProcess(depend_output_tensors, result->perception);
+  }
+  if (ret != 0) {
     RCLCPP_INFO(rclcpp::get_logger("UnetOutputParser"),
-                "postprocess return error, code = %d", ret);
+                "postprocess return error, code = %d",
+                ret);
   }
   std::stringstream ss;
   ss << "UnetOutputParser parse finished, predict result: "
-      << result->perception;
-  RCLCPP_DEBUG(rclcpp::get_logger("UnetOutputParser"),
-              "%s", ss.str().c_str());
+     << result->perception;
+  RCLCPP_DEBUG(rclcpp::get_logger("UnetOutputParser"), "%s", ss.str().c_str());
   return ret;
 }
 
 int UnetOutputParser::PostProcess(
-  std::vector<std::shared_ptr<DNNTensor>> &tensors,
-  Perception &perception)
-{
+    std::vector<std::shared_ptr<DNNTensor>>& tensors, Perception& perception) {
   perception.type = Perception::SEG;
   hbSysFlushMem(&(tensors[0]->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
 
@@ -76,27 +97,62 @@ int UnetOutputParser::PostProcess(
   int channel = tensors[0]->properties.validShape.dimensionSize[c_index];
 
   RCLCPP_DEBUG(rclcpp::get_logger("UnetOutputParser"),
-              "PostProcess width: %d height: %d channel: %d",
-              width, height, channel);
+               "PostProcess width: %d height: %d channel: %d",
+               width,
+               height,
+               channel);
 
-  float *data = reinterpret_cast<float *>(tensors[0]->sysMem[0].virAddr);
+  float* data = reinterpret_cast<float*>(tensors[0]->sysMem[0].virAddr);
+  int parse_valid_h = valid_h / 4;
+  int parse_valid_w = valid_w / 4;
+  perception.seg.data.resize(parse_valid_h * parse_valid_w * channel);
+  perception.seg.valid_w = parse_valid_w;
+  perception.seg.valid_h = parse_valid_h;
+  perception.seg.channel = channel;
+  perception.seg.num_classes = num_classes_;
+
+  for (int h = 0; h < parse_valid_h; h++) {
+    auto index = h * parse_valid_w * channel;
+    auto* dst = &perception.seg.data[index];
+    auto* src = data + h * width * channel;
+    memcpy(dst, src, parse_valid_w * channel * sizeof(float));
+  }
+
+  return 0;
+}
+
+int UnetOutputParser::ParseRenderPostProcess(
+    std::vector<std::shared_ptr<DNNTensor>>& tensors, Perception& perception) {
+  perception.type = Perception::SEG;
+  hbSysFlushMem(&(tensors[0]->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
+
+  // get shape
+  int h_index, w_index, c_index;
+  get_tensor_hwc_index(tensors[0], &h_index, &w_index, &c_index);
+  int height = tensors[0]->properties.validShape.dimensionSize[h_index];
+  int width = tensors[0]->properties.validShape.dimensionSize[w_index];
+  int channel = tensors[0]->properties.validShape.dimensionSize[c_index];
+
+  RCLCPP_DEBUG(rclcpp::get_logger("UnetOutputParser"),
+               "PostProcess width: %d height: %d channel: %d",
+               width,
+               height,
+               channel);
+
+  float* data = reinterpret_cast<float*>(tensors[0]->sysMem[0].virAddr);
   perception.seg.seg.resize(height * width);
   perception.seg.width = width;
   perception.seg.height = height;
+  perception.seg.channel = channel;
   perception.seg.num_classes = num_classes_;
 
-  // argmax, operate in NHWC format
-  for (int h = 0; h < height; ++h)
-  {
-    for (int w = 0; w < width; ++w)
-    {
+  for (int h = 0; h < height; ++h) {
+    for (int w = 0; w < width; ++w) {
       float top_score = -1000000.0f;
       int top_index = 0;
-      float *c_data = data + (width * h + w) * channel;
-      for (int c = 0; c < channel; c++)
-      {
-        if (c_data[c] > top_score)
-        {
+      float* c_data = data + (width * h + w) * channel;
+      for (int c = 0; c < channel; c++) {
+        if (c_data[c] > top_score) {
           top_score = c_data[c];
           top_index = c;
         }

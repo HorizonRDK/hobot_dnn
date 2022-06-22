@@ -18,12 +18,13 @@
 #include <algorithm>
 #include <iomanip>
 #include <iterator>
+#include <memory>
 #include <ostream>
 #include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
-#include <memory>
+
 #include "easy_dnn/data_structure.h"
 
 using hobot::easy_dnn::DNNResult;
@@ -134,9 +135,13 @@ typedef struct Classification {
 
 struct Parsing {
   std::vector<int8_t> seg;
+  std::vector<float> data;
   int32_t num_classes = 0;
   int32_t width = 0;
+  int32_t valid_h = 0;
+  int32_t valid_w = 0;
   int32_t height = 0;
+  int32_t channel = 0;
 };
 
 struct MaskResultInfo {
@@ -209,7 +214,7 @@ struct Perception {
 class Dnn_Parser_Result : public DNNResult {
  public:
   Perception perception;
-  void Reset() override { }
+  void Reset() override {}
 };
 
 #endif  // _OUTPUT_PARSER_PERCEPTION_COMMON_H_

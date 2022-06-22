@@ -136,6 +136,7 @@ class DnnExampleNode : public DnnNode {
   int is_shared_mem_sub_ = 0;
 
   int Predict(std::vector<std::shared_ptr<DNNInput>> &inputs,
+              std::vector<std::shared_ptr<OutputDescription>> &output_descs,
               const std::shared_ptr<std::vector<hbDNNRoi>> rois,
               std::shared_ptr<DnnNodeOutput> dnn_output);
   int FeedFromLocal();

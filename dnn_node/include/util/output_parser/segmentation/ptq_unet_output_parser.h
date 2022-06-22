@@ -15,22 +15,30 @@
 #ifndef _SEGMENTATION_PTQ_UNET_OUTPUT_PARSER_H_
 #define _SEGMENTATION_PTQ_UNET_OUTPUT_PARSER_H_
 
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
-#include <memory>
 
-#include "util/output_parser/perception_common.h"
 #include "dnn/hb_dnn_ext.h"
 #include "dnn_node/dnn_node_data.h"
+#include "util/output_parser/perception_common.h"
 
 namespace hobot {
 namespace dnn_node {
-/**
- * Method for post processing
- */
-class UnetOutputParser : public SingleBranchOutputParser
-{
+
+class UnetOutputDescription : public OutputDescription {
+ public:
+  UnetOutputDescription(Model* mode, int index, std::string type = "")
+      : OutputDescription(mode, index, std::move(type)) {}
+  ~UnetOutputDescription() override = default;
+
+  int valid_w = 0;
+  int valid_h = 0;
+  int parse_render = 0;
+};
+
+class UnetOutputParser : public SingleBranchOutputParser {
  public:
   int32_t Parse(
       std::shared_ptr<DNNResult>& output,
@@ -39,11 +47,18 @@ class UnetOutputParser : public SingleBranchOutputParser
       std::shared_ptr<DNNTensor>& output_tensor) override;
 
  private:
-  int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
-                  Perception &perception);
+  int PostProcess(std::vector<std::shared_ptr<DNNTensor>>& output_tensors,
+                  Perception& perception);
+
+  int ParseRenderPostProcess(
+      std::vector<std::shared_ptr<DNNTensor>>& output_tensors,
+      Perception& perception);
 
  private:
   int num_classes_ = 20;
+  int valid_w = 960;
+  int valid_h = 544;
+  int parser_render = 0;
 };
 
 }  // namespace dnn_node
