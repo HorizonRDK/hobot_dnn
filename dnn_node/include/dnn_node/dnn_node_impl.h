@@ -58,6 +58,19 @@ struct DnnNodeRunTimePara {
   std::condition_variable task_cv;
 };
 
+// 运行时fps统计
+struct DnnNodeRunTimeFpsStat {
+  // 第一帧的时间
+  std::shared_ptr<std::chrono::high_resolution_clock::time_point>
+      last_frame_tp = nullptr;
+  int frame_count = 0;
+  float frame_fps = -1;
+  std::mutex frame_stat_mtx;
+
+  bool Update();
+  float Get();
+};
+
 struct ThreadPool {
   hobot::CThreadPool msg_handle_;
   std::mutex msg_mutex_;
@@ -93,6 +106,7 @@ class DnnNodeImpl {
   int TaskInit();
 
   // 启动推理
+  // is_sync_mode 预测模式，true为同步模式，false为异步模式。
   int Run(
       std::vector<std::shared_ptr<DNNInput>> &dnn_inputs,
       std::vector<std::shared_ptr<DNNTensor>> &tensor_inputs,
@@ -102,6 +116,18 @@ class DnnNodeImpl {
       std::function<int(const std::shared_ptr<DnnNodeOutput> &)> post_process,
       const std::shared_ptr<std::vector<hbDNNRoi>> rois,
       const bool is_sync_mode,
+      const int alloctask_timeout_ms,
+      const int infer_timeout_ms);
+
+  // 推理实现
+  int RunImpl(
+      std::vector<std::shared_ptr<DNNInput>> dnn_inputs,
+      std::vector<std::shared_ptr<DNNTensor>> tensor_inputs,
+      InputType input_type,
+      std::vector<std::shared_ptr<OutputDescription>> output_descs,
+      std::shared_ptr<DnnNodeOutput> output,
+      std::function<int(const std::shared_ptr<DnnNodeOutput> &)> post_process,
+      const std::shared_ptr<std::vector<hbDNNRoi>> rois,
       const int alloctask_timeout_ms,
       const int infer_timeout_ms);
 
@@ -118,20 +144,22 @@ class DnnNodeImpl {
 
   // 执行推理任务
   // - 参数
-  //   - [out] outputs 输出数据智能指针列表，同步模式有效。
-  //   - [in] task_id 预测任务ID。
-  //   - [in] is_sync_mode 预测模式，true为同步模式，false为异步模式。
-  //   - [in] timeout_ms 预测推理超时时间。
+  //   - [in/out] node_output 推理任务输出智能。
+  //   - [in] task_id 推理任务ID。
+  //   - [in] timeout_ms 推理推理超时时间。
   int RunInferTask(
-      std::shared_ptr<DnnNodeOutput> &sync_output,
+      std::shared_ptr<DnnNodeOutput> &node_output,
       const TaskId &task_id,
       std::function<int(const std::shared_ptr<DnnNodeOutput> &)> post_process,
-      const bool is_sync_mode = true,
       const int timeout_ms = 1000);
 
   // 使用通过SetInputs输入给模型的数据进行推理
+  // - 参数
+  //   - [in/out] node_output 推理任务输出智能。
+  //   - [in] task 推理任务。
+  //   - [in] timeout_ms 推理推理超时时间。
   // outputs为模型输出，timeout_ms为推理超时时间
-  int RunInfer(std::vector<std::shared_ptr<DNNResult>> &outputs,
+  int RunInfer(std::shared_ptr<DnnNodeOutput> node_output,
                const std::shared_ptr<Task> &task,
                const int timeout_ms);
 
@@ -149,6 +177,12 @@ class DnnNodeImpl {
   std::shared_ptr<DnnNodePara> dnn_node_para_ptr_ = nullptr;
   std::shared_ptr<DnnNodeRunTimePara> dnn_rt_para_ = nullptr;
   std::shared_ptr<ThreadPool> thread_pool_ = nullptr;
+
+  // 输入的统计
+  // 例如对于订阅图片进行推理的场景，此处统计的输入帧率等于订阅到图片的帧率
+  DnnNodeRunTimeFpsStat input_stat_;
+  // 输出的统计，只统计推理成功（推理+解析模型输出）的帧率
+  DnnNodeRunTimeFpsStat output_stat_;
 };
 
 }  // namespace dnn_node

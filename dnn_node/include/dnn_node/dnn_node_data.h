@@ -98,6 +98,26 @@ struct DnnNodePara {
       output_parsers_;
 };
 
+// 运行时时间统计
+struct DnnNodeRunTimeStat {
+  // 推理统计，包括输入数据给模型、处理输入数据、模型推理、等待推理结束的过程
+  int infer_time_ms = 0;
+  struct timespec infer_timespec_start;
+  struct timespec infer_timespec_end;
+
+  // 解析模型输出统计
+  int parse_time_ms = 0;
+  struct timespec parse_timespec_start;
+  struct timespec parse_timespec_end;
+
+  // 推理输入帧率
+  float input_fps;
+  // 推理成功的输出帧率
+  float output_fps;
+  // 为true表示在当前帧刷新fps
+  bool fps_updated = false;
+};
+
 // 用户可以继承DnnNodeOutput来扩展输出内容
 // 例如增加推理结果对应的图片数据、图片名、时间戳、ID等
 struct DnnNodeOutput {
@@ -105,6 +125,8 @@ struct DnnNodeOutput {
   virtual ~DnnNodeOutput() {}
   // 输出数据智能指针列表
   std::vector<std::shared_ptr<DNNResult>> outputs;
+
+  std::shared_ptr<DnnNodeRunTimeStat> rt_stat = nullptr;
 };
 
 }  // namespace dnn_node

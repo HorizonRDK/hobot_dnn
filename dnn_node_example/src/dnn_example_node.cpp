@@ -42,6 +42,20 @@
 #include <cv_bridge/cv_bridge.h>
 #endif
 
+builtin_interfaces::msg::Time ConvertToRosTime(
+    const struct timespec &time_spec) {
+  builtin_interfaces::msg::Time stamp;
+  stamp.set__sec(time_spec.tv_sec);
+  stamp.set__nanosec(time_spec.tv_nsec);
+  return stamp;
+}
+
+int CalTimeMsDuration(const builtin_interfaces::msg::Time &start,
+                      const builtin_interfaces::msg::Time &end) {
+  return (end.sec - start.sec) * 1000 + end.nanosec / 1000 / 1000 -
+         start.nanosec / 1000 / 1000;
+}
+
 DnnExampleNode::DnnExampleNode(const std::string &node_name,
                                const NodeOptions &options)
     : DnnNode(node_name, options) {
@@ -237,6 +251,10 @@ int DnnExampleNode::PostProcess(
   if (!rclcpp::ok()) {
     return -1;
   }
+
+  struct timespec time_start = {0, 0};
+  clock_gettime(CLOCK_REALTIME, &time_start);
+
   auto parser_output = std::dynamic_pointer_cast<DnnExampleOutput>(node_output);
   if (parser_output) {
     std::stringstream ss;
@@ -267,31 +285,66 @@ int DnnExampleNode::PostProcess(
     ImageUtils::Render(parser_output->pyramid, pub_data);
   }
 
-  {
-    std::unique_lock<std::mutex> lk(frame_stat_mtx_);
-    if (!output_tp_) {
-      output_tp_ =
-          std::make_shared<std::chrono::high_resolution_clock::time_point>();
-      *output_tp_ = std::chrono::system_clock::now();
-    }
-    auto tp_now = std::chrono::system_clock::now();
-    output_frameCount_++;
-    auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(
-                        tp_now - *output_tp_)
-                        .count();
-    if (interval >= 1000) {
-      float out_fps = static_cast<float>(output_frameCount_) /
-                      (static_cast<float>(interval) / 1000.0);
-      RCLCPP_WARN(rclcpp::get_logger("example"), "Smart fps %.2f", out_fps);
+  // preprocess
+  ai_msgs::msg::Perf perf_preprocess;
+  perf_preprocess.set__type(model_name_ + "_preprocess");
+  perf_preprocess.set__stamp_start(
+      ConvertToRosTime(parser_output->preprocess_timespec_start));
+  perf_preprocess.set__stamp_end(
+      ConvertToRosTime(parser_output->preprocess_timespec_end));
+  perf_preprocess.set__time_ms_duration(CalTimeMsDuration(
+      perf_preprocess.stamp_start, perf_preprocess.stamp_end));
+  pub_data->perfs.emplace_back(perf_preprocess);
 
-      smart_fps_ = round(out_fps);
-      output_frameCount_ = 0;
-      *output_tp_ = std::chrono::system_clock::now();
+  if (node_output->rt_stat) {
+    if (node_output->rt_stat->fps_updated) {
+      RCLCPP_WARN(rclcpp::get_logger("example"),
+                  "Sub img fps %.2f",
+                  node_output->rt_stat->input_fps);
+      RCLCPP_WARN(rclcpp::get_logger("example"),
+                  "Smart fps %.2f",
+                  node_output->rt_stat->output_fps);
     }
-  }
 
-  if (smart_fps_ > 0) {
-    pub_data->set__fps(smart_fps_);
+    struct timespec time_now = {0, 0};
+    clock_gettime(CLOCK_REALTIME, &time_now);
+
+    // predict
+    ai_msgs::msg::Perf perf;
+    perf.set__type(model_name_ + "_predict_infer");
+    perf.stamp_start =
+        ConvertToRosTime(node_output->rt_stat->infer_timespec_start);
+    perf.stamp_end = ConvertToRosTime(node_output->rt_stat->infer_timespec_end);
+    perf.set__time_ms_duration(node_output->rt_stat->infer_time_ms);
+    pub_data->perfs.push_back(perf);
+
+    perf.set__type(model_name_ + "_predict_parse");
+    perf.stamp_start =
+        ConvertToRosTime(node_output->rt_stat->parse_timespec_start);
+    perf.stamp_end = ConvertToRosTime(node_output->rt_stat->parse_timespec_end);
+    perf.set__time_ms_duration(node_output->rt_stat->parse_time_ms);
+    pub_data->perfs.push_back(perf);
+
+    // postprocess
+    ai_msgs::msg::Perf perf_postprocess;
+    perf_postprocess.set__type(model_name_ + "_postprocess");
+    perf_postprocess.stamp_start = ConvertToRosTime(time_start);
+    clock_gettime(CLOCK_REALTIME, &time_now);
+    perf_postprocess.stamp_end = ConvertToRosTime(time_now);
+    perf_postprocess.set__time_ms_duration(CalTimeMsDuration(
+        perf_postprocess.stamp_start, perf_postprocess.stamp_end));
+    pub_data->perfs.emplace_back(perf_postprocess);
+
+    // 从发布图像到发布AI结果的延迟
+    ai_msgs::msg::Perf perf_pipeline;
+    perf_pipeline.set__type(model_name_ + "_pipeline");
+    perf_pipeline.set__stamp_start(pub_data->header.stamp);
+    perf_pipeline.set__stamp_end(perf_postprocess.stamp_end);
+    perf_pipeline.set__time_ms_duration(
+        CalTimeMsDuration(perf_pipeline.stamp_start, perf_pipeline.stamp_end));
+    pub_data->perfs.push_back(perf_pipeline);
+
+    pub_data->set__fps(round(node_output->rt_stat->input_fps));
   }
 
   msg_publisher_->publish(std::move(pub_data));
@@ -386,30 +439,6 @@ void DnnExampleNode::RosImgProcess(
 
   if (!rclcpp::ok()) {
     return;
-  }
-
-  {
-    std::unique_lock<std::mutex> lk(sub_frame_stat_mtx_);
-    if (!sub_img_tp_) {
-      sub_img_tp_ =
-          std::make_shared<std::chrono::high_resolution_clock::time_point>();
-      *sub_img_tp_ = std::chrono::system_clock::now();
-    }
-    auto tp_now = std::chrono::system_clock::now();
-
-    sub_img_frameCount_++;
-    auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(
-                        tp_now - *sub_img_tp_)
-                        .count();
-    if (interval >= 1000) {
-      RCLCPP_WARN(rclcpp::get_logger("img_sub"),
-                  "Sub img fps %.2f",
-                  static_cast<float>(sub_img_frameCount_) /
-                      (static_cast<float>(interval) / 1000.0));
-
-      sub_img_frameCount_ = 0;
-      *sub_img_tp_ = std::chrono::system_clock::now();
-    }
   }
 
   std::stringstream ss;
@@ -535,7 +564,7 @@ void DnnExampleNode::RosImgProcess(
 
   // 4. 处理预测结果，如渲染到图片或者发布预测结果
   if (ret != 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("example"), "Run predict failed!");
+    RCLCPP_INFO(rclcpp::get_logger("example"), "Run predict failed!");
     return;
   }
 }
@@ -551,6 +580,9 @@ void DnnExampleNode::SharedMemImgProcess(
     return;
   }
 
+  struct timespec time_start = {0, 0};
+  clock_gettime(CLOCK_REALTIME, &time_start);
+
   std::stringstream ss;
   ss << "Recved img encoding: "
      << std::string(reinterpret_cast<const char *>(img_msg->encoding.data()))
@@ -559,35 +591,6 @@ void DnnExampleNode::SharedMemImgProcess(
      << ", stamp: " << img_msg->time_stamp.sec << "_"
      << img_msg->time_stamp.nanosec << ", data size: " << img_msg->data_size;
   RCLCPP_INFO(rclcpp::get_logger("example"), "%s", ss.str().c_str());
-
-  {
-    std::unique_lock<std::mutex> lk(sub_frame_stat_mtx_);
-    if (!sub_img_tp_) {
-      sub_img_tp_ =
-          std::make_shared<std::chrono::high_resolution_clock::time_point>();
-      *sub_img_tp_ = std::chrono::system_clock::now();
-    }
-    auto tp_now = std::chrono::system_clock::now();
-
-    sub_img_frameCount_++;
-    auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(
-                        tp_now - *sub_img_tp_)
-                        .count();
-    if (interval >= 1000) {
-      RCLCPP_WARN(rclcpp::get_logger("img_sub"),
-                  "Sub img fps %.2f",
-                  static_cast<float>(sub_img_frameCount_) /
-                      (static_cast<float>(interval) / 1000.0));
-
-      sub_img_frameCount_ = 0;
-      *sub_img_tp_ = std::chrono::system_clock::now();
-    }
-  }
-  // dump recved img msg
-  // std::ofstream ofs("img_" + std::to_string(img_msg->index) + "." +
-  // std::string(reinterpret_cast<const char*>(img_msg->encoding.data())));
-  // ofs.write(reinterpret_cast<const char*>(img_msg->data.data()),
-  //   img_msg->data_size);
 
   auto tp_start = std::chrono::system_clock::now();
 
@@ -637,6 +640,11 @@ void DnnExampleNode::SharedMemImgProcess(
     dnn_output->pyramid = pyramid;
   }
 
+  dnn_output->preprocess_timespec_start = time_start;
+  struct timespec time_now = {0, 0};
+  clock_gettime(CLOCK_REALTIME, &time_now);
+  dnn_output->preprocess_timespec_end = time_now;
+
   uint32_t ret = 0;
   // 3. 开始预测
   ret = Predict(inputs, nullptr, dnn_output);
@@ -652,7 +660,7 @@ void DnnExampleNode::SharedMemImgProcess(
 
   // 4. 处理预测结果，如渲染到图片或者发布预测结果
   if (ret != 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("example"), "Run predict failed!");
+    RCLCPP_INFO(rclcpp::get_logger("example"), "Run predict failed!");
     return;
   }
 }

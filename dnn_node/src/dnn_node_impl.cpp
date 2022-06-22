@@ -27,6 +27,33 @@
 namespace hobot {
 namespace dnn_node {
 
+bool DnnNodeRunTimeFpsStat::Update() {
+  std::unique_lock<std::mutex> lk(frame_stat_mtx);
+  if (!last_frame_tp) {
+    last_frame_tp =
+        std::make_shared<std::chrono::high_resolution_clock::time_point>();
+    *last_frame_tp = std::chrono::system_clock::now();
+  }
+  auto tp_now = std::chrono::system_clock::now();
+  frame_count++;
+  auto interval = std::chrono::duration_cast<std::chrono::milliseconds>(
+                      tp_now - *last_frame_tp)
+                      .count();
+  if (interval >= 1000) {
+    frame_fps = static_cast<float>(frame_count) /
+                (static_cast<float>(interval) / 1000.0);
+    frame_count = 0;
+    *last_frame_tp = std::chrono::system_clock::now();
+    return true;
+  }
+  return false;
+}
+
+float DnnNodeRunTimeFpsStat::Get() {
+  std::unique_lock<std::mutex> lk(frame_stat_mtx);
+  return frame_fps;
+}
+
 DnnNodeImpl::DnnNodeImpl(std::shared_ptr<DnnNodePara> &dnn_node_para_ptr) {
   dnn_node_para_ptr_ = dnn_node_para_ptr;
   dnn_rt_para_ = std::make_shared<DnnNodeRunTimePara>();
@@ -193,64 +220,42 @@ int DnnNodeImpl::PreProcess(
 }
 
 int DnnNodeImpl::RunInferTask(
-    std::shared_ptr<DnnNodeOutput> &sync_outputs,
+    std::shared_ptr<DnnNodeOutput> &node_output,
     const TaskId &task_id,
     std::function<int(const std::shared_ptr<DnnNodeOutput> &)> post_process,
-    const bool is_sync_mode,
     const int timeout_ms) {
-  if (!dnn_rt_para_) {
+  if (!dnn_rt_para_ || !node_output) {
     return -1;
   }
-  if (is_sync_mode) {
-    int ret = RunInfer(sync_outputs->outputs, GetTask(task_id), timeout_ms);
-    if (ret != 0) {
-      ReleaseTask(task_id);
-      RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Run infer fail\n");
-    } else {
-      ReleaseTask(task_id);
-      if (post_process) {
-        post_process(sync_outputs);
-      }
-    }
-
-    return ret;
+  int ret = RunInfer(node_output, GetTask(task_id), timeout_ms);
+  if (ret != 0) {
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Run infer fail\n");
   } else {
-    std::lock_guard<std::mutex> lock(thread_pool_->msg_mutex_);
-    if (thread_pool_->msg_handle_.GetTaskNum() >=
-        thread_pool_->msg_limit_count_) {
-      RCLCPP_ERROR(rclcpp::get_logger("dnn"),
-                   "Task Size: %d exceeds limit: %d",
-                   thread_pool_->msg_handle_.GetTaskNum(),
-                   thread_pool_->msg_limit_count_);
-      return -1;
-    }
-    auto infer_task =
-        [this, task_id, timeout_ms, sync_outputs, post_process]() {
-          std::shared_ptr<DnnNodeOutput> aync_outputs = sync_outputs;
-          if (RunInfer(aync_outputs->outputs, GetTask(task_id), timeout_ms) !=
-              0) {
-            ReleaseTask(task_id);
-            RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Run infer fail\n");
-          } else {
-            ReleaseTask(task_id);
-            if (post_process) {
-              post_process(aync_outputs);
-            }
-          }
-        };
-
-    thread_pool_->msg_handle_.PostTask(infer_task);
+    // 统计输出fps
+    node_output->rt_stat->fps_updated = output_stat_.Update();
+    node_output->rt_stat->output_fps = output_stat_.Get();
   }
-  return 0;
+
+  ReleaseTask(task_id);
+  // 即使推理失败，也要将对应的（空）结果输出，保证每个推理输入都有输出。
+  if (post_process) {
+    post_process(node_output);
+  }
+
+  return ret;
 }
 
-int DnnNodeImpl::RunInfer(std::vector<std::shared_ptr<DNNResult>> &outputs,
+int DnnNodeImpl::RunInfer(std::shared_ptr<DnnNodeOutput> node_output,
                           const std::shared_ptr<Task> &node_task,
                           const int timeout_ms) {
-  if (!dnn_node_para_ptr_ || !node_task) {
+  if (!dnn_node_para_ptr_ || !node_output || !node_task) {
     RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid node task\n");
     return -1;
   }
+
+  auto tp_now = std::chrono::system_clock::now();
+  struct timespec timespec_now = {0, 0};
+  clock_gettime(CLOCK_REALTIME, &timespec_now);
 
   auto &task = node_task;
   uint32_t ret = 0;
@@ -275,6 +280,20 @@ int DnnNodeImpl::RunInfer(std::vector<std::shared_ptr<DNNResult>> &outputs,
     return ret;
   }
 
+  if (node_output->rt_stat) {
+    node_output->rt_stat->infer_time_ms =
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now() - tp_now)
+            .count();
+    node_output->rt_stat->infer_timespec_start = timespec_now;
+    clock_gettime(CLOCK_REALTIME, &timespec_now);
+    node_output->rt_stat->infer_timespec_end = timespec_now;
+
+    tp_now = std::chrono::system_clock::now();
+    clock_gettime(CLOCK_REALTIME, &timespec_now);
+    node_output->rt_stat->parse_timespec_start = timespec_now;
+  }
+
   if (ModelTaskType::ModelInferType == dnn_node_para_ptr_->model_task_type) {
     auto model_task = std::dynamic_pointer_cast<ModelInferTask>(task);
     ret = model_task->ParseOutput();
@@ -283,7 +302,7 @@ int DnnNodeImpl::RunInfer(std::vector<std::shared_ptr<DNNResult>> &outputs,
           rclcpp::get_logger("dnn"), "Failed to parse outputs, ret[%d]", ret);
       return ret;
     }
-    ret = model_task->GetOutputs(outputs);
+    ret = model_task->GetOutputs(node_output->outputs);
   } else if (ModelTaskType::ModelRoiInferType ==
              dnn_node_para_ptr_->model_task_type) {
     auto model_task = std::dynamic_pointer_cast<ModelRoiInferTask>(task);
@@ -293,7 +312,16 @@ int DnnNodeImpl::RunInfer(std::vector<std::shared_ptr<DNNResult>> &outputs,
           rclcpp::get_logger("dnn"), "Failed to parse outputs, ret[%d]", ret);
       return ret;
     }
-    ret = model_task->GetOutputs(outputs);
+    ret = model_task->GetOutputs(node_output->outputs);
+  }
+
+  if (node_output->rt_stat) {
+    node_output->rt_stat->parse_time_ms =
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now() - tp_now)
+            .count();
+    clock_gettime(CLOCK_REALTIME, &timespec_now);
+    node_output->rt_stat->parse_timespec_end = timespec_now;
   }
 
   if (ret != 0) {
@@ -347,6 +375,7 @@ TaskId DnnNodeImpl::AllocTask(int timeout_ms) {
     dnn_rt_para_->running_tasks[task_id] = idle_task->second;
     dnn_rt_para_->idle_tasks.erase(task_id);
   };
+
   std::unique_lock<std::mutex> lg(dnn_rt_para_->task_mtx);
   if (!dnn_rt_para_->idle_tasks.empty()) {
     alloc_task();
@@ -405,7 +434,7 @@ int DnnNodeImpl::ReleaseTask(const TaskId &task_id) {
                "idle_tasks size: %d, running_tasks size: %d",
                dnn_rt_para_->idle_tasks.size(),
                dnn_rt_para_->running_tasks.size());
-  return -1;
+  return 0;
 }
 
 std::shared_ptr<Task> DnnNodeImpl::GetTask(const TaskId &task_id) {
@@ -456,11 +485,106 @@ int DnnNodeImpl::Run(
     const bool is_sync_mode,
     const int alloctask_timeout_ms,
     const int infer_timeout_ms) {
+  // 统计输入fps
+  input_stat_.Update();
+
+  if (is_sync_mode) {
+    return RunImpl(inputs,
+                   tensor_inputs,
+                   input_type,
+                   output_descs,
+                   output,
+                   post_process,
+                   rois,
+                   alloctask_timeout_ms,
+                   infer_timeout_ms);
+  } else {
+    std::lock_guard<std::mutex> lock(thread_pool_->msg_mutex_);
+    if (thread_pool_->msg_handle_.GetTaskNum() >=
+        thread_pool_->msg_limit_count_) {
+      RCLCPP_WARN(rclcpp::get_logger("dnn"),
+                  "Task Size: %d exceeds limit: %d",
+                  thread_pool_->msg_handle_.GetTaskNum(),
+                  thread_pool_->msg_limit_count_);
+      // todo [20220622] 返回错误码告知用户推理失败原因
+      return -1;
+    }
+
+    auto infer_task = [this,
+                       inputs,
+                       tensor_inputs,
+                       input_type,
+                       output_descs,
+                       output,
+                       post_process,
+                       rois,
+                       alloctask_timeout_ms,
+                       infer_timeout_ms]() {
+      RunImpl(inputs,
+              tensor_inputs,
+              input_type,
+              output_descs,
+              output,
+              post_process,
+              rois,
+              alloctask_timeout_ms,
+              infer_timeout_ms);
+    };
+
+    thread_pool_->msg_handle_.PostTask(infer_task);
+  }
+
+  return 0;
+}
+
+int DnnNodeImpl::RunImpl(
+    std::vector<std::shared_ptr<DNNInput>> inputs,
+    std::vector<std::shared_ptr<DNNTensor>> tensor_inputs,
+    InputType input_type,
+    std::vector<std::shared_ptr<OutputDescription>> output_descs,
+    const std::shared_ptr<DnnNodeOutput> output,
+    std::function<int(const std::shared_ptr<DnnNodeOutput> &)> post_process,
+    const std::shared_ptr<std::vector<hbDNNRoi>> rois,
+    const int alloctask_timeout_ms,
+    const int infer_timeout_ms) {
+  // 对于roi
+  // infer，如果当前帧中无roi，不需要推理，更新统计信息后直接执行用户定义的后处理
+  if (dnn_node_para_ptr_ &&
+      ModelTaskType::ModelRoiInferType == dnn_node_para_ptr_->model_task_type &&
+      (!rois || rois->empty())) {
+    std::shared_ptr<DnnNodeOutput> dnn_output = nullptr;
+    if (output) {
+      // 使用传入的DnnNodeOutput
+      dnn_output = output;
+    }
+    if (!dnn_output) {
+      // 没有传入，创建DnnNodeOutput
+      dnn_output = std::make_shared<DnnNodeOutput>();
+    }
+
+    if (!dnn_output->rt_stat) {
+      dnn_output->rt_stat = std::make_shared<DnnNodeRunTimeStat>();
+    }
+
+    // 统计输入fps
+    dnn_output->rt_stat->input_fps = input_stat_.Get();
+    // 统计输出fps
+    dnn_output->rt_stat->fps_updated = output_stat_.Update();
+    dnn_output->rt_stat->output_fps = output_stat_.Get();
+    if (post_process) {
+      post_process(dnn_output);
+    }
+    return 0;
+  }
+
+  // 需要推理
+
   // 1 申请推理task
   auto task_id = AllocTask(alloctask_timeout_ms);
   if (task_id < 0) {
     return -1;
   }
+
   if (!output_descs.empty()) {
     auto infer_task = std::dynamic_pointer_cast<ModelTask>(GetTask(task_id));
     if (!infer_task) {
@@ -494,10 +618,15 @@ int DnnNodeImpl::Run(
     dnn_output = std::make_shared<DnnNodeOutput>();
   }
 
+  if (!dnn_output->rt_stat) {
+    dnn_output->rt_stat = std::make_shared<DnnNodeRunTimeStat>();
+  }
+
+  // 统计输入fps
+  dnn_output->rt_stat->input_fps = input_stat_.Get();
+
   // 4 执行模型推理
-  if (RunInferTask(
-          dnn_output, task_id, post_process, is_sync_mode, infer_timeout_ms) !=
-      0) {
+  if (RunInferTask(dnn_output, task_id, post_process, infer_timeout_ms) != 0) {
     RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Run RunInferTask failed!");
     ReleaseTask(task_id);
     return -1;

@@ -79,6 +79,9 @@ struct DnnExampleOutput : public DnnNodeOutput {
   std::string frame_id = "";
   std_msgs::msg::Header::_stamp_type stamp;
   std::shared_ptr<hobot::easy_dnn::NV12PyramidInput> pyramid = nullptr;
+
+  struct timespec preprocess_timespec_start;
+  struct timespec preprocess_timespec_end;
 };
 
 class DnnExampleNode : public DnnNode {
@@ -128,15 +131,9 @@ class DnnExampleNode : public DnnNode {
   int image_width = 0;
   int image_height = 0;
   int dump_render_img_ = 0;
-  int is_sync_mode_ = 1;
+  int is_sync_mode_ = 0;
   // 使用shared mem通信方式订阅图片
   int is_shared_mem_sub_ = 0;
-
-  std::shared_ptr<std::chrono::high_resolution_clock::time_point> output_tp_ =
-      nullptr;
-  int output_frameCount_ = 0;
-  int smart_fps_ = -1;
-  std::mutex frame_stat_mtx_;
 
   int Predict(std::vector<std::shared_ptr<DNNInput>> &inputs,
               const std::shared_ptr<std::vector<hbDNNRoi>> rois,
@@ -158,12 +155,6 @@ class DnnExampleNode : public DnnNode {
   // 和sensor_msgs::msg::CompressedImage格式扩展订阅压缩图
   std::string ros_img_topic_name_ = "/image_raw";
   void RosImgProcess(const sensor_msgs::msg::Image::ConstSharedPtr msg);
-
-  std::shared_ptr<std::chrono::high_resolution_clock::time_point> sub_img_tp_ =
-      nullptr;
-
-  int sub_img_frameCount_ = 0;
-  std::mutex sub_frame_stat_mtx_;
 };
 
 #endif  // DNN_EXAMPLE_NODE_H_

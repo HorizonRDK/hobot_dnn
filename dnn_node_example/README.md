@@ -132,7 +132,7 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 | image_type         | 图片格式，0：bgr，1：nv12             | 否                   | 0                   |                                                                         |
 | image_width        | 本地回灌nv12格式图片的宽度            | nv12格式图片必须设置 | 0                   |                                                                         |
 | image_height       | 本地回灌nv12格式图片的高度            | nv12格式图片必须设置 | 0                   |                                                                         |
-| is_sync_mode       | 同步或异步模式 0: 异步 1: 同步        | 否                   | 1                   |                                                                         |
+| is_sync_mode       | 同步或异步模式 0: 异步 1: 同步        | 否                   | 0                   |                                                                         |
 | is_shared_mem_sub  | 使用shared mem通信方式订阅图片        | 否                   | 0                   |                                                                         |
 | config_file        | 配置文件路径                          | 否                   | ""                  | 更改配置文件配置不同模型调用不同后处理算法,默认启用fasterrcnn模型后处理 |
 | dump_render_img    | 是否进行渲染，0：否；1：是            | 否                   | 0                   |                                                                         |
@@ -156,9 +156,9 @@ cp -r PATH/lib/dnn_benchmark_example/config/runtime/ ./config (其中PATH为Toge
 
 # 运行模式1：
 使用本地jpg格式图片通过同步模式进行回灌预测，并存储渲染后的图片
-ros2 run dnn_node_example example --ros-args -p feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1
+ros2 run dnn_node_example example --ros-args -p is_sync_mode:=1 -p feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1
 配置使用yolov3模型和dnn_node中内置的yolov3后处理算法，使用本地jpg格式图片通过同步模式进行回灌预测，并存储渲染后的图片
-ros2 run dnn_node_example example --ros-args -p feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1 -p config_file:=config/yolov3workconfig.json
+ros2 run dnn_node_example example --ros-args -p is_sync_mode:=1 -p feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1 -p config_file:=config/yolov3workconfig.json
 
 # 运行模式2：
 使用订阅到的image msg(topic为/image_raw)通过异步模式进行预测，并设置log级别为warn
@@ -199,7 +199,7 @@ cp -r install/lib/dnn_node_example/config/ .
 cp -r PATH/lib/dnn_benchmark_example/config/runtime/ ./config (其中PATH为TogetherROS的安装路径)
 
 # 运行模式1：使用本地jpg格式图片通过同步模式进行回灌预测，并存储渲染后的图片
-./install/lib/dnn_node_example/example --ros-args -p feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1
+./install/lib/dnn_node_example/example --ros-args -p is_sync_mode:=1 -p feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1
 
 # 运行模式2：使用订阅到的image msg(topic为/image_raw)通过异步模式进行预测，并设置log级别为warn
 ./install/lib/dnn_node_example/example --ros-args -p feed_type:=1 -p is_sync_mode:=0 --log-level warn
@@ -221,7 +221,7 @@ cp -r PATH/lib/dnn_benchmark_example/config/runtime/ ./config (其中PATH为Toge
   "model_file"为模型文件的路径。
   目前example支持的模型:
   | 模型名称                               | 模型类型 | 模型输出说明                             | 渲染效果                              |
-  | -------------------------------------- | -------- | ---------------------------------------- | ---------------------------------- |
+  | -------------------------------------- | -------- | ---------------------------------------- | ------------------------------------- |
   | yolov2_608x608_nv12                    | 检测模型 | 输出检测到的物体和检测框                 | ![image](./render/yolov2.jpeg)        |
   | yolov3_416x416_nv12                    | 检测模型 | 输出检测到的物体和检测框                 | ![image](./render/yolov3.jpeg)        |
   | yolov5_672x672_nv12                    | 检测模型 | 输出检测到的物体和检测框                 | ![image](./render/yolov5.jpeg)        |
