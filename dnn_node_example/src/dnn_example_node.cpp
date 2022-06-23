@@ -103,8 +103,6 @@ DnnExampleNode::DnnExampleNode(const std::string &node_name,
 
   msg_publisher_ = this->create_publisher<ai_msgs::msg::PerceptionTargets>(
       msg_pub_topic_name_, 10);
-  unet_publisher_ =
-      this->create_publisher<sensor_msgs::msg::Image>(unet_pub_topic_name_, 10);
 
   if (Init() != 0) {
     RCLCPP_ERROR(rclcpp::get_logger("example"), "Init failed!");
@@ -478,8 +476,12 @@ void DnnExampleNode::RosImgProcess(
     auto unet_output_desc =
         std::make_shared<hobot::dnn_node::UnetOutputDescription>(
             model_manage, 0, "unet_branch");
-    unet_output_desc->valid_w = img_msg->width;
-    unet_output_desc->valid_h = img_msg->height;
+    unet_output_desc->valid_w = img_msg->width > model_input_width_
+                                    ? model_input_width_
+                                    : img_msg->width;
+    unet_output_desc->valid_h = img_msg->height > model_input_height_
+                                    ? model_input_height_
+                                    : img_msg->height;
     unet_output_desc->parse_render = dump_render_img_;
     auto output_desc =
         std::dynamic_pointer_cast<OutputDescription>(unet_output_desc);
@@ -635,9 +637,15 @@ void DnnExampleNode::SharedMemImgProcess(
     auto unet_output_desc =
         std::make_shared<hobot::dnn_node::UnetOutputDescription>(
             model_manage, 0, "unet_branch");
-    unet_output_desc->valid_w = img_msg->width;
-    unet_output_desc->valid_h = img_msg->height;
+    unet_output_desc->valid_w = img_msg->width > model_input_width_
+                                    ? model_input_width_
+                                    : img_msg->width;
+    unet_output_desc->valid_h = img_msg->height > model_input_height_
+                                    ? model_input_height_
+                                    : img_msg->height;
     unet_output_desc->parse_render = dump_render_img_;
+    unet_output_desc->frame_id = std::to_string(img_msg->index);
+    unet_output_desc->stamp = img_msg->time_stamp;
     auto output_desc =
         std::dynamic_pointer_cast<OutputDescription>(unet_output_desc);
     output_descs.push_back(output_desc);

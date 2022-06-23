@@ -41,34 +41,33 @@ int32_t UnetOutputParser::Parse(
 
   auto unet_output_desc =
       std::dynamic_pointer_cast<UnetOutputDescription>(output_description);
+  int valid_h = 0, valid_w = 0, parser_render = 0;
   if (unet_output_desc) {
     valid_h = unet_output_desc->valid_h;
     valid_w = unet_output_desc->valid_w;
     parser_render = unet_output_desc->parse_render;
-    RCLCPP_INFO(rclcpp::get_logger("UnetOutputParser"),
-                "valid_w: %d valid_h: %d isdump: %d",
-                valid_w,
-                valid_h,
-                parser_render);
+
   } else {
     RCLCPP_ERROR(rclcpp::get_logger("UnetOutputParser"),
                  "output_description invalid cast");
     return -1;
   }
 
-  std::shared_ptr<Dnn_Parser_Result> result;
+  std::shared_ptr<Dnn_Parser_Result> result = nullptr;
   if (!output) {
     result = std::make_shared<Dnn_Parser_Result>();
+    result->Reset();
     output = result;
   } else {
     result = std::dynamic_pointer_cast<Dnn_Parser_Result>(output);
+    result->Reset();
   }
 
   auto depend_output_tensors =
       std::vector<std::shared_ptr<DNNTensor>>{output_tensor};
 
   int ret = 0;
-  PostProcess(depend_output_tensors, result->perception);
+  PostProcess(depend_output_tensors, result->perception, valid_w, valid_h);
   if (1 == parser_render) {
     ParseRenderPostProcess(depend_output_tensors, result->perception);
   }
@@ -85,7 +84,10 @@ int32_t UnetOutputParser::Parse(
 }
 
 int UnetOutputParser::PostProcess(
-    std::vector<std::shared_ptr<DNNTensor>>& tensors, Perception& perception) {
+    std::vector<std::shared_ptr<DNNTensor>>& tensors,
+    Perception& perception,
+    int valid_w,
+    int valid_h) {
   perception.type = Perception::SEG;
   hbSysFlushMem(&(tensors[0]->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
 
@@ -95,12 +97,6 @@ int UnetOutputParser::PostProcess(
   int height = tensors[0]->properties.validShape.dimensionSize[h_index];
   int width = tensors[0]->properties.validShape.dimensionSize[w_index];
   int channel = tensors[0]->properties.validShape.dimensionSize[c_index];
-
-  RCLCPP_DEBUG(rclcpp::get_logger("UnetOutputParser"),
-               "PostProcess width: %d height: %d channel: %d",
-               width,
-               height,
-               channel);
 
   float* data = reinterpret_cast<float*>(tensors[0]->sysMem[0].virAddr);
   int parse_valid_h = valid_h / 4;
@@ -115,7 +111,8 @@ int UnetOutputParser::PostProcess(
     auto index = h * parse_valid_w * channel;
     auto* dst = &perception.seg.data[index];
     auto* src = data + h * width * channel;
-    memcpy(dst, src, parse_valid_w * channel * sizeof(float));
+    int copy_len = parse_valid_w * channel * sizeof(float);
+    memcpy(dst, src, copy_len);
   }
 
   return 0;

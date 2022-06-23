@@ -214,7 +214,12 @@ struct Perception {
 class Dnn_Parser_Result : public DNNResult {
  public:
   Perception perception;
-  void Reset() override {}
+  void Reset() override {
+    perception.seg.seg.clear();
+    perception.seg.data.clear();
+    perception.det.clear();
+    perception.cls.clear();
+  }
 };
 
 #endif  // _OUTPUT_PARSER_PERCEPTION_COMMON_H_
