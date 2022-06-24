@@ -22,7 +22,6 @@
 
 #include "dnn/hb_dnn_ext.h"
 #include "dnn_node/dnn_node_data.h"
-#include "sensor_msgs/msg/image.hpp"
 #include "util/output_parser/perception_common.h"
 
 namespace hobot {
@@ -33,9 +32,6 @@ class UnetOutputDescription : public OutputDescription {
   UnetOutputDescription(Model* mode, int index, std::string type = "")
       : OutputDescription(mode, index, std::move(type)) {}
   ~UnetOutputDescription() override = default;
-
-  std::string frame_id = "";
-  std_msgs::msg::Header::_stamp_type stamp;
 
   int valid_w = 0;
   int valid_h = 0;

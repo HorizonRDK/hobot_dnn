@@ -644,8 +644,6 @@ void DnnExampleNode::SharedMemImgProcess(
                                     ? model_input_height_
                                     : img_msg->height;
     unet_output_desc->parse_render = dump_render_img_;
-    unet_output_desc->frame_id = std::to_string(img_msg->index);
-    unet_output_desc->stamp = img_msg->time_stamp;
     auto output_desc =
         std::dynamic_pointer_cast<OutputDescription>(unet_output_desc);
     output_descs.push_back(output_desc);
