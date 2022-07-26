@@ -8,10 +8,7 @@ Dnn Benchmark example package是Dnn Node package的性能评测示例，通过�
 
 依赖库：
 
-- dnn:1.8.4
-- easydnn:0.3.3
 - opencv:3.4.5
-- rapidjson:1.1.0
 
 ros package：
 
