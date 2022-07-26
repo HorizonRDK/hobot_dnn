@@ -14,11 +14,10 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
 
 ## Dependency
 
-- dnn:1.8.4
-- easydnn:0.3.3
+- dnn:1.9.6c
+- easydnn:0.4.11
 - opencv:3.4.5
-- hobotlog:1.0.5
-- rapidjson:1.1.0
+- hlog:0.4.7
 
 ## 开发环境
 
