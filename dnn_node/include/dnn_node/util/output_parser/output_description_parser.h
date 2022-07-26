@@ -12,19 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "include/post_process/post_process_base.h"
-#include "dnn_node/util/output_parser/detection/ptq_yolo5_output_parser.h"
+#ifndef EASY_DNN_OUTPUT_DESC_PARSER_H
+#define EASY_DNN_OUTPUT_DESC_PARSER_H
 
-#ifndef POST_PROCESS_YOLOV5_H_
-#define POST_PROCESS_YOLOV5_H_
+#include <memory>
+#include <utility>
 
-class Yolov5PostProcess : public PostProcessBase {
- public:
-  explicit Yolov5PostProcess(int32_t model_output_count)
-      : PostProcessBase(model_output_count) {}
-  ~Yolov5PostProcess() {}
+#include "easy_dnn/description.h"
+#include "easy_dnn/model.h"
+#include "easy_dnn/output_parser.h"
 
-  int SetOutParser(Model* model_manage) override;
-};
+using hobot::easy_dnn::Model;
+using hobot::easy_dnn::OutputDescription;
+using hobot::easy_dnn::OutputParser;
 
-#endif  // POST_PROCESS_YOLOV5_H_
+#endif  // EASY_DNN_OUTPUT_DESC_PARSER_H

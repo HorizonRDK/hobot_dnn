@@ -62,15 +62,16 @@ add_library(${PROJECT_NAME} SHARED
   src/util/output_parser/detection/ptq_efficientdet_output_parser.cpp
   src/util/output_parser/detection/ptq_ssd_output_parser.cpp
   src/util/output_parser/detection/fcos_output_parser.cpp
+  src/util/output_parser/detection/facehand_detect_output_parser.cpp
   src/util/output_parser/classification/ptq_classification_output_parser.cpp
   src/util/output_parser/segmentation/ptq_unet_output_parser.cpp
+  src/util/output_parser/detection/filter2d_output_parser.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
   opencv_world
   alog
-  log
-  hobotlog.a
+  hlog
   easy_dnn
   dnn
   cnn_intf
@@ -103,8 +104,8 @@ install(
 )
 
 install(
-  DIRECTORY include/util/output_parser/
-  DESTINATION include/util/output_parser/
+  DIRECTORY include/dnn_node/util/output_parser/
+  DESTINATION include/dnn_node/util/output_parser/
 )
 
 # Causes the visibility macros to use dllexport rather than dllimport,

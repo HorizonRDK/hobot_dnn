@@ -19,7 +19,7 @@
 #include "include/utils/null_output_parser.h"
 
 int32_t nullOutputParser::Parse(
-      std::shared_ptr<DNNResult> &output,
+      std::shared_ptr<DnnParserResult> &output,
       std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
       std::shared_ptr<OutputDescription> &output_description,
       std::shared_ptr<DNNTensor> &output_tensor)

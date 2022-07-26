@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "util/output_parser/detection/nms.h"
+#include "dnn_node/util/output_parser/detection/nms.h"
 
 #include <algorithm>
 #include <vector>

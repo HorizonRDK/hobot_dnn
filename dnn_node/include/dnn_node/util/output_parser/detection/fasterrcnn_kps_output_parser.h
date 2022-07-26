@@ -20,18 +20,18 @@
 #include <utility>
 #include <vector>
 
+#include "dnn_node/util/output_parser/detection/filter2d_output_parser.h"
 #include "easy_dnn/data_structure.h"
 #include "easy_dnn/model.h"
 #include "easy_dnn/output_parser.h"
-#include "easy_dnn/output_parser/detection/filter2d_output_parser.h"
 
-using hobot::easy_dnn::MultiBranchOutputParser;
 using hobot::easy_dnn::DNNResult;
 using hobot::easy_dnn::DNNTensor;
-using hobot::easy_dnn::InputDescription;
-using hobot::easy_dnn::OutputDescription;
-using hobot::easy_dnn::Model;
 using hobot::easy_dnn::Filter2DResult;
+using hobot::easy_dnn::InputDescription;
+using hobot::easy_dnn::Model;
+using hobot::easy_dnn::MultiBranchOutputParser;
+using hobot::easy_dnn::OutputDescription;
 
 /**
  * \~Chinese @brief 2D坐标点
@@ -58,8 +58,8 @@ class LandmarksResult : public DNNResult {
 
 class DetectOutDesc : public OutputDescription {
  public:
-  DetectOutDesc(Model *mode, int index, std::string type = "detection")
-          : OutputDescription(mode, index, type) { }
+  DetectOutDesc(Model* mode, int index, std::string type = "detection")
+      : OutputDescription(mode, index, type) {}
 
   uint32_t output_size;
 };
@@ -74,10 +74,11 @@ struct FasterRcnnKpsParserPara {
   std::vector<uint32_t> kps_shifts_;
 };
 
-class FasterRcnnKpsOutputParser : public MultiBranchOutputParser {
+class FasterRcnnKpsOutputParser
+    : public MultiBranchOutputParser<LandmarksResult> {
  public:
   FasterRcnnKpsOutputParser(
-    std::shared_ptr<FasterRcnnKpsParserPara> parser_para) {
+      std::shared_ptr<FasterRcnnKpsParserPara> parser_para) {
     if (parser_para) {
       parser_para_ = parser_para;
     }
@@ -85,7 +86,7 @@ class FasterRcnnKpsOutputParser : public MultiBranchOutputParser {
   ~FasterRcnnKpsOutputParser() {}
 
   int32_t Parse(
-      std::shared_ptr<DNNResult>& output,
+      std::shared_ptr<LandmarksResult>& output,
       std::vector<std::shared_ptr<InputDescription>>& input_descriptions,
       std::shared_ptr<OutputDescription>& output_descriptions,
       std::shared_ptr<DNNTensor>& output_tensor,

@@ -20,7 +20,7 @@
 #include "ai_msgs/msg/perception_targets.hpp"
 #include "dnn_node/dnn_node_data.h"
 #include "rclcpp/rclcpp.hpp"
-#include "util/output_parser/perception_common.h"
+#include "dnn_node/util/output_parser/perception_common.h"
 
 #ifndef POST_PROCESS_BASE_H_
 #define POST_PROCESS_BASE_H_

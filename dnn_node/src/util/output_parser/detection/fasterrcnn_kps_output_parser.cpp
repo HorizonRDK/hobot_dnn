@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "dnn_node/util/output_parser/detection/fasterrcnn_kps_output_parser.h"
+
 #include <memory>
 #include <vector>
 
 #include "rclcpp/rclcpp.hpp"
-#include "include/util/output_parser/detection/fasterrcnn_kps_output_parser.h"
 
 inline float SigMoid(const float &input) {
   return 1 / (1 + std::exp(-1 * input));
@@ -27,18 +28,18 @@ inline float GetFloatByInt(int32_t value, uint32_t shift) {
 }
 
 int32_t FasterRcnnKpsOutputParser::Parse(
-      std::shared_ptr<DNNResult>& output,
-      std::vector<std::shared_ptr<InputDescription>>& input_descriptions,
-      std::shared_ptr<OutputDescription>& output_descriptions,
-      std::shared_ptr<DNNTensor>& output_tensor,
-      std::vector<std::shared_ptr<OutputDescription>>& depend_output_descs,
-      std::vector<std::shared_ptr<DNNTensor>>& depend_output_tensors,
-      std::vector<std::shared_ptr<DNNResult>>& depend_outputs) {
+    std::shared_ptr<LandmarksResult> &output,
+    std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
+    std::shared_ptr<OutputDescription> &output_descriptions,
+    std::shared_ptr<DNNTensor> &output_tensor,
+    std::vector<std::shared_ptr<OutputDescription>> &depend_output_descs,
+    std::vector<std::shared_ptr<DNNTensor>> &depend_output_tensors,
+    std::vector<std::shared_ptr<DNNResult>> &depend_outputs) {
   RCLCPP_INFO(rclcpp::get_logger("fasterrcnn_parser"),
-    "FasterRcnnKpsOutputParser parse start");
+              "FasterRcnnKpsOutputParser parse start");
   if (!parser_para_) {
     RCLCPP_ERROR(rclcpp::get_logger("fasterrcnn_parser"),
-      "FasterRcnnKpsOutputParser para is not set");
+                 "FasterRcnnKpsOutputParser para is not set");
     return -1;
   }
   if (!input_descriptions.empty()) {
@@ -46,19 +47,20 @@ int32_t FasterRcnnKpsOutputParser::Parse(
   }
   if (output_descriptions) {
     RCLCPP_INFO(rclcpp::get_logger("fasterrcnn_parser"),
-      "type: %s, GetDependencies size: %d",
-      output_descriptions->GetType().c_str(),
-      output_descriptions->GetDependencies().size());
+                "type: %s, GetDependencies size: %d",
+                output_descriptions->GetType().c_str(),
+                output_descriptions->GetDependencies().size());
     if (!output_descriptions->GetDependencies().empty()) {
       RCLCPP_INFO(rclcpp::get_logger("fasterrcnn_parser"),
-        "Dependencies: %d", output_descriptions->GetDependencies().front());
+                  "Dependencies: %d",
+                  output_descriptions->GetDependencies().front());
     }
   }
   RCLCPP_INFO(rclcpp::get_logger("fasterrcnn_parser"),
-    "dep out size: %d %d %d",
-    depend_output_descs.size(),
-    depend_output_tensors.size(),
-    depend_outputs.size());
+              "dep out size: %d %d %d",
+              depend_output_descs.size(),
+              depend_output_tensors.size(),
+              depend_outputs.size());
   size_t body_box_num = 0;
   Filter2DResult *filter2d_result = nullptr;
   if (depend_outputs.size() >= 3) {
@@ -66,8 +68,9 @@ int32_t FasterRcnnKpsOutputParser::Parse(
     if (!filter2d_result) {
       RCLCPP_INFO(rclcpp::get_logger("fasterrcnn_parser"), "invalid cast");
     } else {
-      RCLCPP_INFO(rclcpp::get_logger("fasterrcnn_parser"), "out box size: %d",
-        filter2d_result->boxes.size());
+      RCLCPP_INFO(rclcpp::get_logger("fasterrcnn_parser"),
+                  "out box size: %d",
+                  filter2d_result->boxes.size());
       body_box_num = filter2d_result->boxes.size();
     }
   }
@@ -89,12 +92,12 @@ int32_t FasterRcnnKpsOutputParser::Parse(
   int feature_size = parser_para_->aligned_kps_dim.at(1) *
                      parser_para_->aligned_kps_dim.at(2) *
                      parser_para_->aligned_kps_dim.at(3);
-  int h_stride = parser_para_->aligned_kps_dim.at(2) *
-    parser_para_->aligned_kps_dim.at(3);
+  int h_stride =
+      parser_para_->aligned_kps_dim.at(2) * parser_para_->aligned_kps_dim.at(3);
   int w_stride = parser_para_->aligned_kps_dim.at(3);
 
   int32_t *kps_feature =
-    reinterpret_cast<int32_t *>(output_tensor->sysMem[0].virAddr);
+      reinterpret_cast<int32_t *>(output_tensor->sysMem[0].virAddr);
   for (size_t box_id = 0; box_id < body_box_num; ++box_id) {
     const auto &body_box = filter2d_result->boxes[box_id];
     float x1 = body_box.left;
@@ -107,8 +110,8 @@ int32_t FasterRcnnKpsOutputParser::Parse(
     float scale_x = parser_para_->kps_feat_width_ / w;
     float scale_y = parser_para_->kps_feat_height_ / h;
 
-    float pos_distance = parser_para_->kps_pos_distance_ *
-        parser_para_->kps_feat_width_;
+    float pos_distance =
+        parser_para_->kps_pos_distance_ * parser_para_->kps_feat_width_;
 
     auto *mxnet_out_for_one_point_begin = kps_feature + feature_size * box_id;
 
@@ -133,35 +136,37 @@ int32_t FasterRcnnKpsOutputParser::Parse(
         }
       }
 
-      float max_score =
-          GetFloatByInt(max_score_before_shift,
-          parser_para_->kps_shifts_[kps_id]);
+      float max_score = GetFloatByInt(max_score_before_shift,
+                                      parser_para_->kps_shifts_[kps_id]);
 
       // get delta
       mxnet_out_for_one_point =
           mxnet_out_for_one_point_begin + max_h * h_stride + max_w * w_stride;
       const auto x_delta =
           mxnet_out_for_one_point[2 * kps_id +
-          parser_para_->kps_points_number_];
-      const auto x_shift = parser_para_->kps_shifts_[2 * kps_id +
-          parser_para_->kps_points_number_];
+                                  parser_para_->kps_points_number_];
+      const auto x_shift =
+          parser_para_
+              ->kps_shifts_[2 * kps_id + parser_para_->kps_points_number_];
       float fp_delta_x = GetFloatByInt(x_delta, x_shift) * pos_distance;
 
       const auto y_delta =
           mxnet_out_for_one_point[2 * kps_id +
-          parser_para_->kps_points_number_ + 1];
+                                  parser_para_->kps_points_number_ + 1];
       const auto y_shift =
-          parser_para_->kps_shifts_[2 * kps_id +
-          parser_para_->kps_points_number_ + 1];
+          parser_para_
+              ->kps_shifts_[2 * kps_id + parser_para_->kps_points_number_ + 1];
       float fp_delta_y = GetFloatByInt(y_delta, y_shift) * pos_distance;
 
       Point point;
       point.x =
-          (max_w + fp_delta_x + 0.46875 + parser_para_->kps_anchor_param_)
-          / scale_x + x1;
+          (max_w + fp_delta_x + 0.46875 + parser_para_->kps_anchor_param_) /
+              scale_x +
+          x1;
       point.y =
-          (max_h + fp_delta_y + 0.46875 + parser_para_->kps_anchor_param_)
-          / scale_y + y1;
+          (max_h + fp_delta_y + 0.46875 + parser_para_->kps_anchor_param_) /
+              scale_y +
+          y1;
       point.score = SigMoid(max_score);
       skeleton[kps_id] = point;
     }
@@ -169,8 +174,9 @@ int32_t FasterRcnnKpsOutputParser::Parse(
   }
 
   RCLCPP_INFO(rclcpp::get_logger("fasterrcnn_parser"),
-    "Kps size: %d", result->values.size());
+              "Kps size: %d",
+              result->values.size());
   RCLCPP_INFO(rclcpp::get_logger("fasterrcnn_parser"),
-    "FasterRcnnKpsOutputParser parse done");
+              "FasterRcnnKpsOutputParser parse done");
   return 0;
 }

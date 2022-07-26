@@ -22,12 +22,12 @@
 #include <utility>
 #include <vector>
 
+#include "dnn_node/util/output_parser/detection/fasterrcnn_kps_output_parser.h"
 #include "include/image_utils.h"
 #include "rapidjson/document.h"
 #include "rapidjson/istreamwrapper.h"
 #include "rapidjson/writer.h"
 #include "rclcpp/rclcpp.hpp"
-#include "util/output_parser/detection/fasterrcnn_kps_output_parser.h"
 
 ai_msgs::msg::PerceptionTargets::UniquePtr PostProcessBase::PostProcess(
     const std::shared_ptr<DnnNodeOutput> &node_output) {
@@ -55,12 +55,10 @@ ai_msgs::msg::PerceptionTargets::UniquePtr PostProcessBase::PostProcess(
   for (auto &rect : det_result->perception.det) {
     if (rect.bbox.xmin < 0) rect.bbox.xmin = 0;
     if (rect.bbox.ymin < 0) rect.bbox.ymin = 0;
-    if (rect.bbox.xmax >= model_input_width_)
-    {
+    if (rect.bbox.xmax >= model_input_width_) {
       rect.bbox.xmax = model_input_width_ - 1;
     }
-    if (rect.bbox.ymax >= model_input_height_)
-    {
+    if (rect.bbox.ymax >= model_input_height_) {
       rect.bbox.ymax = model_input_height_ - 1;
     }
 

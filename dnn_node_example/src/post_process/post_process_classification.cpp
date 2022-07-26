@@ -24,22 +24,20 @@
 
 #include "rclcpp/rclcpp.hpp"
 
-int ClassificationPostProcess::SetOutParser(Model* model_manage)
-{
+int ClassificationPostProcess::SetOutParser(Model *model_manage) {
   RCLCPP_INFO(rclcpp::get_logger("ClassificationPostProcess"),
-                "Set out parser");
+              "Set out parser");
   output_index_ = model_output_count_ - 1;
 
   auto ClsParser =
-    std::make_shared<hobot::dnn_node::ClassficationOutputParser>();
+      std::make_shared<hobot::dnn_node::ClassficationOutputParser>();
   auto ret = ClsParser->InitClassNames(cls_name_file_);
-  if (0 != ret)
-  {
+  if (0 != ret) {
     return ret;
   }
 
   std::shared_ptr<OutputParser> parser =
-        std::dynamic_pointer_cast<OutputParser>(ClsParser);
+      std::dynamic_pointer_cast<OutputParser>(ClsParser);
   model_manage->SetOutputParser(output_index_, parser);
 
   return 0;
@@ -47,17 +45,15 @@ int ClassificationPostProcess::SetOutParser(Model* model_manage)
 
 ai_msgs::msg::PerceptionTargets::UniquePtr
 ClassificationPostProcess::PostProcess(
-    const std::shared_ptr<DnnNodeOutput>& node_output)
-{
+    const std::shared_ptr<DnnNodeOutput> &node_output) {
   const auto &outputs = node_output->outputs;
   RCLCPP_INFO(rclcpp::get_logger("ClassificationPostProcess"),
               "outputs size: %d",
               outputs.size());
   if (outputs.empty() ||
-      static_cast<int32_t>(outputs.size()) < model_output_count_)
-  {
+      static_cast<int32_t>(outputs.size()) < model_output_count_) {
     RCLCPP_ERROR(rclcpp::get_logger("ClassificationPostProcess"),
-                "Invalid outputs");
+                 "Invalid outputs");
     return nullptr;
   }
 
@@ -73,14 +69,13 @@ ClassificationPostProcess::PostProcess(
   RCLCPP_INFO(rclcpp::get_logger("ClassificationPostProcess"),
               "out cls size: %d",
               det_result->perception.cls.size());
-  for (auto &cls : det_result->perception.cls)
-  {
+  for (auto &cls : det_result->perception.cls) {
     std::string clsname = cls.class_name;
     std::stringstream ss;
-    ss << "class type:" << cls.class_name
-       << ", score:" << cls.score;
+    ss << "class type:" << cls.class_name << ", score:" << cls.score;
     RCLCPP_INFO(rclcpp::get_logger("ClassificationPostProcess"),
-                  "%s", ss.str().c_str());
+                "%s",
+                ss.str().c_str());
 
     auto xmin = model_input_width_ / 2;
     auto ymin = model_input_height_ / 2;

@@ -12,13 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "util/output_parser/detection/ptq_yolo2_output_parser.h"
-#include "rclcpp/rclcpp.hpp"
+#include "dnn_node/util/output_parser/detection/ptq_yolo2_output_parser.h"
+
 #include <queue>
+
+#include "dnn_node/util/output_parser/algorithm.h"
+#include "dnn_node/util/output_parser/detection/nms.h"
+#include "dnn_node/util/output_parser/utils.h"
 #include "rapidjson/document.h"
-#include "util/output_parser/algorithm.h"
-#include "util/output_parser/detection/nms.h"
-#include "util/output_parser/utils.h"
+#include "rclcpp/rclcpp.hpp"
 
 namespace hobot {
 namespace dnn_node {
@@ -60,21 +62,18 @@ PTQYolo2Config default_ptq_yolo2_config = {
      "hair drier",    "toothbrush"}};
 
 int32_t Yolo2OutputParser::Parse(
-      std::shared_ptr<DNNResult>& output,
-      std::vector<std::shared_ptr<InputDescription>>& input_descriptions,
-      std::shared_ptr<OutputDescription>& output_description,
-      std::shared_ptr<DNNTensor>& output_tensor)
-{
-  if (!output_tensor)
-  {
+    std::shared_ptr<Dnn_Parser_Result> &output,
+    std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
+    std::shared_ptr<OutputDescription> &output_description,
+    std::shared_ptr<DNNTensor> &output_tensor) {
+  if (!output_tensor) {
     RCLCPP_ERROR(rclcpp::get_logger("Yolo2_detection_parser"),
                  "output_tensor invalid cast");
     return -1;
   }
 
   std::shared_ptr<Dnn_Parser_Result> result;
-  if (!output)
-  {
+  if (!output) {
     result = std::make_shared<Dnn_Parser_Result>();
     output = result;
   } else {
@@ -82,26 +81,24 @@ int32_t Yolo2OutputParser::Parse(
   }
 
   auto depend_output_tensors =
-          std::vector<std::shared_ptr<DNNTensor>>{output_tensor};
+      std::vector<std::shared_ptr<DNNTensor>>{output_tensor};
 
   int ret = PostProcess(depend_output_tensors, result->perception);
-  if (ret != 0)
-  {
+  if (ret != 0) {
     RCLCPP_INFO(rclcpp::get_logger("Yolo2_detection_parser"),
-                "postprocess return error, code = %d", ret);
+                "postprocess return error, code = %d",
+                ret);
   }
   std::stringstream ss;
   ss << "Yolo2_detection_parser parse finished, predict result: "
-      << result->perception;
-  RCLCPP_DEBUG(rclcpp::get_logger("Yolo2_detection_parser"),
-              "%s", ss.str().c_str());
+     << result->perception;
+  RCLCPP_DEBUG(
+      rclcpp::get_logger("Yolo2_detection_parser"), "%s", ss.str().c_str());
   return ret;
 }
 
 int Yolo2OutputParser::PostProcess(
-  std::vector<std::shared_ptr<DNNTensor>> &tensors,
-  Perception &perception)
-{
+    std::vector<std::shared_ptr<DNNTensor>> &tensors, Perception &perception) {
   perception.type = Perception::DET;
   hbSysFlushMem(&(tensors[0]->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
   auto *data = reinterpret_cast<float *>(tensors[0]->sysMem[0].virAddr);
@@ -115,19 +112,15 @@ int Yolo2OutputParser::PostProcess(
   int height, width;
   get_tensor_hw(tensors[0], &height, &width);
   // int *shape = tensor->data_shape.d;
-  for (int h = 0; h < height; h++)
-  {
-    for (int w = 0; w < width; w++)
-    {
-      for (size_t k = 0; k < anchors_table.size(); k++)
-      {
+  for (int h = 0; h < height; h++) {
+    for (int w = 0; w < width; w++) {
+      for (size_t k = 0; k < anchors_table.size(); k++) {
         double anchor_x = anchors_table[k].first;
         double anchor_y = anchors_table[k].second;
         float *cur_data = data + k * num_pred;
 
         float objness = cur_data[4];
-        for (int index = 0; index < num_classes; ++index)
-        {
+        for (int index = 0; index < num_classes; ++index) {
           class_pred[index] = cur_data[5 + index];
         }
 
@@ -136,8 +129,7 @@ int Yolo2OutputParser::PostProcess(
         float confidence = (1.f / (1 + std::exp(-objness))) *
                            (1.f / (1 + std::exp(-class_pred[id])));
 
-        if (confidence < score_threshold_)
-        {
+        if (confidence < score_threshold_) {
           continue;
         }
 
@@ -159,8 +151,7 @@ int Yolo2OutputParser::PostProcess(
         double xmax = (box_center_x + box_scale_x / 2.0);
         double ymax = (box_center_y + box_scale_y / 2.0);
 
-        if (xmin > xmax || ymin > ymax)
-        {
+        if (xmin > xmax || ymin > ymax) {
           continue;
         }
 

@@ -15,16 +15,15 @@
 #ifndef _DETECTION_PTQ_EFFICIENTDET_OUTPUT_PARSER_H_
 #define _DETECTION_PTQ_EFFICIENTDET_OUTPUT_PARSER_H_
 
+#include <memory>
+#include <mutex>
 #include <string>
 #include <utility>
 #include <vector>
-#include <mutex>
-#include <memory>
 
-#include "util/output_parser/perception_common.h"
 #include "dnn/hb_dnn_ext.h"
 #include "dnn_node/dnn_node_data.h"
-
+#include "dnn_node/util/output_parser/perception_common.h"
 
 namespace hobot {
 namespace dnn_node {
@@ -61,16 +60,26 @@ struct EDAnchor {
 
 extern EfficientDetConfig default_efficient_det_config;
 
-class EfficientDetAssistParser : public SingleBranchOutputParser {};
+class EfficientDetAssistParser
+    : public SingleBranchOutputParser<Dnn_Parser_Result> {
+ public:
+  int32_t Parse(
+      std::shared_ptr<Dnn_Parser_Result> &output,
+      std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
+      std::shared_ptr<OutputDescription> &output_description,
+      std::shared_ptr<DNNTensor> &output_tensor) override {
+    return 0;
+  }
+};
 
 /**
  * Method for post processing
  */
-class EfficientDetOutputParser : public MultiBranchOutputParser
-{
+class EfficientDetOutputParser
+    : public MultiBranchOutputParser<Dnn_Parser_Result> {
  public:
   int32_t Parse(
-      std::shared_ptr<DNNResult> &output,
+      std::shared_ptr<Dnn_Parser_Result> &output,
       std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
       std::shared_ptr<OutputDescription> &output_descriptions,
       std::shared_ptr<DNNTensor> &output_tensor,

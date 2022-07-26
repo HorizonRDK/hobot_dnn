@@ -15,31 +15,30 @@
 #ifndef _CLASSIFICATION_PTQ_CLASSIFICATION_OUTPUT_PARSER_H_
 #define _CLASSIFICATION_PTQ_CLASSIFICATION_OUTPUT_PARSER_H_
 
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
 
-#include "util/output_parser/perception_common.h"
 #include "dnn/hb_dnn_ext.h"
 #include "dnn_node/dnn_node_data.h"
+#include "dnn_node/util/output_parser/perception_common.h"
 
 namespace hobot {
 namespace dnn_node {
 
-class ClassficationOutputParser : public SingleBranchOutputParser
-{
+class ClassficationOutputParser
+    : public SingleBranchOutputParser<Dnn_Parser_Result> {
  public:
   int32_t Parse(
-      std::shared_ptr<DNNResult>& output,
-      std::vector<std::shared_ptr<InputDescription>>& input_descriptions,
-      std::shared_ptr<OutputDescription>& output_description,
-      std::shared_ptr<DNNTensor>& output_tensor) override;
+      std::shared_ptr<Dnn_Parser_Result> &output,
+      std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
+      std::shared_ptr<OutputDescription> &output_description,
+      std::shared_ptr<DNNTensor> &output_tensor) override;
 
   int InitClassNames(const std::string &cls_name_file);
 
  private:
-  int PostProcess(std::shared_ptr<DNNTensor> &tensors,
-                  Perception &perception);
+  int PostProcess(std::shared_ptr<DNNTensor> &tensors, Perception &perception);
 
   void GetTopkResult(std::shared_ptr<DNNTensor> &tensor,
                      std::vector<Classification> &top_k_cls);

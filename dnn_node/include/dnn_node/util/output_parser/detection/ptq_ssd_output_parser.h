@@ -15,14 +15,14 @@
 #ifndef _DETECTION_PTQ_SSD_OUTPUT_PARSER_H_
 #define _DETECTION_PTQ_SSD_OUTPUT_PARSER_H_
 
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
-#include <memory>
 
-#include "util/output_parser/perception_common.h"
 #include "dnn/hb_dnn_ext.h"
 #include "dnn_node/dnn_node_data.h"
+#include "dnn_node/util/output_parser/perception_common.h"
 
 namespace hobot {
 namespace dnn_node {
@@ -60,13 +60,21 @@ struct SSDConfig {
  */
 extern SSDConfig default_ssd_config;
 
-class SSDAssistParser : public SingleBranchOutputParser {};
-
-class SSDOutputParser : public MultiBranchOutputParser
-{
+class SSDAssistParser : public SingleBranchOutputParser<Dnn_Parser_Result> {
  public:
   int32_t Parse(
-      std::shared_ptr<DNNResult> &output,
+      std::shared_ptr<Dnn_Parser_Result> &output,
+      std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
+      std::shared_ptr<OutputDescription> &output_description,
+      std::shared_ptr<DNNTensor> &output_tensor) override {
+    return 0;
+  }
+};
+
+class SSDOutputParser : public MultiBranchOutputParser<Dnn_Parser_Result> {
+ public:
+  int32_t Parse(
+      std::shared_ptr<Dnn_Parser_Result> &output,
       std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
       std::shared_ptr<OutputDescription> &output_descriptions,
       std::shared_ptr<DNNTensor> &output_tensor,

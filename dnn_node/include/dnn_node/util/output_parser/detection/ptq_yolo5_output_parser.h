@@ -12,29 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef PTQ_YOLO3_DARKNET_OUTPUT_PARSER_H
-#define PTQ_YOLO3_DARKNET_OUTPUT_PARSER_H
+#ifndef _DETECTION_PTQ_YOLO5_OUTPUT_PARSER_H_
+#define _DETECTION_PTQ_YOLO5_OUTPUT_PARSER_H_
 
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
-#include <memory>
-#include "util/output_parser/perception_common.h"
 
 #include "dnn/hb_dnn_ext.h"
 #include "dnn_node/dnn_node_data.h"
+#include "dnn_node/util/output_parser/perception_common.h"
 
 namespace hobot {
 namespace dnn_node {
 
 /**
- * Config definition for Yolo3
+ * Config definition for Yolo5
  */
-struct PTQYolo3DarknetConfig {
+struct PTQYolo5Config {
   std::vector<int> strides;
   std::vector<std::vector<std::pair<double, double>>> anchors_table;
   int class_num;
   std::vector<std::string> class_names;
+  std::vector<std::vector<float>> dequantize_scale;
 
   std::string Str() {
     std::stringstream ss;
@@ -54,15 +55,23 @@ struct PTQYolo3DarknetConfig {
   }
 };
 
-extern PTQYolo3DarknetConfig default_ptq_yolo3_darknet_config;
+extern PTQYolo5Config default_ptq_yolo5_config;
 
-class Yolo3_darknetAssistParser : public SingleBranchOutputParser {};
-
-class Yolo3DarknetOutputParser : public MultiBranchOutputParser
-{
+class Yolo5AssistParser : public SingleBranchOutputParser<Dnn_Parser_Result> {
  public:
   int32_t Parse(
-      std::shared_ptr<DNNResult> &output,
+      std::shared_ptr<Dnn_Parser_Result> &output,
+      std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
+      std::shared_ptr<OutputDescription> &output_description,
+      std::shared_ptr<DNNTensor> &output_tensor) override {
+    return 0;
+  }
+};
+
+class Yolo5OutputParser : public MultiBranchOutputParser<Dnn_Parser_Result> {
+ public:
+  int32_t Parse(
+      std::shared_ptr<Dnn_Parser_Result> &output,
       std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
       std::shared_ptr<OutputDescription> &output_descriptions,
       std::shared_ptr<DNNTensor> &output_tensor,
@@ -74,21 +83,25 @@ class Yolo3DarknetOutputParser : public MultiBranchOutputParser
   int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
                   Perception &perception);
 
-  void PostProcessNHWC(std::shared_ptr<DNNTensor> tensor,
-                       int layer,
-                       std::vector<Detection> &dets);
+  void PostProcess(std::shared_ptr<DNNTensor> tensor,
+                   int layer,
+                   std::vector<Detection> &dets);
 
-  void PostProcessNCHW(std::shared_ptr<DNNTensor> tensor,
-                       int layer,
-                       std::vector<Detection> &dets);
+  double Dequanti(int32_t data,
+                  int layer,
+                  bool big_endian,
+                  int offset,
+                  hbDNNTensorProperties &properties);
 
  private:
-  PTQYolo3DarknetConfig yolo3_config_ = default_ptq_yolo3_darknet_config;
-  float score_threshold_ = 0.3;
-  float nms_threshold_ = 0.45;
-  int nms_top_k_ = 500;
+  PTQYolo5Config yolo5_config_ = default_ptq_yolo5_config;
+  float score_threshold_ = 0.4;
+  float nms_threshold_ = 0.5;
+  int nms_top_k_ = 5000;
+  bool has_dequanti_node_ = true;
+  std::string dequanti_file_ = "";
 };
 
 }  // namespace dnn_node
 }  // namespace hobot
-#endif  // PTQ_YOLO3_DARKNET_OUTPUT_PARSER_H_
+#endif  // _DETECTION_PTQ_YOLO5_OUTPUT_PARSER_H_

@@ -12,16 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "util/output_parser/detection/ptq_efficientdet_output_parser.h"
-#include "rclcpp/rclcpp.hpp"
-#include "rapidjson/document.h"
-#include "rapidjson/istreamwrapper.h"
-#include "util/output_parser/algorithm.h"
-#include "util/output_parser/detection/nms.h"
-#include "util/output_parser/utils.h"
+#include "dnn_node/util/output_parser/detection/ptq_efficientdet_output_parser.h"
+
+#include <arm_neon.h>
 
 #include <queue>
-#include <arm_neon.h>
+
+#include "dnn_node/util/output_parser/algorithm.h"
+#include "dnn_node/util/output_parser/detection/nms.h"
+#include "dnn_node/util/output_parser/utils.h"
+#include "rapidjson/document.h"
+#include "rapidjson/istreamwrapper.h"
+#include "rclcpp/rclcpp.hpp"
 
 namespace hobot {
 namespace dnn_node {
@@ -65,31 +67,27 @@ EfficientDetConfig default_efficient_det_config = {
      "vase",          "scissors",     "teddy bear",
      "hair drier",    "toothbrush"}};
 
-int EfficientDetOutputParser::Setdequanti_file(const std::string &dequanti_file)
-{
-  if (dequanti_file.empty())
-    return 0;
+int EfficientDetOutputParser::Setdequanti_file(
+    const std::string &dequanti_file) {
+  if (dequanti_file.empty()) return 0;
   this->dequanti_file_ = dequanti_file;
   // resize vector size
   efficient_det_config_.scales.resize(10);
-  for (int i = 0; i < 5; i++)
-  {
+  for (int i = 0; i < 5; i++) {
     efficient_det_config_.scales[i].resize(720);
     efficient_det_config_.scales[i + 5].resize(36);
   }
   // read scales for tensors
   std::fstream infile;
   infile.open(dequanti_file_.c_str(), std::ios_base::in);
-  if (!infile.is_open())
-  {
+  if (!infile.is_open()) {
     RCLCPP_DEBUG(rclcpp::get_logger("EfficientDetOutputParser"),
-        "Open file: %s failed!", dequanti_file_.c_str());
+                 "Open file: %s failed!",
+                 dequanti_file_.c_str());
     return -1;
   }
-  for (int i = 0; i < 10; i++)
-  {
-    for (int j = 0; j < efficient_det_config_.scales[i].size(); j++)
-    {
+  for (int i = 0; i < 10; i++) {
+    for (int j = 0; j < efficient_det_config_.scales[i].size(); j++) {
       infile >> efficient_det_config_.scales[i][j];
     }
   }
@@ -98,40 +96,36 @@ int EfficientDetOutputParser::Setdequanti_file(const std::string &dequanti_file)
 };
 
 int32_t EfficientDetOutputParser::Parse(
-      std::shared_ptr<DNNResult> &output,
-      std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
-      std::shared_ptr<OutputDescription> &output_descriptions,
-      std::shared_ptr<DNNTensor> &output_tensor,
-      std::vector<std::shared_ptr<OutputDescription>> &depend_output_descs,
-      std::vector<std::shared_ptr<DNNTensor>> &depend_output_tensors,
-      std::vector<std::shared_ptr<DNNResult>> &depend_outputs)
-{
-  if (output_descriptions)
-  {
+    std::shared_ptr<Dnn_Parser_Result> &output,
+    std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
+    std::shared_ptr<OutputDescription> &output_descriptions,
+    std::shared_ptr<DNNTensor> &output_tensor,
+    std::vector<std::shared_ptr<OutputDescription>> &depend_output_descs,
+    std::vector<std::shared_ptr<DNNTensor>> &depend_output_tensors,
+    std::vector<std::shared_ptr<DNNResult>> &depend_outputs) {
+  if (output_descriptions) {
     RCLCPP_DEBUG(rclcpp::get_logger("EfficientDetOutputParser"),
                  "type: %s, GetDependencies size: %d",
                  output_descriptions->GetType().c_str(),
                  output_descriptions->GetDependencies().size());
-    if (!output_descriptions->GetDependencies().empty())
-    {
+    if (!output_descriptions->GetDependencies().empty()) {
       RCLCPP_DEBUG(rclcpp::get_logger("EfficientDetOutputParser"),
                    "Dependencies: %d",
                    output_descriptions->GetDependencies().front());
     }
   }
   RCLCPP_INFO(rclcpp::get_logger("EfficientDetOutputParser"),
-              "dep out size: %d %d", depend_output_descs.size(),
+              "dep out size: %d %d",
+              depend_output_descs.size(),
               depend_output_tensors.size());
-  if (depend_output_tensors.size() < 10)
-  {
+  if (depend_output_tensors.size() < 10) {
     RCLCPP_ERROR(rclcpp::get_logger("EfficientDetOutputParser"),
                  "depend out tensor size invalid cast");
     return -1;
   }
 
   std::shared_ptr<Dnn_Parser_Result> result;
-  if (!output)
-  {
+  if (!output) {
     result = std::make_shared<Dnn_Parser_Result>();
     output = result;
   } else {
@@ -139,24 +133,23 @@ int32_t EfficientDetOutputParser::Parse(
   }
 
   int ret = PostProcess(depend_output_tensors, result->perception);
-  if (ret != 0)
-  {
+  if (ret != 0) {
     RCLCPP_INFO(rclcpp::get_logger("EfficientDetOutputParser"),
-                "postprocess return error, code = %d", ret);
+                "postprocess return error, code = %d",
+                ret);
   }
   std::stringstream ss;
   ss << "EfficientDetOutputParser parse finished, predict result: "
-      << result->perception;
-  RCLCPP_DEBUG(rclcpp::get_logger("EfficientDetOutputParser"),
-              "%s", ss.str().c_str());
+     << result->perception;
+  RCLCPP_DEBUG(
+      rclcpp::get_logger("EfficientDetOutputParser"), "%s", ss.str().c_str());
   return ret;
 }
 
 int EfficientDetOutputParser::GetAnchors(std::vector<EDAnchor> &anchors,
-                                                 int layer,
-                                                 int feat_height,
-                                                 int feat_width)
-{
+                                         int layer,
+                                         int feat_height,
+                                         int feat_width) {
   int stride = default_efficient_det_config.feature_strides[layer];
   auto scales = default_efficient_det_config.anchor_scales[layer];
   const auto &ratios = default_efficient_det_config.anchor_ratio;
@@ -202,8 +195,7 @@ int EfficientDetOutputParser::GetAnchors(std::vector<EDAnchor> &anchors,
 static inline uint32x4x4_t CalculateIndex(uint32_t idx,
                                           float32x4_t a,
                                           float32x4_t b,
-                                          uint32x4x4_t c)
-{
+                                          uint32x4x4_t c) {
   uint32x4_t mask{0};
   mask = vcltq_f32(b, a);
   uint32x4_t vec_idx = {idx, idx + 1, idx + 2, idx + 3};
@@ -211,8 +203,7 @@ static inline uint32x4x4_t CalculateIndex(uint32_t idx,
   return res;
 }
 
-static inline float32x2_t CalculateMax(float32x4_t in)
-{
+static inline float32x2_t CalculateMax(float32x4_t in) {
   auto pmax = vpmax_f32(vget_high_f32(in), vget_low_f32(in));
   return vpmax_f32(pmax, pmax);
 }
@@ -272,8 +263,7 @@ int EfficientDetOutputParser::GetBboxAndScores(
     std::vector<Detection> &dets,
     std::vector<EDAnchor> &anchors,
     int class_num,
-    int tensor_index)
-{
+    int tensor_index) {
   auto *shape = c_tensor->properties.validShape.dimensionSize;
   int32_t c_batch_size = shape[0];
   int h_idx, w_idx, c_idx;
@@ -298,23 +288,18 @@ int EfficientDetOutputParser::GetBboxAndScores(
   hbSysFlushMem(&(c_tensor->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
   hbSysFlushMem(&(bbox_tensor->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
 
-  if (this->has_dequanti_node_)
-  {
+  if (this->has_dequanti_node_) {
     auto *raw_cls_data = reinterpret_cast<float *>(c_tensor->sysMem[0].virAddr);
     auto *raw_box_data =
         reinterpret_cast<float *>(bbox_tensor->sysMem[0].virAddr);
-    for (unsigned int i = 0; i < box_num; i++)
-    {
+    for (unsigned int i = 0; i < box_num; i++) {
       uint32_t res_id_cur_anchor = i * class_num;
       int max_id = 0;
       float max_score = raw_cls_data[res_id_cur_anchor];
-      if (class_num % 4 != 0)
-      {
-        for (int cls = 1; cls < class_num; ++cls)
-        {
+      if (class_num % 4 != 0) {
+        for (int cls = 1; cls < class_num; ++cls) {
           float cls_value = raw_cls_data[res_id_cur_anchor + cls];
-          if (cls_value > max_score)
-          {
+          if (cls_value > max_score) {
             max_score = cls_value;
             max_id = cls;
           }
@@ -328,57 +313,48 @@ int EfficientDetOutputParser::GetBboxAndScores(
         float max_score_1 = raw_cls_data[res_id_cur_anchor + 1];
         float max_score_2 = raw_cls_data[res_id_cur_anchor + 2];
         float max_score_3 = raw_cls_data[res_id_cur_anchor + 3];
-        for (int cls = 0; cls < class_num; cls += 4)
-        {
+        for (int cls = 0; cls < class_num; cls += 4) {
           float cls_value_0 = raw_cls_data[res_id_cur_anchor + cls];
           float cls_value_1 = raw_cls_data[res_id_cur_anchor + cls + 1];
           float cls_value_2 = raw_cls_data[res_id_cur_anchor + cls + 2];
           float cls_value_3 = raw_cls_data[res_id_cur_anchor + cls + 3];
-          if (cls_value_0 > max_score_0)
-          {
+          if (cls_value_0 > max_score_0) {
             max_score_0 = cls_value_0;
             max_id_0 = cls;
           }
 
-          if (cls_value_1 > max_score_1)
-          {
+          if (cls_value_1 > max_score_1) {
             max_score_1 = cls_value_1;
             max_id_1 = cls + 1;
           }
 
-          if (cls_value_2 > max_score_2)
-          {
+          if (cls_value_2 > max_score_2) {
             max_score_2 = cls_value_2;
             max_id_2 = cls + 2;
           }
 
-          if (cls_value_3 > max_score_3)
-          {
+          if (cls_value_3 > max_score_3) {
             max_score_3 = cls_value_3;
             max_id_3 = cls + 3;
           }
         }
 
-        if (max_score_0 > max_score)
-        {
+        if (max_score_0 > max_score) {
           max_score = max_score_0;
           max_id = max_id_0;
         }
 
-        if (max_score_1 > max_score)
-        {
+        if (max_score_1 > max_score) {
           max_score = max_score_1;
           max_id = max_id_1;
         }
 
-        if (max_score_2 > max_score)
-        {
+        if (max_score_2 > max_score) {
           max_score = max_score_2;
           max_id = max_id_2;
         }
 
-        if (max_score_3 > max_score)
-        {
+        if (max_score_3 > max_score) {
           max_score = max_score_3;
           max_id = max_id_3;
         }
@@ -423,8 +399,7 @@ int EfficientDetOutputParser::GetBboxAndScores(
         reinterpret_cast<int32_t *>(c_tensor->sysMem[0].virAddr);
     auto *raw_box_data =
         reinterpret_cast<int32_t *>(bbox_tensor->sysMem[0].virAddr);
-    for (unsigned int i = 0; i < box_num; i++)
-    {
+    for (unsigned int i = 0; i < box_num; i++) {
       // score and cls
       uint32_t res_id_cur_anchor = i * class_num;
       int cls_scale_index = res_id_cur_anchor % 720;
@@ -481,20 +456,15 @@ int EfficientDetOutputParser::GetBboxAndScores(
 }
 
 int EfficientDetOutputParser::PostProcess(
-    std::vector<std::shared_ptr<DNNTensor>> &tensors,
-    Perception &perception)
-{
+    std::vector<std::shared_ptr<DNNTensor>> &tensors, Perception &perception) {
   perception.type = Perception::DET;
 
   int layer_num = efficient_det_config_.feature_strides.size();
-  if (!anchor_init_)
-  {
+  if (!anchor_init_) {
     std::unique_lock<std::mutex> mtx(anchors_mtx);
-    if (!anchor_init_)
-    {
+    if (!anchor_init_) {
       anchors_table_.resize(layer_num);
-      for (int i = 0; i < layer_num; i++)
-      {
+      for (int i = 0; i < layer_num; i++) {
         int height, width;
         get_tensor_aligned_hw(tensors[i], &height, &width);
         GetAnchors(anchors_table_[i], i, height, width);
@@ -506,8 +476,7 @@ int EfficientDetOutputParser::PostProcess(
 
   std::vector<Detection> dets;
 
-  for (int i = 0; i < layer_num; i++)
-  {
+  for (int i = 0; i < layer_num; i++) {
     std::vector<EDAnchor> &anchors = anchors_table_[i];
     int anchors_num = anchors.size();
     GetBboxAndScores(tensors[i],
@@ -518,8 +487,7 @@ int EfficientDetOutputParser::PostProcess(
                      i);
   }
   yolo5_nms(dets, nms_threshold_, 6000, perception.det, false);
-  if (perception.det.size() > nms_top_k_)
-  {
+  if (perception.det.size() > nms_top_k_) {
     perception.det.resize(nms_top_k_);
   }
 

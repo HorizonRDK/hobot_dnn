@@ -108,7 +108,8 @@ ai_msgs::msg::PerceptionTargets::UniquePtr FasterRcnnPostProcess::PostProcess(
     std::stringstream ss;
     ss << "rect: " << rect.left << " " << rect.top << " " << rect.right << " "
        << rect.bottom << ", " << rect.conf;
-    RCLCPP_INFO(rclcpp::get_logger("mono2d_body_det"), "%s", ss.str().c_str());
+    RCLCPP_INFO(
+        rclcpp::get_logger("FasterRcnnPostProcess"), "%s", ss.str().c_str());
 
     ai_msgs::msg::Roi roi;
     roi.set__type("body");
@@ -139,7 +140,7 @@ ai_msgs::msg::PerceptionTargets::UniquePtr FasterRcnnPostProcess::PostProcess(
       target_point.point.emplace_back(pt);
     }
     ss << "\n";
-    RCLCPP_DEBUG(rclcpp::get_logger("mono2d_body_det"),
+    RCLCPP_DEBUG(rclcpp::get_logger("FasterRcnnPostProcess"),
                  "FasterRcnnKpsOutputParser parse kps: %s",
                  ss.str().c_str());
     body_kps.emplace_back(target_point);
