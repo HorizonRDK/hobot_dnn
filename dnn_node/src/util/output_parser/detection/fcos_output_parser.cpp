@@ -149,17 +149,14 @@ void FcosDetectionOutputParser::GetBboxAndScoresNHWC(
 
         // get detection box
         int index = 4 * (h * tensor_w + w);
-        double xmin = (w - bbox_data[index]);
-        xmin *= fcos_config_.strides[i];
-
-        double ymin = (h - bbox_data[index + 1]);
-        ymin *= fcos_config_.strides[i];
-
-        double xmax = (w + bbox_data[index + 2]);
-        xmax *= fcos_config_.strides[i];
-
-        double ymax = (h + bbox_data[index + 3]);
-        ymax *= fcos_config_.strides[i];
+        double xmin = 
+            ((w + 0.5) * fcos_config_.strides[i] - bbox_data[index]);
+        double ymin  =
+            ((h + 0.5) * fcos_config_.strides[i] - bbox_data[index + 1]);
+        double xmax =
+            ((w + 0.5) * fcos_config_.strides[i] + bbox_data[index + 2]);
+        double ymax  =
+            ((h + 0.5) * fcos_config_.strides[i] + bbox_data[index + 3]);
 
         Detection detection;
         detection.bbox.xmin = xmin;
@@ -214,17 +211,14 @@ void FcosDetectionOutputParser::GetBboxAndScoresNCHW(
 
         // get detection box
         int index = 4 * (h * tensor_w + w);
-        double xmin = (w - bbox_data[index]);
-        xmin *= fcos_config_.strides[i];
-
-        double ymin = (h - bbox_data[index + 1]);
-        ymin *= fcos_config_.strides[i];
-
-        double xmax = (w + bbox_data[index + 2]);
-        xmax *= fcos_config_.strides[i];
-
-        double ymax = (h + bbox_data[index + 3]);
-        ymax *= fcos_config_.strides[i];
+        double xmin = 
+            ((w + 0.5) * fcos_config_.strides[i] - bbox_data[index]);
+        double ymin  =
+            ((h + 0.5) * fcos_config_.strides[i] - bbox_data[index + 1]);
+        double xmax =
+            ((w + 0.5) * fcos_config_.strides[i] + bbox_data[index + 2]);
+        double ymax  =
+            ((h + 0.5) * fcos_config_.strides[i] + bbox_data[index + 3]);
 
         Detection detection;
         detection.bbox.xmin = xmin;
