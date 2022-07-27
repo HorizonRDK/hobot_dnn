@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "util/output_parser/segmentation/ptq_unet_output_parser.h"
+#include "dnn_node/util/output_parser/segmentation/ptq_unet_output_parser.h"
 
 #include <queue>
 
+#include "dnn_node/util/output_parser/algorithm.h"
+#include "dnn_node/util/output_parser/utils.h"
 #include "rclcpp/rclcpp.hpp"
-#include "util/output_parser/algorithm.h"
-#include "util/output_parser/utils.h"
 
 namespace hobot {
 namespace dnn_node {
 
 int32_t UnetOutputParser::Parse(
-    std::shared_ptr<DNNResult>& output,
+    std::shared_ptr<Dnn_Parser_Result>& output,
     std::vector<std::shared_ptr<InputDescription>>& input_descriptions,
     std::shared_ptr<OutputDescription>& output_description,
     std::shared_ptr<DNNTensor>& output_tensor) {

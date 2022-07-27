@@ -26,7 +26,7 @@
 #include "sensor_msgs/image_encodings.hpp"
 #include "sensor_msgs/msg/compressed_image.hpp"
 #include "sensor_msgs/msg/image.hpp"
-#include "util/output_parser/segmentation/ptq_unet_output_parser.h"
+#include "dnn_node/util/output_parser/segmentation/ptq_unet_output_parser.h"
 
 #ifndef POST_PROCESS_UNET_H
 #define POST_PROCESS_UNET_H

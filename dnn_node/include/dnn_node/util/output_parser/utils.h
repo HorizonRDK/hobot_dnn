@@ -15,9 +15,9 @@
 #ifndef _OUTPUT_PARSER_UTILS_H_
 #define _OUTPUT_PARSER_UTILS_H_
 
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
 
 #include "dnn_node/dnn_node_data.h"
 
@@ -46,7 +46,6 @@ int get_tensor_hwc_index(std::shared_ptr<DNNTensor> tensor,
  */
 int get_tensor_hw(std::shared_ptr<DNNTensor> tensor, int *height, int *width);
 
-
 /**
  *
  * @param tensor
@@ -55,6 +54,33 @@ int get_tensor_hw(std::shared_ptr<DNNTensor> tensor, int *height, int *width);
  * @return
  */
 int get_tensor_aligned_hw(std::shared_ptr<DNNTensor> tensor,
-                          int *height, int *width);
+                          int *height,
+                          int *width);
+
+class Utils {
+ public:
+  static void GetRoiScale(float &scale_h,
+                          float &scale_w,
+                          hbDNNRoi &roi,
+                          hbDNNTensorProperties &properties);
+};
+
+class TensorUtils {
+ public:
+  static int32_t GetTensorHWCIndex(int32_t tensor_layout,
+                                   int *h_index,
+                                   int *w_index,
+                                   int *c_index);
+
+  static int32_t GetTensorValidHWC(hbDNNTensorProperties *properties,
+                                   int *valid_h,
+                                   int *valid_w,
+                                   int *valid_c);
+
+  static void GetTensorScale(hbDNNTensorProperties const &properties,
+                             std::vector<float> &scales);
+};
+
+static inline float Sigmoid(float x) { return 1.0 / (1 + exp(-x)); }
 
 #endif  // _OUTPUT_PARSER_UTILS_H_

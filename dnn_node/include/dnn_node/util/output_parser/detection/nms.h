@@ -16,8 +16,8 @@
 #define _DETECTION_NMS_H_
 
 #include <vector>
-#include "util/output_parser/perception_common.h"
 
+#include "dnn_node/util/output_parser/perception_common.h"
 
 /**
  * Non-maximum suppression

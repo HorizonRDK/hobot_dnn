@@ -19,10 +19,10 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include "util/output_parser/perception_common.h"
 
 #include "dnn/hb_dnn_ext.h"
 #include "dnn_node/dnn_node_data.h"
+#include "dnn_node/util/output_parser/perception_common.h"
 
 namespace hobot {
 namespace dnn_node {
@@ -36,12 +36,23 @@ struct FcosConfig {
 };
 extern FcosConfig default_fcos_config;
 
-class FcosDetectionAssistParser : public SingleBranchOutputParser {};
-
-class FcosDetectionOutputParser : public MultiBranchOutputParser {
+class FcosDetectionAssistParser
+    : public SingleBranchOutputParser<Dnn_Parser_Result> {
  public:
   int32_t Parse(
-      std::shared_ptr<DNNResult> &output,
+      std::shared_ptr<Dnn_Parser_Result> &output,
+      std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
+      std::shared_ptr<OutputDescription> &output_description,
+      std::shared_ptr<DNNTensor> &output_tensor) override {
+    return 0;
+  }
+};
+
+class FcosDetectionOutputParser
+    : public MultiBranchOutputParser<Dnn_Parser_Result> {
+ public:
+  int32_t Parse(
+      std::shared_ptr<Dnn_Parser_Result> &output,
       std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
       std::shared_ptr<OutputDescription> &output_descriptions,
       std::shared_ptr<DNNTensor> &output_tensor,

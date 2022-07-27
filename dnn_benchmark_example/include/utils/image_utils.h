@@ -22,16 +22,9 @@
 #include "easy_dnn/data_structure.h"
 #include "easy_dnn/model.h"
 #include "easy_dnn/model_manager.h"
-#include "easy_dnn/output_parser/classification/classification_output_parser.h"
-#include "easy_dnn/output_parser/detection/bev3d_output_parser.h"
-#include "easy_dnn/output_parser/detection/detection_data_structure.h"
-#include "easy_dnn/output_parser/detection/detection_output_parser.h"
-#include "easy_dnn/output_parser/detection/filter2d_output_parser.h"
-#include "easy_dnn/output_parser/detection/real3d_output_parser.h"
-#include "easy_dnn/output_parser/parsing/depth_output_parser.h"
-#include "easy_dnn/output_parser/parsing/elevation_output_parser.h"
-#include "easy_dnn/output_parser/parsing/parsing_output_parser.h"
-#include "easy_dnn/output_parser/parsing/residual_output_parser.h"
+#include "dnn_node/util/output_parser/classification/classification_output_parser.h"
+#include "dnn_node/util/output_parser/detection/detection_data_structure.h"
+#include "dnn_node/util/output_parser/detection/filter2d_output_parser.h"
 #include "easy_dnn/task_manager.h"
 #include "opencv2/core/mat.hpp"
 #include "opencv2/imgcodecs.hpp"
@@ -43,46 +36,14 @@
     return;                                            \
   }
 
-using hobot::easy_dnn::Bev3DOutputDescription;
-using hobot::easy_dnn::Bev3DOutputParser;
-using hobot::easy_dnn::Bev3DResult;
-using hobot::easy_dnn::ClassificationOutputDescription;
-using hobot::easy_dnn::ClassificationOutputParser;
-using hobot::easy_dnn::ClassificationResult;
-using hobot::easy_dnn::DepthOutputDescription;
-using hobot::easy_dnn::DepthOutputParser;
-using hobot::easy_dnn::DepthResult;
-using hobot::easy_dnn::DetectionOutputDescription;
-using hobot::easy_dnn::DetectionOutputParser;
-using hobot::easy_dnn::DetectionResult;
 using hobot::easy_dnn::DNNResult;
 using hobot::easy_dnn::DNNTensor;
-using hobot::easy_dnn::ElevationOutputDescription;
-using hobot::easy_dnn::ElevationOutputParser;
-using hobot::easy_dnn::ElevationResult;
-using hobot::easy_dnn::Filter2DOutputDescription;
-using hobot::easy_dnn::Filter2DOutputDescriptionParser;
-using hobot::easy_dnn::Filter2DOutputParser;
-using hobot::easy_dnn::Filter2DResult;
 using hobot::easy_dnn::InputDescription;
 using hobot::easy_dnn::Model;
 using hobot::easy_dnn::ModelInferTask;
 using hobot::easy_dnn::ModelManager;
 using hobot::easy_dnn::ModelRoiInferTask;
 using hobot::easy_dnn::NV12PyramidInput;
-using hobot::easy_dnn::OutputDescription;
-using hobot::easy_dnn::OutputParser;
-using hobot::easy_dnn::ParsingOutputDescription;
-using hobot::easy_dnn::ParsingOutputParser;
-using hobot::easy_dnn::ParsingResult;
-using hobot::easy_dnn::PerceptionRect;
-using hobot::easy_dnn::QueryFilter;
-using hobot::easy_dnn::Real3DOutputParser;
-using hobot::easy_dnn::Real3dResult;
-using hobot::easy_dnn::ResidualOutputDescription;
-using hobot::easy_dnn::ResidualOutputParser;
-using hobot::easy_dnn::ResidualResult;
-using hobot::easy_dnn::TaskManager;
 
 #define M_PI_F 3.141592653f
 

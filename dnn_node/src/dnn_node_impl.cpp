@@ -21,7 +21,6 @@
 #include <utility>
 #include <vector>
 
-#include "hobotlog/hobotlog.hpp"
 #include "rclcpp/rclcpp.hpp"
 
 namespace hobot {
@@ -144,8 +143,6 @@ int DnnNodeImpl::TaskInit() {
               "Set task_num [%d]",
               dnn_node_para_ptr_->task_num);
 
-  // set log level of easy dnn
-  SetLogLevel(HOBOT_LOG_ERROR);
   return 0;
 }
 

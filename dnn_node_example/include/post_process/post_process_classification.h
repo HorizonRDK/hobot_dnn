@@ -18,7 +18,7 @@
 
 #include "include/post_process/post_process_base.h"
 
-#include "util/output_parser/classification/ptq_classification_output_parser.h"
+#include "dnn_node/util/output_parser/classification/ptq_classification_output_parser.h"
 
 #ifndef POST_PROCESS_CLASSIFICATION_H_
 #define POST_PROCESS_CLASSIFICATION_H_

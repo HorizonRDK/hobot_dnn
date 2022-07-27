@@ -12,39 +12,41 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef NULL_OUTPUT_PARSER_H
-#define NULL_OUTPUT_PARSER_H
+#ifndef EASY_DNN_CLASSIFICATION_OUTPUT_PARSER_H
+#define EASY_DNN_CLASSIFICATION_OUTPUT_PARSER_H
 
+#include <algorithm>
+#include <iterator>
 #include <memory>
+#include <ostream>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "easy_dnn/data_structure.h"
+#include "easy_dnn/model.h"
 #include "easy_dnn/output_parser.h"
-#include "dnn_node/util/output_parser/detection/filter2d_output_parser.h"
 
-using hobot::easy_dnn::SingleBranchOutputParser;
-using hobot::easy_dnn::DNNResult;
-using hobot::easy_dnn::DNNTensor;
-using hobot::easy_dnn::InputDescription;
-using hobot::easy_dnn::OutputDescription;
-
-class DnnParserResult : public DNNResult {
+namespace hobot {
+namespace easy_dnn {
+class ClassificationResult : public DNNResult {
  public:
-  void Reset() override {
-  }
+  float max_conf;
+  int class_id;
+  std::string class_name;
 };
 
-class nullOutputParser : public SingleBranchOutputParser<DnnParserResult> {
+class ClassificationOutputParser
+    : public SingleBranchOutputParser<ClassificationResult> {
  public:
-  nullOutputParser() {}
-  ~nullOutputParser() {}
   int32_t Parse(
-      std::shared_ptr<DnnParserResult> &output,
+      std::shared_ptr<ClassificationResult> &output,
       std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
       std::shared_ptr<OutputDescription> &output_description,
       std::shared_ptr<DNNTensor> &output_tensor) override;
 };
 
-#endif  // NULL_OUTPUT_PARSER_H
+}  // namespace easy_dnn
+}  // namespace hobot
+
+#endif  // EASY_DNN_CLASSIFICATION_OUTPUT_PARSER_H

@@ -22,7 +22,7 @@
 
 #include "dnn/hb_dnn_ext.h"
 #include "dnn_node/dnn_node_data.h"
-#include "util/output_parser/perception_common.h"
+#include "dnn_node/util/output_parser/perception_common.h"
 
 namespace hobot {
 namespace dnn_node {
@@ -38,10 +38,10 @@ class UnetOutputDescription : public OutputDescription {
   int parse_render = 0;
 };
 
-class UnetOutputParser : public SingleBranchOutputParser {
+class UnetOutputParser : public SingleBranchOutputParser<Dnn_Parser_Result> {
  public:
   int32_t Parse(
-      std::shared_ptr<DNNResult>& output,
+      std::shared_ptr<Dnn_Parser_Result>& output,
       std::vector<std::shared_ptr<InputDescription>>& input_descriptions,
       std::shared_ptr<OutputDescription>& output_description,
       std::shared_ptr<DNNTensor>& output_tensor) override;

@@ -15,7 +15,7 @@
 #include <string>
 
 #include "include/post_process/post_process_base.h"
-#include "util/output_parser/detection/ptq_efficientdet_output_parser.h"
+#include "dnn_node/util/output_parser/detection/ptq_efficientdet_output_parser.h"
 
 #ifndef POST_PROCESS_EFFICIENTDET_H_
 #define POST_PROCESS_EFFICIENTDET_H_

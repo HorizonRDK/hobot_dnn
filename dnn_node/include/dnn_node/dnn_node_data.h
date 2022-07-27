@@ -27,11 +27,12 @@
 #include "easy_dnn/model.h"
 #include "easy_dnn/model_manager.h"
 #include "easy_dnn/output_parser.h"
-#include "easy_dnn/output_parser/detection/facehand_detect_output_parser.h"
-#include "easy_dnn/output_parser/parsing/parsing_output_parser.h"
 #include "easy_dnn/task.h"
 #include "easy_dnn/task_manager.h"
 #include "rclcpp/rclcpp.hpp"
+#include "dnn_node/util/output_parser/parsing_output_parser.h"
+#include "dnn_node/util/output_parser/detection/filter2d_output_parser.h"
+#include "dnn_node/util/output_parser/detection/facehand_detect_output_parser.h"
 
 namespace hobot {
 namespace dnn_node {

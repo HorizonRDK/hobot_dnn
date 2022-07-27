@@ -12,14 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "util/output_parser/detection/fcos_output_parser.h"
-#include "rclcpp/rclcpp.hpp"
-#include "util/output_parser/algorithm.h"
-#include "util/output_parser/detection/nms.h"
-#include "util/output_parser/utils.h"
+#include "dnn_node/util/output_parser/detection/fcos_output_parser.h"
 
 #include <iostream>
 #include <queue>
+
+#include "dnn_node/util/output_parser/algorithm.h"
+#include "dnn_node/util/output_parser/detection/nms.h"
+#include "dnn_node/util/output_parser/utils.h"
+#include "rclcpp/rclcpp.hpp"
 
 namespace hobot {
 namespace dnn_node {
@@ -62,7 +63,7 @@ struct ScoreId {
 };
 
 int32_t FcosDetectionOutputParser::Parse(
-    std::shared_ptr<DNNResult> &output,
+    std::shared_ptr<Dnn_Parser_Result> &output,
     std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
     std::shared_ptr<OutputDescription> &output_descriptions,
     std::shared_ptr<DNNTensor> &output_tensor,
@@ -80,8 +81,10 @@ int32_t FcosDetectionOutputParser::Parse(
                    output_descriptions->GetDependencies().front());
     }
   }
+
   RCLCPP_INFO(rclcpp::get_logger("fcos_detection_parser"),
-              "dep out size: %d %d", depend_output_descs.size(),
+              "dep out size: %d %d",
+              depend_output_descs.size(),
               depend_output_tensors.size());
   if (depend_output_tensors.size() < 15) {
     RCLCPP_ERROR(rclcpp::get_logger("fcos_detection_parser"),
@@ -100,8 +103,10 @@ int32_t FcosDetectionOutputParser::Parse(
   int ret = PostProcess(depend_output_tensors, result->perception);
   if (ret != 0) {
     RCLCPP_INFO(rclcpp::get_logger("fcos_detection_parser"),
-                "postprocess return error, code = %d", ret);
+                "postprocess return error, code = %d",
+                ret);
   }
+
   return ret;
 }
 
@@ -163,8 +168,7 @@ void FcosDetectionOutputParser::GetBboxAndScoresNHWC(
         detection.bbox.ymax = ymax;
         detection.score = tmp_score.score;
         detection.id = tmp_score.id;
-        detection.class_name =
-            fcos_config_.class_names[tmp_score.id].c_str();
+        detection.class_name = fcos_config_.class_names[tmp_score.id].c_str();
         dets.push_back(detection);
       }
     }
@@ -229,8 +233,7 @@ void FcosDetectionOutputParser::GetBboxAndScoresNCHW(
         detection.bbox.ymax = ymax;
         detection.score = tmp_score.score;
         detection.id = tmp_score.id;
-        detection.class_name =
-            fcos_config_.class_names[tmp_score.id].c_str();
+        detection.class_name = fcos_config_.class_names[tmp_score.id].c_str();
         dets.push_back(detection);
       }
     }
@@ -238,8 +241,7 @@ void FcosDetectionOutputParser::GetBboxAndScoresNCHW(
 }
 
 int FcosDetectionOutputParser::PostProcess(
-    std::vector<std::shared_ptr<DNNTensor>> &tensors,
-    Perception &perception) {
+    std::vector<std::shared_ptr<DNNTensor>> &tensors, Perception &perception) {
   if (!tensors[0]) {
     RCLCPP_INFO(rclcpp::get_logger("fcos_example"), "tensor layout error.");
     return -1;

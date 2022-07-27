@@ -12,18 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "util/output_parser/detection/ptq_ssd_output_parser.h"
-#include "rapidjson/document.h"
-#include "util/output_parser/algorithm.h"
-#include "util/output_parser/detection/nms.h"
-#include "util/output_parser/utils.h"
+#include "dnn_node/util/output_parser/detection/ptq_ssd_output_parser.h"
+
 #include <queue>
+
+#include "dnn_node/util/output_parser/algorithm.h"
+#include "dnn_node/util/output_parser/detection/nms.h"
+#include "dnn_node/util/output_parser/utils.h"
+#include "rapidjson/document.h"
 
 namespace hobot {
 namespace dnn_node {
 
-inline float fastExp(float x)
-{
+inline float fastExp(float x) {
   union {
     uint32_t i;
     float f;
@@ -53,40 +54,36 @@ SSDConfig default_ssd_config = {
      "pottedplant", "sheep",   "sofa",  "train",     "tvmonitor"}};
 
 int32_t SSDOutputParser::Parse(
-      std::shared_ptr<DNNResult> &output,
-      std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
-      std::shared_ptr<OutputDescription> &output_descriptions,
-      std::shared_ptr<DNNTensor> &output_tensor,
-      std::vector<std::shared_ptr<OutputDescription>> &depend_output_descs,
-      std::vector<std::shared_ptr<DNNTensor>> &depend_output_tensors,
-      std::vector<std::shared_ptr<DNNResult>> &depend_outputs)
-{
-  if (output_descriptions)
-  {
+    std::shared_ptr<Dnn_Parser_Result> &output,
+    std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
+    std::shared_ptr<OutputDescription> &output_descriptions,
+    std::shared_ptr<DNNTensor> &output_tensor,
+    std::vector<std::shared_ptr<OutputDescription>> &depend_output_descs,
+    std::vector<std::shared_ptr<DNNTensor>> &depend_output_tensors,
+    std::vector<std::shared_ptr<DNNResult>> &depend_outputs) {
+  if (output_descriptions) {
     RCLCPP_DEBUG(rclcpp::get_logger("SSDOutputParser"),
                  "type: %s, GetDependencies size: %d",
                  output_descriptions->GetType().c_str(),
                  output_descriptions->GetDependencies().size());
-    if (!output_descriptions->GetDependencies().empty())
-    {
+    if (!output_descriptions->GetDependencies().empty()) {
       RCLCPP_DEBUG(rclcpp::get_logger("SSDOutputParser"),
                    "Dependencies: %d",
                    output_descriptions->GetDependencies().front());
     }
   }
   RCLCPP_INFO(rclcpp::get_logger("SSDOutputParser"),
-              "dep out size: %d %d", depend_output_descs.size(),
+              "dep out size: %d %d",
+              depend_output_descs.size(),
               depend_output_tensors.size());
-  if (depend_output_tensors.size() < 3)
-  {
+  if (depend_output_tensors.size() < 3) {
     RCLCPP_ERROR(rclcpp::get_logger("SSDOutputParser"),
                  "depend out tensor size invalid cast");
     return -1;
   }
 
   std::shared_ptr<Dnn_Parser_Result> result;
-  if (!output)
-  {
+  if (!output) {
     result = std::make_shared<Dnn_Parser_Result>();
     output = result;
   } else {
@@ -96,24 +93,19 @@ int32_t SSDOutputParser::Parse(
   PostProcess(depend_output_tensors, result->perception);
   std::stringstream ss;
   ss << "PTQSSDPostProcessMethod DoProcess finished, predict result: "
-      << result->perception;
-  RCLCPP_DEBUG(rclcpp::get_logger("SSDOutputParser"),
-              "%s", ss.str().c_str());
+     << result->perception;
+  RCLCPP_DEBUG(rclcpp::get_logger("SSDOutputParser"), "%s", ss.str().c_str());
   return 0;
 }
 
 int SSDOutputParser::PostProcess(
-    std::vector<std::shared_ptr<DNNTensor>> &tensors,
-    Perception &perception)
-{
+    std::vector<std::shared_ptr<DNNTensor>> &tensors, Perception &perception) {
   perception.type = Perception::DET;
   int layer_num = ssd_config_.step.size();
-  if (anchors_table_.empty())
-  {
+  if (anchors_table_.empty()) {
     // Note: note thread safe
     anchors_table_.resize(layer_num);
-    for (int i = 0; i < layer_num; i++)
-    {
+    for (int i = 0; i < layer_num; i++) {
       int height, width;
       std::vector<Anchor> &anchors = anchors_table_[i];
       get_tensor_hw(tensors[i * 2], &height, &width);
@@ -122,8 +114,7 @@ int SSDOutputParser::PostProcess(
   }
 
   std::vector<Detection> dets;
-  for (int i = 0; i < layer_num; i++)
-  {
+  for (int i = 0; i < layer_num; i++) {
     std::vector<Anchor> &anchors = anchors_table_[i];
     GetBboxAndScores(tensors[i * 2 + 1],
                      tensors[i * 2],
@@ -137,30 +128,25 @@ int SSDOutputParser::PostProcess(
 }
 
 int SSDOutputParser::SsdAnchors(std::vector<Anchor> &anchors,
-                                        int layer,
-                                        int layer_height,
-                                        int layer_width)
-{
+                                int layer,
+                                int layer_height,
+                                int layer_width) {
   int step = ssd_config_.step[layer];
   float min_size = ssd_config_.anchor_size[layer].first;
   float max_size = ssd_config_.anchor_size[layer].second;
   auto &anchor_ratio = ssd_config_.anchor_ratio[layer];
-  for (int i = 0; i < layer_height; i++)
-  {
-    for (int j = 0; j < layer_width; j++)
-    {
+  for (int i = 0; i < layer_height; i++) {
+    for (int j = 0; j < layer_width; j++) {
       float cy = (i + ssd_config_.offset[0]) * step;
       float cx = (j + ssd_config_.offset[1]) * step;
       anchors.emplace_back(Anchor(cx, cy, min_size, min_size));
-      if (max_size > 0)
-      {
+      if (max_size > 0) {
         anchors.emplace_back(Anchor(cx,
                                     cy,
                                     std::sqrt(max_size * min_size),
                                     std::sqrt(max_size * min_size)));
       }
-      for (int k = 0; k < 4; k++)
-      {
+      for (int k = 0; k < 4; k++) {
         if (anchor_ratio[k] == 0) continue;
         float sr = std::sqrt(anchor_ratio[k]);
         float w = min_size * sr;
@@ -177,8 +163,7 @@ int SSDOutputParser::GetBboxAndScores(std::shared_ptr<DNNTensor> c_tensor,
                                       std::vector<Detection> &dets,
                                       std::vector<Anchor> &anchors,
                                       int class_num,
-                                      float cut_off_threshold)
-{
+                                      float cut_off_threshold) {
   int *shape = c_tensor->properties.validShape.dimensionSize;
   int32_t c_batch_size = shape[0];
   int h_idx, w_idx, c_idx;
@@ -198,8 +183,14 @@ int SSDOutputParser::GetBboxAndScores(std::shared_ptr<DNNTensor> c_tensor,
   int32_t b_cnum = shape[c_idx];
 
   RCLCPP_DEBUG(rclcpp::get_logger("SSDOutputParser"),
-    "PostProcess c_wnum:%d c_hnum:%d c_cnum:%d b_wnum:%d b_hnum:%d b_cnum: %d",
-              c_wnum, c_hnum, c_cnum, b_wnum, b_hnum, b_cnum);
+               "PostProcess c_wnum:%d c_hnum:%d c_cnum:%d b_wnum:%d b_hnum:%d "
+               "b_cnum: %d",
+               c_wnum,
+               c_hnum,
+               c_cnum,
+               b_wnum,
+               b_hnum,
+               b_cnum);
 
   assert(anchor_num_per_pixel == b_cnum / 4);
   assert(c_batch_size == b_batch_size && c_hnum == b_hnum && c_wnum == b_wnum);
@@ -212,8 +203,7 @@ int SSDOutputParser::GetBboxAndScores(std::shared_ptr<DNNTensor> c_tensor,
   auto *raw_box_data =
       reinterpret_cast<float *>(bbox_tensor->sysMem[0].virAddr);
 
-  for (int i = 0; i < box_num; i++)
-  {
+  for (int i = 0; i < box_num; i++) {
     uint32_t res_id_cur_anchor = i * class_num;
     // get softmax sum
     double sum = 0;
@@ -228,8 +218,7 @@ int SSDOutputParser::GetBboxAndScores(std::shared_ptr<DNNTensor> c_tensor,
     }
 
     double max_score = 0;
-    for (int cls = 0; cls < class_num; ++cls)
-    {
+    for (int cls = 0; cls < class_num; ++cls) {
       float cls_score;
       if (is_performance_) {
         cls_score = fastExp(raw_cls_data[res_id_cur_anchor + cls]);
@@ -239,8 +228,7 @@ int SSDOutputParser::GetBboxAndScores(std::shared_ptr<DNNTensor> c_tensor,
       sum += cls_score;
       /* scores should be larger than background score, or else will not be
       selected */
-      if (cls != 0 && cls_score > max_score && cls_score > background_score)
-      {
+      if (cls != 0 && cls_score > max_score && cls_score > background_score) {
         max_id = cls - 1;
         max_score = cls_score;
       }
@@ -248,8 +236,7 @@ int SSDOutputParser::GetBboxAndScores(std::shared_ptr<DNNTensor> c_tensor,
     // get softmax score
     max_score = max_score / sum;
 
-    if (max_score <= score_threshold_)
-    {
+    if (max_score <= score_threshold_) {
       continue;
     }
 
@@ -286,9 +273,9 @@ int SSDOutputParser::GetBboxAndScores(std::shared_ptr<DNNTensor> c_tensor,
 
     Bbox bbox(xmin, ymin, xmax, ymax);
     dets.emplace_back(static_cast<int>(max_id),
-            max_score,
-            bbox,
-            ssd_config_.class_names[max_id].c_str());
+                      max_score,
+                      bbox,
+                      ssd_config_.class_names[max_id].c_str());
   }
   return 0;
 }
