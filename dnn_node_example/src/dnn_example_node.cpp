@@ -88,6 +88,7 @@ DnnExampleNode::DnnExampleNode(const std::string &node_name,
                  "dnn parse init failed!!! config_file: %s",
                  config_file.data());
     rclcpp::shutdown();
+    return;
   }
 
   std::stringstream ss;
@@ -107,6 +108,7 @@ DnnExampleNode::DnnExampleNode(const std::string &node_name,
   if (Init() != 0) {
     RCLCPP_ERROR(rclcpp::get_logger("example"), "Init failed!");
     rclcpp::shutdown();
+    return;
   }
 
   if (GetModelInputSize(0, model_input_width_, model_input_height_) < 0) {
@@ -342,7 +344,7 @@ int DnnExampleNode::PostProcess(
         CalTimeMsDuration(perf_pipeline.stamp_start, perf_pipeline.stamp_end));
     pub_data->perfs.push_back(perf_pipeline);
 
-    pub_data->set__fps(round(node_output->rt_stat->input_fps));
+    pub_data->set__fps(round(node_output->rt_stat->output_fps));
   }
 
   msg_publisher_->publish(std::move(pub_data));
