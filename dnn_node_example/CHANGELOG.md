@@ -1,5 +1,9 @@
 # Changelog for package dnn_node_example
 
+hhp_1.0.6 (2022-08-31)
+------------------
+1. example中算法前处理使用hobot_cv进行图片resize。
+
 hhp_1.0.5 (2022-08-11)
 ------------------
 1. 修复发布的ROS Msg中算法推理输出帧率数据错误的问题。
