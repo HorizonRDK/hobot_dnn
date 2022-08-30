@@ -39,6 +39,7 @@ find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(ai_msgs REQUIRED)
 find_package(dnn_node REQUIRED)
+find_package(hobot_cv REQUIRED)
 
 option(CV_BRIDGE_PKG "using cv_bridge pkg" OFF)
 if (${CV_BRIDGE_PKG})
@@ -70,6 +71,8 @@ include_directories(
 
 link_directories(
   ${SYS_ROOT}/usr/lib/hbbpu/
+  ${CMAKE_SYSROOT}/usr/lib/hbmedia/
+  ${SYS_ROOT}/opt/tros/lib/
 )
 
 add_executable(example
@@ -94,6 +97,7 @@ ament_target_dependencies(
   dnn_node
   sensor_msgs
   ai_msgs
+  hobot_cv
 )
 
 if (${SHARED_MEM})
