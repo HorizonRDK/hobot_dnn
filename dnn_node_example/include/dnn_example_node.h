@@ -78,6 +78,11 @@ struct DnnExampleOutput : public DnnNodeOutput {
   std::string image_name = "";
   std::string frame_id = "";
   std_msgs::msg::Header::_stamp_type stamp;
+  float ratio = 1.0;       //缩放比例系数，无需缩放为1
+  uint32_t padding_l = 0;  //图片左边padding空相素个数
+  uint32_t padding_r = 0;  //图片右边padding空相素个数
+  uint32_t padding_t = 0;  //图片上边padding空相素个数
+  uint32_t padding_b = 0;  //图片下边padding空相素个数
   std::shared_ptr<hobot::easy_dnn::NV12PyramidInput> pyramid = nullptr;
 
   struct timespec preprocess_timespec_start;

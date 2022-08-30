@@ -33,8 +33,8 @@ class UnetOutputDescription : public OutputDescription {
       : OutputDescription(mode, index, std::move(type)) {}
   ~UnetOutputDescription() override = default;
 
-  int valid_w = 0;
-  int valid_h = 0;
+  uint32_t valid_w = 0;
+  uint32_t valid_h = 0;
   int parse_render = 0;
 };
 

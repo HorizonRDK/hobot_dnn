@@ -39,6 +39,7 @@ find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(ai_msgs REQUIRED)
 find_package(dnn_node REQUIRED)
+find_package(hobot_cv REQUIRED)
 
 option(CV_BRIDGE_PKG "using cv_bridge pkg" OFF)
 if (${CV_BRIDGE_PKG})
@@ -68,8 +69,18 @@ include_directories(
   ${SYS_ROOT}/usr/include/opencv/
 )
 
+if(HOBOTCV_NEON_LIB_INSTALL_PATH)
+  message("HOBOTCV_NEON_LIB_INSTALL_PATH is defined as " ${HOBOTCV_NEON_LIB_INSTALL_PATH})
+else()
+  set(HOBOTCV_NEON_LIB_INSTALL_PATH ${CMAKE_INSTALL_PREFIX}/lib)
+  message("set HOBOTCV_NEON_LIB_INSTALL_PATH as " ${HOBOTCV_NEON_LIB_INSTALL_PATH})
+endif()
+
+
 link_directories(
   ${SYS_ROOT}/usr/lib/hbbpu/
+  ${SYS_ROOT}/usr/lib/hbmedia/
+  ${HOBOTCV_NEON_LIB_INSTALL_PATH}
 )
 
 add_executable(example
@@ -94,6 +105,7 @@ ament_target_dependencies(
   dnn_node
   sensor_msgs
   ai_msgs
+  hobot_cv
 )
 
 if (${SHARED_MEM})

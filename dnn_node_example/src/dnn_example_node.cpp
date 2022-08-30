@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "dnn_node/dnn_node.h"
+#include "hobot_cv/hobotcv_imgproc.h"
 #include "include/image_utils.h"
 #include "include/post_process/post_process_base.h"
 #include "include/post_process/post_process_classification.h"
@@ -278,6 +279,53 @@ int DnnExampleNode::PostProcess(
     return -1;
   }
 
+  if (parser_output->ratio != 1.0) {  //映射缩放前坐标
+    for (size_t i = 0; i < pub_data->targets.size(); ++i) {
+      for (size_t j = 0; j < pub_data->targets[i].rois.size(); ++j) {  //检测框
+        auto xmin = pub_data->targets[i].rois[j].rect.x_offset;
+        auto ymin = pub_data->targets[i].rois[j].rect.y_offset;
+        auto rect_width = pub_data->targets[i].rois[j].rect.width;
+        auto rect_height = pub_data->targets[i].rois[j].rect.height;
+        auto xmax = xmin + rect_width;
+        auto ymax = ymin + rect_height;
+        if (xmin < parser_output->padding_l) {
+          xmin = parser_output->padding_l;
+        }
+        if (ymin < parser_output->padding_t) {
+          ymin = parser_output->padding_t;
+        }
+        if (xmax > model_input_width_ - parser_output->padding_r) {
+          xmax = model_input_width_ - parser_output->padding_r;
+        }
+        if (ymax > model_input_height_ - parser_output->padding_b) {
+          ymax = model_input_height_ - parser_output->padding_b;
+        }
+        xmin = (xmin - parser_output->padding_l) * parser_output->ratio;
+        ymin = (ymin - parser_output->padding_t) * parser_output->ratio;
+
+        xmax = (xmax - parser_output->padding_l) * parser_output->ratio;
+        ymax = (ymax - parser_output->padding_t) * parser_output->ratio;
+
+        pub_data->targets[i].rois[j].rect.set__x_offset(xmin);
+        pub_data->targets[i].rois[j].rect.set__y_offset(ymin);
+        pub_data->targets[i].rois[j].rect.set__width(xmax - xmin);
+        pub_data->targets[i].rois[j].rect.set__height(ymax - ymin);
+
+        if (pub_data->targets[i].points.size() != 0) {  // kps_point
+          size_t kps_size = pub_data->targets[i].points[j].point.size();
+          for (size_t k = 0; k < kps_size; ++k) {
+            auto point_x = pub_data->targets[i].points[j].point[k].x *
+                           parser_output->ratio;
+            auto point_y = pub_data->targets[i].points[j].point[k].y *
+                           parser_output->ratio;
+            pub_data->targets[i].points[j].point[k].set__x(point_x);
+            pub_data->targets[i].points[j].point[k].set__y(point_y);
+          }
+        }
+      }
+    }
+  }
+
   pub_data->header.set__stamp(parser_output->stamp);
   pub_data->header.set__frame_id(parser_output->frame_id);
 
@@ -478,12 +526,14 @@ void DnnExampleNode::RosImgProcess(
     auto unet_output_desc =
         std::make_shared<hobot::dnn_node::UnetOutputDescription>(
             model_manage, 0, "unet_branch");
-    unet_output_desc->valid_w = img_msg->width > model_input_width_
-                                    ? model_input_width_
-                                    : img_msg->width;
-    unet_output_desc->valid_h = img_msg->height > model_input_height_
-                                    ? model_input_height_
-                                    : img_msg->height;
+    unet_output_desc->valid_w =
+        img_msg->width > static_cast<uint32_t>(model_input_width_)
+            ? static_cast<uint32_t>(model_input_width_)
+            : img_msg->width;
+    unet_output_desc->valid_h =
+        img_msg->height > static_cast<uint32_t>(model_input_height_)
+            ? static_cast<uint32_t>(model_input_height_)
+            : img_msg->height;
     unet_output_desc->parse_render = dump_render_img_;
     auto output_desc =
         std::dynamic_pointer_cast<OutputDescription>(unet_output_desc);
@@ -503,6 +553,7 @@ void DnnExampleNode::RosImgProcess(
   // 1. 将图片处理成模型输入数据类型DNNInput
   // 使用图片生成pym，NV12PyramidInput为DNNInput的子类
   std::shared_ptr<hobot::easy_dnn::NV12PyramidInput> pyramid = nullptr;
+  auto dnn_output = std::make_shared<DnnExampleOutput>();
   if ("rgb8" == img_msg->encoding) {
 #ifdef CV_BRIDGE_PKG_ENABLED
     auto cv_img =
@@ -553,13 +604,51 @@ void DnnExampleNode::RosImgProcess(
 #else
     RCLCPP_ERROR(rclcpp::get_logger("example"), "Unsupport cv bridge");
 #endif
-  } else if ("nv12" == img_msg->encoding) {
-    pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromNV12Img(
-        reinterpret_cast<const char *>(img_msg->data.data()),
-        img_msg->height,
-        img_msg->width,
-        model_input_height_,
-        model_input_width_);
+  } else if ("nv12" == img_msg->encoding) {  // nv12格式使用hobotcv resize
+    if (img_msg->height != static_cast<uint32_t>(model_input_height_) ||
+        img_msg->width != static_cast<uint32_t>(model_input_width_)) {
+      cv::Mat src(img_msg->height * 3 / 2,
+                  img_msg->width,
+                  CV_8UC1,
+                  (void *)(img_msg->data.data()));
+      float ratio_w = static_cast<float>(img_msg->width) /
+                      static_cast<float>(model_input_width_);
+      float ratio_h = static_cast<float>(img_msg->height) /
+                      static_cast<float>(model_input_height_);
+      float dst_ratio = std::max(ratio_w, ratio_h);
+      int resized_width, resized_height;
+      if (dst_ratio == ratio_w) {
+        resized_width = model_input_width_;
+        resized_height = static_cast<float>(img_msg->height) / dst_ratio;
+      } else if (dst_ratio == ratio_h) {
+        resized_width = static_cast<float>(img_msg->width) / dst_ratio;
+        resized_height = model_input_height_;
+      }
+      dnn_output->ratio = dst_ratio;
+      cv::Mat dst;
+      hobot_cv::hobotcv_resize(src,
+                               img_msg->height,
+                               img_msg->width,
+                               dst,
+                               resized_height,
+                               resized_width);
+      pyramid = ImageUtils::GetNV12PyramidFromNV12Mat(dst,
+                                                      model_input_height_,
+                                                      model_input_width_,
+                                                      dnn_output->padding_l,
+                                                      dnn_output->padding_t);
+      dnn_output->padding_r =
+          model_input_width_ - resized_width - dnn_output->padding_l;
+      dnn_output->padding_b =
+          model_input_height_ - resized_height - dnn_output->padding_t;
+    } else {  //不需要进行resize
+      pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromNV12Img(
+          reinterpret_cast<const char *>(img_msg->data.data()),
+          img_msg->height,
+          img_msg->width,
+          model_input_height_,
+          model_input_width_);
+    }
   }
 
   if (!pyramid) {
@@ -580,7 +669,7 @@ void DnnExampleNode::RosImgProcess(
   // 2. 使用pyramid创建DNNInput对象inputs
   // inputs将会作为模型的输入通过RunInferTask接口传入
   auto inputs = std::vector<std::shared_ptr<DNNInput>>{pyramid};
-  auto dnn_output = std::make_shared<DnnExampleOutput>();
+
   dnn_output->frame_id = img_msg->header.frame_id;
   dnn_output->stamp = img_msg->header.stamp;
 
@@ -639,12 +728,14 @@ void DnnExampleNode::SharedMemImgProcess(
     auto unet_output_desc =
         std::make_shared<hobot::dnn_node::UnetOutputDescription>(
             model_manage, 0, "unet_branch");
-    unet_output_desc->valid_w = img_msg->width > model_input_width_
-                                    ? model_input_width_
-                                    : img_msg->width;
-    unet_output_desc->valid_h = img_msg->height > model_input_height_
-                                    ? model_input_height_
-                                    : img_msg->height;
+    unet_output_desc->valid_w =
+        img_msg->width > static_cast<uint32_t>(model_input_width_)
+            ? static_cast<uint32_t>(model_input_width_)
+            : img_msg->width;
+    unet_output_desc->valid_h =
+        img_msg->height > static_cast<uint32_t>(model_input_height_)
+            ? static_cast<uint32_t>(model_input_height_)
+            : img_msg->height;
     unet_output_desc->parse_render = dump_render_img_;
     auto output_desc =
         std::dynamic_pointer_cast<OutputDescription>(unet_output_desc);
@@ -656,14 +747,54 @@ void DnnExampleNode::SharedMemImgProcess(
   // 1. 将图片处理成模型输入数据类型DNNInput
   // 使用图片生成pym，NV12PyramidInput为DNNInput的子类
   std::shared_ptr<hobot::dnn_node::NV12PyramidInput> pyramid = nullptr;
+  auto dnn_output = std::make_shared<DnnExampleOutput>();
   if ("nv12" ==
       std::string(reinterpret_cast<const char *>(img_msg->encoding.data()))) {
-    pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromNV12Img(
-        reinterpret_cast<const char *>(img_msg->data.data()),
-        img_msg->height,
-        img_msg->width,
-        model_input_height_,
-        model_input_width_);
+    // nv12格式使用hobotcv resize
+    if (img_msg->height != static_cast<uint32_t>(model_input_height_) ||
+        img_msg->width != static_cast<uint32_t>(model_input_width_)) {
+      cv::Mat src(img_msg->height * 3 / 2,
+                  img_msg->width,
+                  CV_8UC1,
+                  (void *)(img_msg->data.data()));
+      float ratio_w = static_cast<float>(img_msg->width) /
+                      static_cast<float>(model_input_width_);
+      float ratio_h = static_cast<float>(img_msg->height) /
+                      static_cast<float>(model_input_height_);
+      float dst_ratio = std::max(ratio_w, ratio_h);
+      int resized_width, resized_height;
+      if (dst_ratio == ratio_w) {
+        resized_width = model_input_width_;
+        resized_height = static_cast<float>(img_msg->height) / dst_ratio;
+      } else if (dst_ratio == ratio_h) {
+        resized_width = static_cast<float>(img_msg->width) / dst_ratio;
+        resized_height = model_input_height_;
+      }
+      dnn_output->ratio = dst_ratio;
+      cv::Mat dst;
+      hobot_cv::hobotcv_resize(src,
+                               img_msg->height,
+                               img_msg->width,
+                               dst,
+                               resized_height,
+                               resized_width);
+      pyramid = ImageUtils::GetNV12PyramidFromNV12Mat(dst,
+                                                      model_input_height_,
+                                                      model_input_width_,
+                                                      dnn_output->padding_l,
+                                                      dnn_output->padding_t);
+      dnn_output->padding_r =
+          model_input_width_ - resized_width - dnn_output->padding_l;
+      dnn_output->padding_b =
+          model_input_height_ - resized_height - dnn_output->padding_t;
+    } else {  //不需要进行resize
+      pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromNV12Img(
+          reinterpret_cast<const char *>(img_msg->data.data()),
+          img_msg->height,
+          img_msg->width,
+          model_input_height_,
+          model_input_width_);
+    }
   } else {
     RCLCPP_ERROR(rclcpp::get_logger("example"),
                  "Unsupported img encoding: %s",
@@ -691,7 +822,7 @@ void DnnExampleNode::SharedMemImgProcess(
   // 2. 使用pyramid创建DNNInput对象inputs
   // inputs将会作为模型的输入通过RunInferTask接口传入
   auto inputs = std::vector<std::shared_ptr<DNNInput>>{pyramid};
-  auto dnn_output = std::make_shared<DnnExampleOutput>();
+
   dnn_output->frame_id = std::to_string(img_msg->index);
   dnn_output->stamp = img_msg->time_stamp;
 
