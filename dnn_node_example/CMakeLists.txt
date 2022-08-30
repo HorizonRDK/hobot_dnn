@@ -69,10 +69,18 @@ include_directories(
   ${SYS_ROOT}/usr/include/opencv/
 )
 
+if(HOBOTCV_NEON_LIB_INSTALL_PATH)
+  message("HOBOTCV_NEON_LIB_INSTALL_PATH is defined as " ${HOBOTCV_NEON_LIB_INSTALL_PATH})
+else()
+  set(HOBOTCV_NEON_LIB_INSTALL_PATH ${CMAKE_INSTALL_PREFIX}/lib)
+  message("set HOBOTCV_NEON_LIB_INSTALL_PATH as " ${HOBOTCV_NEON_LIB_INSTALL_PATH})
+endif()
+
+
 link_directories(
   ${SYS_ROOT}/usr/lib/hbbpu/
-  ${CMAKE_SYSROOT}/usr/lib/hbmedia/
-  ${SYS_ROOT}/opt/tros/lib/
+  ${SYS_ROOT}/usr/lib/hbmedia/
+  ${HOBOTCV_NEON_LIB_INSTALL_PATH}
 )
 
 add_executable(example

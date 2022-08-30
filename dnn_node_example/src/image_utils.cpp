@@ -212,6 +212,9 @@ std::shared_ptr<NV12PyramidInput> ImageUtils::GetNV12PyramidFromNV12Mat(
   //获取输入图片的宽高
   uint32_t nv12_width = nv12_mat.cols;
   uint32_t nv12_height = nv12_mat.rows * 2 / 3;
+  if (nv12_width > pyramid_width && nv12_height > pyramid_height) {
+    return nullptr;
+  }
   auto *y = new hbSysMem;
   auto *uv = new hbSysMem;
 

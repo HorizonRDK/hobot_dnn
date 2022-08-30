@@ -63,7 +63,15 @@ class ImageUtils {
                                                           int scaled_img_height,
                                                           int scaled_img_width);
 
-  // 从nv12格式mat获取到pyramid，并将图片copy到最中间位置，根据输入图片的大小padding空相素点
+  /**
+   * 从nv12格式mat获取到pyramid，并将图片copy到最中间位置，根据输入图片的大小padding空相素点
+   * @param[in] nv12_mat: 输入nv12格式的图像mat
+   * @param[in] pyramid_height: 目标图像高
+   * @param[in] pyramid_width: 目标图像宽
+   * @param[out] padding_x：原图左方padding空相素点个数
+   * @param[out] padding_y：原图上方padding空相素点个数
+   * @return 如果nv12_mat分辨率小于pyramid_width * pyramid_height，返回nullptr
+   */
   static std::shared_ptr<NV12PyramidInput> GetNV12PyramidFromNV12Mat(
       const cv::Mat &nv12_mat,
       uint32_t pyramid_height,

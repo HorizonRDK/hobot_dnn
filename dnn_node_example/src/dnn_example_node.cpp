@@ -288,27 +288,23 @@ int DnnExampleNode::PostProcess(
         auto rect_height = pub_data->targets[i].rois[j].rect.height;
         auto xmax = xmin + rect_width;
         auto ymax = ymin + rect_height;
-        if (xmin < parser_output->padding_front_width) {
-          xmin = parser_output->padding_front_width;
+        if (xmin < parser_output->padding_l) {
+          xmin = parser_output->padding_l;
         }
-        if (ymin < parser_output->padding_front_height) {
-          ymin = parser_output->padding_front_height;
+        if (ymin < parser_output->padding_t) {
+          ymin = parser_output->padding_t;
         }
-        if (xmax > model_input_width_ - parser_output->padding_follow_width) {
-          xmax = model_input_width_ - parser_output->padding_follow_width;
+        if (xmax > model_input_width_ - parser_output->padding_r) {
+          xmax = model_input_width_ - parser_output->padding_r;
         }
-        if (ymax > model_input_height_ - parser_output->padding_follow_height) {
-          ymax = model_input_height_ - parser_output->padding_follow_height;
+        if (ymax > model_input_height_ - parser_output->padding_b) {
+          ymax = model_input_height_ - parser_output->padding_b;
         }
-        xmin =
-            (xmin - parser_output->padding_front_width) * parser_output->ratio;
-        ymin =
-            (ymin - parser_output->padding_front_height) * parser_output->ratio;
+        xmin = (xmin - parser_output->padding_l) * parser_output->ratio;
+        ymin = (ymin - parser_output->padding_t) * parser_output->ratio;
 
-        xmax =
-            (xmax - parser_output->padding_front_width) * parser_output->ratio;
-        ymax =
-            (ymax - parser_output->padding_front_height) * parser_output->ratio;
+        xmax = (xmax - parser_output->padding_l) * parser_output->ratio;
+        ymax = (ymax - parser_output->padding_t) * parser_output->ratio;
 
         pub_data->targets[i].rois[j].rect.set__x_offset(xmin);
         pub_data->targets[i].rois[j].rect.set__y_offset(ymin);
@@ -636,16 +632,15 @@ void DnnExampleNode::RosImgProcess(
                                dst,
                                resized_height,
                                resized_width);
-      pyramid = ImageUtils::GetNV12PyramidFromNV12Mat(
-          dst,
-          model_input_height_,
-          model_input_width_,
-          dnn_output->padding_front_width,
-          dnn_output->padding_front_height);
-      dnn_output->padding_follow_width =
-          model_input_width_ - resized_width - dnn_output->padding_front_width;
-      dnn_output->padding_follow_height = model_input_height_ - resized_height -
-                                          dnn_output->padding_front_height;
+      pyramid = ImageUtils::GetNV12PyramidFromNV12Mat(dst,
+                                                      model_input_height_,
+                                                      model_input_width_,
+                                                      dnn_output->padding_l,
+                                                      dnn_output->padding_t);
+      dnn_output->padding_r =
+          model_input_width_ - resized_width - dnn_output->padding_l;
+      dnn_output->padding_b =
+          model_input_height_ - resized_height - dnn_output->padding_t;
     } else {  //不需要进行resize
       pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromNV12Img(
           reinterpret_cast<const char *>(img_msg->data.data()),
@@ -783,16 +778,15 @@ void DnnExampleNode::SharedMemImgProcess(
                                dst,
                                resized_height,
                                resized_width);
-      pyramid = ImageUtils::GetNV12PyramidFromNV12Mat(
-          dst,
-          model_input_height_,
-          model_input_width_,
-          dnn_output->padding_front_width,
-          dnn_output->padding_front_height);
-      dnn_output->padding_follow_width =
-          model_input_width_ - resized_width - dnn_output->padding_front_width;
-      dnn_output->padding_follow_height = model_input_height_ - resized_height -
-                                          dnn_output->padding_front_height;
+      pyramid = ImageUtils::GetNV12PyramidFromNV12Mat(dst,
+                                                      model_input_height_,
+                                                      model_input_width_,
+                                                      dnn_output->padding_l,
+                                                      dnn_output->padding_t);
+      dnn_output->padding_r =
+          model_input_width_ - resized_width - dnn_output->padding_l;
+      dnn_output->padding_b =
+          model_input_height_ - resized_height - dnn_output->padding_t;
     } else {  //不需要进行resize
       pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromNV12Img(
           reinterpret_cast<const char *>(img_msg->data.data()),
