@@ -624,6 +624,10 @@ void DnnExampleNode::RosImgProcess(
         resized_width = static_cast<float>(img_msg->width) / dst_ratio;
         resized_height = model_input_height_;
       }
+      resized_width =
+          resized_width % 2 == 0 ? resized_width : resized_width - 1;
+      resized_height =
+          resized_height % 2 == 0 ? resized_height : resized_height - 1;
       dnn_output->ratio = dst_ratio;
       cv::Mat dst;
       hobot_cv::hobotcv_resize(src,
@@ -770,6 +774,10 @@ void DnnExampleNode::SharedMemImgProcess(
         resized_width = static_cast<float>(img_msg->width) / dst_ratio;
         resized_height = model_input_height_;
       }
+      resized_width =
+          resized_width % 2 == 0 ? resized_width : resized_width - 1;
+      resized_height =
+          resized_height % 2 == 0 ? resized_height : resized_height - 1;
       dnn_output->ratio = dst_ratio;
       cv::Mat dst;
       hobot_cv::hobotcv_resize(src,

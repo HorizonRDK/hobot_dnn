@@ -79,7 +79,6 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 
 - 编译命令：`colcon build --packages-select dnn_node_example --cmake-args -DCV_BRIDGE_PKG=ON -DSHARED_MEM=OFF`
 - 编译和运行会依赖cv_bridge pkg，不使用shared mem通信方式。支持使用订阅到的rgb8, bgr8和nv12格式图片进行模型推理。
-- 在板端编译时，需要在CMakeList中指定neon动态库的路径 ${SYS_ROOT}/opt/tros/lib/
 
 ### docker交叉编译
 
