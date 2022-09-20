@@ -30,6 +30,7 @@
 #include "easy_dnn/task.h"
 #include "easy_dnn/task_manager.h"
 #include "rclcpp/rclcpp.hpp"
+#include "std_msgs/msg/header.hpp"
 #include "dnn_node/util/output_parser/parsing_output_parser.h"
 #include "dnn_node/util/output_parser/detection/filter2d_output_parser.h"
 #include "dnn_node/util/output_parser/detection/facehand_detect_output_parser.h"
@@ -80,17 +81,22 @@ struct DnnNodePara {
   std::string model_file;
 
   // 模型名，dnn node根据model_name解析出需要管理和推理使用的模型
-  std::string model_name;
+  // 根据模型文件名称，在X3派上查询模型名的方法为：
+  // hrt_model_exec model_info --model_file [model_file（模型文件名称）]
+  // 查询输出包含模型名、模型输入和输出的信息，其中[model name]为模型名
+  // 如果模型文件中只包含一个模型时，可以不指定模型名
+  std::string model_name{""};
 
   // 模型的task类型，dnn node根据模类型创建task
-  // 例如多任务检测或者扣图检测，对应的ModelTask分别是ModelInferTask和ModelRoiInferTask
+  // 当算法的输入包含roi（Region of Interest，例如目标的检测框）时选择ModelRoiInferType类型，其他情况下选择ModelInferType类型。
   ModelTaskType model_task_type = ModelTaskType::ModelInferType;
 
   // 创建task超时时间，单位ms
   int timeout_ms = 100;
 
   // 创建的task数量，一个model支持由多个task执行
-  int task_num = 1;
+  // 如果算法推理耗时较长，需要使用更多的task进行推理
+  int task_num = 2;
 
   // 模型输出索引和对应的解析方式
   // 如果用户子类中没有override SetOutputParser接口，
@@ -124,7 +130,17 @@ struct DnnNodeRunTimeStat {
 struct DnnNodeOutput {
   DnnNodeOutput() { outputs.clear(); }
   virtual ~DnnNodeOutput() {}
-  // 输出数据智能指针列表
+
+  // 输出结果的消息头，用于匹配对应的输入
+  // 在前处理中使用订阅到的图片消息的header填充
+  std::shared_ptr<std_msgs::msg::Header> msg_header = nullptr;
+
+  // 模型输出的tensor数据指针列表，维度等于模型输出branch数
+  // 推理完成后，用户可以直接解析output_tensors并使用解析后的结构化数据
+  std::vector<std::shared_ptr<DNNTensor>> output_tensors;
+
+  // 输出数据智能指针列表，即DNNTensor经过解析后的数据，维度等于模型输出branch数
+  // 当用户使用SetOutputParser接口配置模型输出的解析方式，推理完成后拿到output_tensors的同时还会拿到解析后的outputs数据
   std::vector<std::shared_ptr<DNNResult>> outputs;
 
   std::shared_ptr<DnnNodeRunTimeStat> rt_stat = nullptr;

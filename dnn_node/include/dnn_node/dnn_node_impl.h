@@ -25,6 +25,9 @@
 namespace hobot {
 namespace dnn_node {
 
+// 推理完成后的结果回调类型
+using PostProcessCbType = std::function<int(std::shared_ptr<DnnNodeOutput> &)>;
+
 struct DnnNodeRunTimePara;
 struct ThreadPool;
 
@@ -77,6 +80,34 @@ struct ThreadPool {
   int msg_limit_count_ = 10;
 };
 
+// 为了创建DNNDefaultOutputParser而创建的空数据类型
+class DNNDefaultOutputResult : public DNNResult {
+ public:
+  void Reset() override {}
+};
+
+// 空解析方法类，绕过EasyDNN的后处理框架限制，实现推理完成后输出模型的所有tensor
+// 目的是支持用户可以不学习使用EasyDNN的后处理框架，推理完成后直接解析模型输出的所有tensor
+// 如果用户没有使用SetOutputParser接口配置模型输出的解析方式，会使用DNNDefaultOutputParser配置模型输出的解析方式
+class DNNDefaultSingleBranchOutputParser : public SingleBranchOutputParser<DNNDefaultOutputResult> {
+  public:
+  DNNDefaultSingleBranchOutputParser() {}
+
+  int32_t Parse(
+    std::shared_ptr<DNNDefaultOutputResult>& output,
+    std::vector<std::shared_ptr<InputDescription>>& input_descriptions,
+    std::shared_ptr<OutputDescription>& output_description,
+    std::shared_ptr<DNNTensor>& output_tensor) override {
+    // 模型输出的每个branch都会调用一次Parse，不需要做任何处理
+    // 推理完成后，用户会拿到所有tensor，再做统一解析
+    if (output_description) {
+      RCLCPP_DEBUG(rclcpp::get_logger("dnn_node"),
+                  "Output idx: %d", output_description->GetIndex());
+    }
+    return 0;
+  }
+};
+
 class DnnNodeImpl {
  public:
   explicit DnnNodeImpl(std::shared_ptr<DnnNodePara> &dnn_node_para_ptr);
@@ -84,6 +115,9 @@ class DnnNodeImpl {
   ~DnnNodeImpl();
 
   int ModelInit();
+
+  // 如果用户没有继承dnn_node中的SetOutputParser接口或者通过DnnNodePara参数配置解析方法，使用默认的解析方法
+  int SetDefaultOutputParser();
 
  public:
   // 申请模型预测任务。
@@ -113,7 +147,7 @@ class DnnNodeImpl {
       InputType input_type,
       std::vector<std::shared_ptr<OutputDescription>> &output_descs,
       const std::shared_ptr<DnnNodeOutput> &output,
-      std::function<int(const std::shared_ptr<DnnNodeOutput> &)> post_process,
+      PostProcessCbType post_process,
       const std::shared_ptr<std::vector<hbDNNRoi>> rois,
       const bool is_sync_mode,
       const int alloctask_timeout_ms,
@@ -126,7 +160,7 @@ class DnnNodeImpl {
       InputType input_type,
       std::vector<std::shared_ptr<OutputDescription>> output_descs,
       std::shared_ptr<DnnNodeOutput> output,
-      std::function<int(const std::shared_ptr<DnnNodeOutput> &)> post_process,
+      PostProcessCbType post_process,
       const std::shared_ptr<std::vector<hbDNNRoi>> rois,
       const int alloctask_timeout_ms,
       const int infer_timeout_ms);
@@ -150,7 +184,7 @@ class DnnNodeImpl {
   int RunInferTask(
       std::shared_ptr<DnnNodeOutput> &node_output,
       const TaskId &task_id,
-      std::function<int(const std::shared_ptr<DnnNodeOutput> &)> post_process,
+      PostProcessCbType post_process,
       const int timeout_ms = 1000);
 
   // 使用通过SetInputs输入给模型的数据进行推理
@@ -183,6 +217,9 @@ class DnnNodeImpl {
   DnnNodeRunTimeFpsStat input_stat_;
   // 输出的统计，只统计推理成功（推理+解析模型输出）的帧率
   DnnNodeRunTimeFpsStat output_stat_;
+
+  // 默认的解析方法
+  std::shared_ptr<OutputParser> dnn_default_output_parser_ = nullptr;
 };
 
 }  // namespace dnn_node
