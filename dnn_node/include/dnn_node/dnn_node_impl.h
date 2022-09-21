@@ -80,29 +80,31 @@ struct ThreadPool {
   int msg_limit_count_ = 10;
 };
 
-// 为了创建DNNDefaultOutputParser而创建的空数据类型
+// 为了创建DNNDefaultSingleBranchOutputParser而创建的空数据类型
 class DNNDefaultOutputResult : public DNNResult {
  public:
   void Reset() override {}
 };
 
 // 空解析方法类，绕过EasyDNN的后处理框架限制，实现推理完成后输出模型的所有tensor
-// 目的是支持用户可以不学习使用EasyDNN的后处理框架，推理完成后直接解析模型输出的所有tensor
-// 如果用户没有使用SetOutputParser接口配置模型输出的解析方式，会使用DNNDefaultOutputParser配置模型输出的解析方式
-class DNNDefaultSingleBranchOutputParser : public SingleBranchOutputParser<DNNDefaultOutputResult> {
-  public:
+// 目的是支持用户可以不学习EasyDNN的后处理框架使用方法，推理完成后直接解析模型输出的所有tensor
+// 如果用户没有使用SetOutputParser接口配置模型输出的解析方式，会使用DNNDefaultSingleBranchOutputParser配置模型输出的解析方式
+class DNNDefaultSingleBranchOutputParser
+    : public SingleBranchOutputParser<DNNDefaultOutputResult> {
+ public:
   DNNDefaultSingleBranchOutputParser() {}
 
   int32_t Parse(
-    std::shared_ptr<DNNDefaultOutputResult>& output,
-    std::vector<std::shared_ptr<InputDescription>>& input_descriptions,
-    std::shared_ptr<OutputDescription>& output_description,
-    std::shared_ptr<DNNTensor>& output_tensor) override {
+      std::shared_ptr<DNNDefaultOutputResult> &output,
+      std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
+      std::shared_ptr<OutputDescription> &output_description,
+      std::shared_ptr<DNNTensor> &output_tensor) override {
     // 模型输出的每个branch都会调用一次Parse，不需要做任何处理
     // 推理完成后，用户会拿到所有tensor，再做统一解析
     if (output_description) {
       RCLCPP_DEBUG(rclcpp::get_logger("dnn_node"),
-                  "Output idx: %d", output_description->GetIndex());
+                   "Output idx: %d",
+                   output_description->GetIndex());
     }
     return 0;
   }
@@ -141,29 +143,27 @@ class DnnNodeImpl {
 
   // 启动推理
   // is_sync_mode 预测模式，true为同步模式，false为异步模式。
-  int Run(
-      std::vector<std::shared_ptr<DNNInput>> &dnn_inputs,
-      std::vector<std::shared_ptr<DNNTensor>> &tensor_inputs,
-      InputType input_type,
-      std::vector<std::shared_ptr<OutputDescription>> &output_descs,
-      const std::shared_ptr<DnnNodeOutput> &output,
-      PostProcessCbType post_process,
-      const std::shared_ptr<std::vector<hbDNNRoi>> rois,
-      const bool is_sync_mode,
-      const int alloctask_timeout_ms,
-      const int infer_timeout_ms);
+  int Run(std::vector<std::shared_ptr<DNNInput>> &dnn_inputs,
+          std::vector<std::shared_ptr<DNNTensor>> &tensor_inputs,
+          InputType input_type,
+          std::vector<std::shared_ptr<OutputDescription>> &output_descs,
+          const std::shared_ptr<DnnNodeOutput> &output,
+          PostProcessCbType post_process,
+          const std::shared_ptr<std::vector<hbDNNRoi>> rois,
+          const bool is_sync_mode,
+          const int alloctask_timeout_ms,
+          const int infer_timeout_ms);
 
   // 推理实现
-  int RunImpl(
-      std::vector<std::shared_ptr<DNNInput>> dnn_inputs,
-      std::vector<std::shared_ptr<DNNTensor>> tensor_inputs,
-      InputType input_type,
-      std::vector<std::shared_ptr<OutputDescription>> output_descs,
-      std::shared_ptr<DnnNodeOutput> output,
-      PostProcessCbType post_process,
-      const std::shared_ptr<std::vector<hbDNNRoi>> rois,
-      const int alloctask_timeout_ms,
-      const int infer_timeout_ms);
+  int RunImpl(std::vector<std::shared_ptr<DNNInput>> dnn_inputs,
+              std::vector<std::shared_ptr<DNNTensor>> tensor_inputs,
+              InputType input_type,
+              std::vector<std::shared_ptr<OutputDescription>> output_descs,
+              std::shared_ptr<DnnNodeOutput> output,
+              PostProcessCbType post_process,
+              const std::shared_ptr<std::vector<hbDNNRoi>> rois,
+              const int alloctask_timeout_ms,
+              const int infer_timeout_ms);
 
   // 配置预测任务的输入数据
   // - 参数
@@ -181,11 +181,10 @@ class DnnNodeImpl {
   //   - [in/out] node_output 推理任务输出智能。
   //   - [in] task_id 推理任务ID。
   //   - [in] timeout_ms 推理推理超时时间。
-  int RunInferTask(
-      std::shared_ptr<DnnNodeOutput> &node_output,
-      const TaskId &task_id,
-      PostProcessCbType post_process,
-      const int timeout_ms = 1000);
+  int RunInferTask(std::shared_ptr<DnnNodeOutput> &node_output,
+                   const TaskId &task_id,
+                   PostProcessCbType post_process,
+                   const int timeout_ms = 1000);
 
   // 使用通过SetInputs输入给模型的数据进行推理
   // - 参数

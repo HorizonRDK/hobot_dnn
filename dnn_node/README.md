@@ -102,8 +102,6 @@ task类型包括`ModelInferType`和`ModelRoiInferType`，默认是`ModelInferTyp
 
 使用SetNodePara接口配置模型管理和推理参数dnn_node_para_ptr_时，指定算法推理任务数量task_num。默认的算法推理任务数量task_num为2，如果算法推理耗时较长（表现为算法推理输出帧率低于输入帧率），需要指定使用更多的task进行推理。
 
-例如对于YOLOv5算法，单帧推理耗时约70毫秒，需要使用3个任务进行推理才可以达到满帧30fps输出。
-
 ### 准备算法输入数据（前处理）
 
 前处理是将数据处理成算法输入的数据类型。
@@ -157,9 +155,9 @@ int32_t Parse(const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output
 
 在处理图片时，如果输入图片分辨率小于模型输入分辨率，将输入图片padding到左上区域；如果输入图片分辨率大于模型输入分辨率，将截图输入图片左上区域。
 
-也可以使用hobotcv对图片做resize处理，将输入图片resize到算法输入分辨率，从而保留图片的全部信息。
+也可以使用hobotcv对图片做resize处理，将**输入图片resize到算法输入分辨率，从而保留图片的全部信息**。使用方法参考dnn_node_sample。
 
-3. 算法输出解析和后处理PostProcess中使用算法输入信息
+3. 在算法输出解析方法和后处理PostProcess中使用算法输入信息
 
 后处理PostProcess的输入参数类型是hobot::dnn_node::DnnNodeOutput，用户可以继承DnnNodeOutput数据类型，添加需要使用的数据。
 
@@ -185,9 +183,9 @@ dnn node支持同步和异步两种推理方式。在调用Run推理接口时通
 
 异步推理：调用Run接口进行预测时，接口内部异步使用线程池处理预测，预测任务送入线程池后不等待预测结束直接返回。当预测结果返回时（预测完成或者预测报错），在dnn node内部使用ReleaseTask接口释放task，并通过PostProcess接口回调解析后的模型输出。
 
-异步推理模式能够充分利用BPU，提升算法推理输出帧率，但是不能保证算法输出顺序和输入顺序一致。对于输出序列有要求的场景，使用时需要判断是否需要对算法输出进行排序。
+异步推理模式能够充分利用BPU，提升算法推理输出帧率，但是不能保证算法输出顺序和输入顺序一致。**对于输出序列有要求的场景，使用时需要判断是否需要对算法输出进行排序**。
 
-如无特殊需求，推荐使用默认的效率更高的异步模式进行算法推理。
+**如无特殊需求，推荐使用默认的效率更高的异步模式进行算法推理。**
 
 6. 使用dnn node中内置的模型输出解析方法
 
@@ -226,18 +224,18 @@ root@ubuntu:~# tree /opt/tros/include/dnn_node/util/output_parser
 
 算法模型和对应的输出解析方法如下：
 
-| 算法类别                 | 算法                 | 算法输出解析方法 |
+| 算法类别       | 算法                 | 算法输出解析方法 |
 | ---------------------- | ---------------------- | ----------- |
-| 目标检测           | [FCOS](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_FCOS.html)           | fcos_output_parser.h         |
-| 目标检测           | [EfficientNet_Det](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_efficient_det.html)           | ptq_efficientdet_output_parser.h         |
-| 目标检测           |    [MobileNet_SSD](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_mobilenet_ssd.html)        |   ptq_ssd_output_parser.h       |
-| 目标检测           |     [YoloV2](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_yolov2.html)       |   ptq_yolo2_output_parser.h       |
-| 目标检测           |     [YoloV3](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_yolov2.html)       |    ptq_yolo3_darknet_output_parser.h       |
-| 目标检测           |     [YoloV5](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_yolov2.html)       |  ptq_yolo5_output_parser.h        |
-| 人体框检测           |     [FasterRcnn](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_adv/face_body_skeleton.html)       |   facehand_detect_output_parser.h       |
-| 人体关键点检测           |     [FasterRcnn](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_adv/face_body_skeleton.html)       |   fasterrcnn_kps_output_parser.h       |
-| 图片分类          |     [mobilenetv2](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/classification/mobilenetv2.html)       |  ptq_classification_output_parser.h        |
-| 语义分割           |     [mobilenet_unet](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/fragmentation/index.html)       |  ptq_unet_output_parser.h        |
+| 目标检测       | [FCOS](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_FCOS.html)           | fcos_output_parser.h         |
+| 目标检测       | [EfficientNet_Det](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_efficient_det.html)           | ptq_efficientdet_output_parser.h         |
+| 目标检测       | [MobileNet_SSD](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_mobilenet_ssd.html)        |   ptq_ssd_output_parser.h       |
+| 目标检测       | [YoloV2](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_yolov2.html)       |   ptq_yolo2_output_parser.h       |
+| 目标检测       | [YoloV3](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_yolov2.html)       |    ptq_yolo3_darknet_output_parser.h       |
+| 目标检测       | [YoloV5](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_yolov2.html)       |  ptq_yolo5_output_parser.h        |
+| 人体框检测     | [FasterRcnn](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_adv/face_body_skeleton.html)       |   facehand_detect_output_parser.h       |
+| 人体关键点检测 | [FasterRcnn](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_adv/face_body_skeleton.html)       |   fasterrcnn_kps_output_parser.h       |
+| 图片分类       | [mobilenetv2](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/classification/mobilenetv2.html)       |  ptq_classification_output_parser.h        |
+| 语义分割       | [mobilenet_unet](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/fragmentation/index.html)       |  ptq_unet_output_parser.h        |
 
 
 在推理结果回调`PostProcess(const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output)`中，使用`hobot_dnn`中内置的解析方法解析`YoloV5`算法输出举例：

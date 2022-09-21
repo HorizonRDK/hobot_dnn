@@ -4,9 +4,9 @@ Getting Started with Dnn Node Sample
 
 # 功能介绍
 
-Dnn Node sample package是Dnn Node package的使用示例，通过继承DnnNode虚基类，使用YOLOv5模型和图像数据利用BPU处理器进行模型推理。
+Dnn Node sample package是Dnn Node package的使用示例，通过继承DnnNode虚基类，使用YOLOv5模型和图像数据利用BPU处理器进行算法推理。
 
-图像数据来源于订阅到的摄像头采集的图像数据消息；推理完成后，支持使用自定义的模型解析方法和Dnn Node中内置的解析方法解析算法输出的tensor；解析完成后发布智能结果，可通过web查看实时的渲染效果。
+图像数据来源于订阅到的图像数据消息，支持使用MIPI/USB摄像头和本地图片发布的图像数据；推理完成后，使用自定义的算法输出解析方法解析算法输出的tensor；解析完成后发布智能结果，可通过web查看实时的渲染效果。
 
 # 开发环境
 
@@ -39,7 +39,7 @@ Dnn Node sample package是Dnn Node package的使用示例，通过继承DnnNode�
 
 1、编译环境确认
 
-- 在docker中编译，并且docker中已经编译好TROS。docker安装、交叉编译说明、TROS编译和部署说明详见[地平线机器人平台用户手册](https://developer.horizon.ai/api/v1/fileData/TogetherROS/quick_start/cross_compile.html#togetherros)。
+- 在docker中编译，并且docker中已经编译好TROS。docker安装、交叉编译、TROS编译和部署说明详见[地平线机器人平台用户手册](https://developer.horizon.ai/api/v1/fileData/TogetherROS/quick_start/cross_compile.html#togetherros)。
 
 2、编译
 
@@ -62,7 +62,7 @@ Dnn Node sample package是Dnn Node package的使用示例，通过继承DnnNode�
 
 ## X3 Ubuntu系统上运行
 
-包括图像消息订阅和WEB展示。
+包括图像消息发布和WEB展示。
 
 **使用F37 MIPI摄像头发布图片**
 
@@ -97,6 +97,7 @@ source /opt/tros/setup.bash
 # 配置本地图片回灌
 export CAM_TYPE=fb
 
+# 使用的本地图片为/opt/tros/lib/dnn_node_sample/config/target.jpg
 ros2 launch dnn_node_sample hobot_dnn_node_sample.launch.py 
 ```
 
@@ -106,11 +107,11 @@ ros2 launch dnn_node_sample hobot_dnn_node_sample.launch.py
 export ROS_LOG_DIR=/userdata/
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/tros/lib/
 
-# 启动图片发布pkg
+# 启动使用F37 MIPI摄像头发布图片
 /opt/tros/lib/mipi_cam/mipi_cam --ros-args -p out_format:=nv12 -p image_width:=960 -p image_height:=544 -p io_method:=shared_mem --log-level error &
-# 启动jpeg图片编码&发布pkg
+# 启动jpeg图片编码&发布
 /opt/tros/lib/hobot_codec/hobot_codec_republish --ros-args -p channel:=1 -p in_mode:=shared_mem -p in_format:=nv12 -p out_mode:=ros -p out_format:=jpeg -p sub_topic:=/hbmem_img -p pub_topic:=/image_jpeg --ros-args --log-level error &
-# 启动web展示pkg
+# 启动web展示
 /opt/tros/lib/websocket/websocket --ros-args -p image_topic:=/image_jpeg -p image_type:=mjpeg -p smart_topic:=/hobot_mono2d_body_detection --log-level error &
 
 # 启动dnn_node_sample算法推理
@@ -119,9 +120,13 @@ export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/tros/lib/
 
 yocto系统上第一次运行web展示需要启动webserver服务，运行方法为:
 
-- cd 到websocket的部署路径下：`cd /opt/tros/lib/websocket/webservice/`
+```shell
+# cd 到websocket的部署路径下
+cd /opt/tros/lib/websocket/webservice/
 
-- 启动nginx：`chmod +x ./sbin/nginx && ./sbin/nginx -p .`
+# 启动nginx
+chmod +x ./sbin/nginx && ./sbin/nginx -p .
+```
 
 启动完成后，在PC端的浏览器输入`http://IP` 即可查看图像和算法渲染效果（IP为旭日X3派的IP地址）。
 

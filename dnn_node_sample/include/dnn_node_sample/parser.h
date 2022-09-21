@@ -19,12 +19,16 @@ namespace dnn_node {
 namespace dnn_node_sample {
 // 定义算法输出数据类型
 struct YoloV5Result {
+  // 目标类别ID
   int id;
+  // 目标检测框
   float xmin;
   float ymin;
   float xmax;
   float ymax;
+  // 检测结果的置信度
   float score;
+  // 目标类别
   std::string class_name;
 
   YoloV5Result(int id_,
@@ -53,7 +57,7 @@ struct YoloV5Result {
 //          解析时，如果不需要使用前处理参数，可以直接使用DnnNodeOutput中的
 //          std::vector<std::shared_ptr<DNNTensor>>
 //          output_tensors成员作为Parse的入口参数
-//   - [in/out] results 解析后的推理结果，YoloV5Result为自定义的算法输出数据类型
+//   - [in/out] results 解析后的结构化数据，YoloV5Result为自定义的算法输出数据类型
 // - 返回值
 //   - 0 成功
 //   - -1 失败

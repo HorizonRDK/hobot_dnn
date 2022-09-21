@@ -1,6 +1,6 @@
 # Changelog for package dnn_node
 
-hhp_1.1.2 (2022-09-25)
+hhp_1.1.2 (2022-09-21)
 ------------------
 1. Node输出数据类型DnnNodeOutput增加消息头和模型输出tensor成员，支持用户直接解析tensor。
 2. 默认推理模式由同步模式变更为效率更高的异步模式。

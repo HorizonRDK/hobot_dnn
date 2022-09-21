@@ -43,38 +43,41 @@ DnnNode::DnnNode(const std::string &node_name,
 DnnNode::~DnnNode() {}
 
 int DnnNode::SetOutputParser() {
+  // 如果用户没有继承dnn_node中的SetOutputParser接口
   RCLCPP_WARN(rclcpp::get_logger("dnn"), "Run default SetOutputParser.");
 
-  // 如果执行这里说明用户没有继承SetOutputParser接口设置parser
   if (!dnn_node_para_ptr_) {
     RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid node para!");
     return -1;
   }
 
-
   if (!dnn_node_para_ptr_->output_parsers_.empty()) {
     // 使用用户在配置参数中设置的parser进行设置
-    RCLCPP_WARN(rclcpp::get_logger("dnn"), "Set output parser with dnn node para.");
+    RCLCPP_WARN(rclcpp::get_logger("dnn"),
+                "Set output parser with dnn node para.");
 
     for (const auto &parser_pair : dnn_node_para_ptr_->output_parsers_) {
       std::shared_ptr<OutputParser> out_parser = parser_pair.second;
       if (!out_parser) {
-        RCLCPP_ERROR(rclcpp::get_logger("dnn"),
-                    "Invalid out_parser");
+        RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid out_parser");
         return -1;
       }
       if (GetModel()->SetOutputParser(parser_pair.first, out_parser) != 0) {
         RCLCPP_ERROR(rclcpp::get_logger("dnn"),
-                    "Set output parser index %d fail!",
-                    parser_pair.first);
+                     "Set output parser index %d fail!",
+                     parser_pair.first);
         return -1;
       }
       RCLCPP_INFO(rclcpp::get_logger("dnn"),
-                    "SetOutputParser %d success", parser_pair.first);
+                  "SetOutputParser %d success",
+                  parser_pair.first);
     }
   } else {
-    // 使用dnn node内置的parser进行设置
-    RCLCPP_WARN(rclcpp::get_logger("dnn"), "Set output parser with default dnn node parser, you will get all output tensors and should parse output_tensors in PostProcess.");
+    // 没有通过DnnNodePara参数配置解析方法，使用dnn node内置的parser进行设置
+    RCLCPP_WARN(
+        rclcpp::get_logger("dnn"),
+        "Set output parser with default dnn node parser, you will get all "
+        "output tensors and should parse output_tensors in PostProcess.");
     return dnn_node_impl_->SetDefaultOutputParser();
   }
 

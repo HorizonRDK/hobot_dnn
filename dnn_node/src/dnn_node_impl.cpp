@@ -94,9 +94,10 @@ int DnnNodeImpl::ModelInit() {
     } else {
       // 2.1.2 模型文件中有多个模型，用户必须指定需要加载的模型
       RCLCPP_ERROR(rclcpp::get_logger("dnn"),
-                  "Model file: %s has %d models, please set model_name para in DnnNodePara with SetNodePara API",
-                  dnn_node_para_ptr_->model_file.c_str(),
-                  dnn_rt_para_->models_load.size());
+                   "Model file: %s has %d models, please set model_name para "
+                   "in DnnNodePara with SetNodePara API",
+                   dnn_node_para_ptr_->model_file.c_str(),
+                   dnn_rt_para_->models_load.size());
       return -1;
     }
   } else {
@@ -109,9 +110,11 @@ int DnnNodeImpl::ModelInit() {
     }
   }
   if (!dnn_rt_para_->model_manage) {
-    RCLCPP_ERROR(
-        rclcpp::get_logger("dnn"), "Find model: %s fail! Check model name on X3PI with cmd: hrt_model_exec model_info --model_file %s",
-        model_name.c_str(), dnn_node_para_ptr_->model_file.c_str());
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"),
+                 "Find model: %s fail! Check model name on X3PI with cmd: "
+                 "hrt_model_exec model_info --model_file %s",
+                 model_name.c_str(),
+                 dnn_node_para_ptr_->model_file.c_str());
     return -1;
   }
 
@@ -137,19 +140,20 @@ int DnnNodeImpl::SetDefaultOutputParser() {
   auto model = GetModel();
   if (!model) {
     RCLCPP_ERROR(rclcpp::get_logger("dnn impl"),
-                "Set default output parser fail! Invalid model");
+                 "Set default output parser fail! Invalid model");
     return -1;
   }
 
   if (!dnn_default_output_parser_) {
-    dnn_default_output_parser_ = std::make_shared<DNNDefaultSingleBranchOutputParser>();
+    dnn_default_output_parser_ =
+        std::make_shared<DNNDefaultSingleBranchOutputParser>();
   }
 
   for (int32_t idx = 0; idx < model->GetOutputCount(); idx++) {
     if (model->SetOutputParser(idx, dnn_default_output_parser_) != 0) {
       RCLCPP_ERROR(rclcpp::get_logger("dnn impl"),
-                  "Set output parser index %d fail!",
-                  idx);
+                   "Set output parser index %d fail!",
+                   idx);
       return -1;
     }
   }
@@ -258,11 +262,10 @@ int DnnNodeImpl::PreProcess(
   return ret;
 }
 
-int DnnNodeImpl::RunInferTask(
-    std::shared_ptr<DnnNodeOutput> &node_output,
-    const TaskId &task_id,
-    PostProcessCbType post_process,
-    const int timeout_ms) {
+int DnnNodeImpl::RunInferTask(std::shared_ptr<DnnNodeOutput> &node_output,
+                              const TaskId &task_id,
+                              PostProcessCbType post_process,
+                              const int timeout_ms) {
   if (!dnn_rt_para_ || !node_output) {
     return -1;
   }
@@ -335,7 +338,7 @@ int DnnNodeImpl::RunInfer(std::shared_ptr<DnnNodeOutput> node_output,
 
   if (ModelTaskType::ModelInferType == dnn_node_para_ptr_->model_task_type) {
     auto model_task = std::dynamic_pointer_cast<ModelInferTask>(task);
-    // 解析DNNTensor
+    // 解析DNNTensor，内部会为算法的每个branch输出调用自定义的Parse接口进行解析
     ret = model_task->ParseOutput();
     if (ret != 0) {
       RCLCPP_ERROR(
@@ -356,7 +359,7 @@ int DnnNodeImpl::RunInfer(std::shared_ptr<DnnNodeOutput> node_output,
           rclcpp::get_logger("dnn"), "Failed to parse outputs, ret[%d]", ret);
       return ret;
     }
-    // 获取解析前的DNNTensor
+    // 解析DNNTensor，内部会为算法的每个branch输出调用自定义的Parse接口进行解析
     model_task->GetOutputTensors(node_output->output_tensors);
     // 获取解析后的DNNResult
     ret = model_task->GetOutputs(node_output->outputs);
@@ -550,7 +553,9 @@ int DnnNodeImpl::Run(
     if (thread_pool_->msg_handle_.GetTaskNum() >=
         thread_pool_->msg_limit_count_) {
       RCLCPP_INFO(rclcpp::get_logger("dnn"),
-                  "Task Size: %d exceeds limit: %d. Prediction time(rt_stat.infer_time_ms in DnnNodeOutput) is too long for this model!",
+                  "Task Size: %d exceeds limit: %d. Prediction "
+                  "time(rt_stat.infer_time_ms in DnnNodeOutput) is too long "
+                  "for this model!",
                   thread_pool_->msg_handle_.GetTaskNum(),
                   thread_pool_->msg_limit_count_);
       // todo [20220622] 返回错误码告知用户推理失败原因

@@ -16,8 +16,8 @@
 #define DNN_NODE_H_
 
 #include <memory>
-#include <vector>
 #include <string>
+#include <vector>
 
 #include "dnn_node/dnn_node_data.h"
 
