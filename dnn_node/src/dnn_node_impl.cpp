@@ -86,15 +86,35 @@ int DnnNodeImpl::ModelInit() {
 
   // 2. 根据模型名，加载实际需要管理的模型
   const auto &model_name = dnn_node_para_ptr_->model_name;
-  for (auto model : dnn_rt_para_->models_load) {
-    if (model->GetName() == model_name) {
-      dnn_rt_para_->model_manage = model;
-      break;
+  if (model_name.empty()) {
+    // 2.1 用户没有指定模型名
+    if (dnn_rt_para_->models_load.size() == 1) {
+      // 2.1.1 模型文件中只有一个模型，直接使用
+      dnn_rt_para_->model_manage = dnn_rt_para_->models_load.at(0);
+    } else {
+      // 2.1.2 模型文件中有多个模型，用户必须指定需要加载的模型
+      RCLCPP_ERROR(rclcpp::get_logger("dnn"),
+                   "Model file: %s has %d models, please set model_name para "
+                   "in DnnNodePara with SetNodePara API",
+                   dnn_node_para_ptr_->model_file.c_str(),
+                   dnn_rt_para_->models_load.size());
+      return -1;
+    }
+  } else {
+    // 2.2 用户指定了模型名
+    for (auto model : dnn_rt_para_->models_load) {
+      if (model->GetName() == model_name) {
+        dnn_rt_para_->model_manage = model;
+        break;
+      }
     }
   }
   if (!dnn_rt_para_->model_manage) {
-    RCLCPP_ERROR(
-        rclcpp::get_logger("dnn"), "Find model: %s fail!", model_name.c_str());
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"),
+                 "Find model: %s fail! Check model name on X3PI with cmd: "
+                 "hrt_model_exec model_info --model_file %s",
+                 model_name.c_str(),
+                 dnn_node_para_ptr_->model_file.c_str());
     return -1;
   }
 
@@ -111,6 +131,32 @@ int DnnNodeImpl::ModelInit() {
                 in_h);
   }
 
+  return 0;
+}
+
+int DnnNodeImpl::SetDefaultOutputParser() {
+  RCLCPP_INFO(rclcpp::get_logger("dnn impl"), "Set default output parser");
+
+  auto model = GetModel();
+  if (!model) {
+    RCLCPP_ERROR(rclcpp::get_logger("dnn impl"),
+                 "Set default output parser fail! Invalid model");
+    return -1;
+  }
+
+  if (!dnn_default_output_parser_) {
+    dnn_default_output_parser_ =
+        std::make_shared<DNNDefaultSingleBranchOutputParser>();
+  }
+
+  for (int32_t idx = 0; idx < model->GetOutputCount(); idx++) {
+    if (model->SetOutputParser(idx, dnn_default_output_parser_) != 0) {
+      RCLCPP_ERROR(rclcpp::get_logger("dnn impl"),
+                   "Set output parser index %d fail!",
+                   idx);
+      return -1;
+    }
+  }
   return 0;
 }
 
@@ -216,11 +262,10 @@ int DnnNodeImpl::PreProcess(
   return ret;
 }
 
-int DnnNodeImpl::RunInferTask(
-    std::shared_ptr<DnnNodeOutput> &node_output,
-    const TaskId &task_id,
-    std::function<int(const std::shared_ptr<DnnNodeOutput> &)> post_process,
-    const int timeout_ms) {
+int DnnNodeImpl::RunInferTask(std::shared_ptr<DnnNodeOutput> &node_output,
+                              const TaskId &task_id,
+                              PostProcessCbType post_process,
+                              const int timeout_ms) {
   if (!dnn_rt_para_ || !node_output) {
     return -1;
   }
@@ -293,12 +338,17 @@ int DnnNodeImpl::RunInfer(std::shared_ptr<DnnNodeOutput> node_output,
 
   if (ModelTaskType::ModelInferType == dnn_node_para_ptr_->model_task_type) {
     auto model_task = std::dynamic_pointer_cast<ModelInferTask>(task);
+    // 解析DNNTensor，内部会为算法的每个branch输出调用自定义的Parse接口进行解析
     ret = model_task->ParseOutput();
     if (ret != 0) {
       RCLCPP_ERROR(
           rclcpp::get_logger("dnn"), "Failed to parse outputs, ret[%d]", ret);
       return ret;
     }
+
+    // 获取解析前的DNNTensor
+    model_task->GetOutputTensors(node_output->output_tensors);
+    // 获取解析后的DNNResult
     ret = model_task->GetOutputs(node_output->outputs);
   } else if (ModelTaskType::ModelRoiInferType ==
              dnn_node_para_ptr_->model_task_type) {
@@ -309,6 +359,9 @@ int DnnNodeImpl::RunInfer(std::shared_ptr<DnnNodeOutput> node_output,
           rclcpp::get_logger("dnn"), "Failed to parse outputs, ret[%d]", ret);
       return ret;
     }
+    // 解析DNNTensor，内部会为算法的每个branch输出调用自定义的Parse接口进行解析
+    model_task->GetOutputTensors(node_output->output_tensors);
+    // 获取解析后的DNNResult
     ret = model_task->GetOutputs(node_output->outputs);
   }
 
@@ -477,7 +530,7 @@ int DnnNodeImpl::Run(
     InputType input_type,
     std::vector<std::shared_ptr<OutputDescription>> &output_descs,
     const std::shared_ptr<DnnNodeOutput> &output,
-    std::function<int(const std::shared_ptr<DnnNodeOutput> &)> post_process,
+    PostProcessCbType post_process,
     const std::shared_ptr<std::vector<hbDNNRoi>> rois,
     const bool is_sync_mode,
     const int alloctask_timeout_ms,
@@ -499,8 +552,10 @@ int DnnNodeImpl::Run(
     std::lock_guard<std::mutex> lock(thread_pool_->msg_mutex_);
     if (thread_pool_->msg_handle_.GetTaskNum() >=
         thread_pool_->msg_limit_count_) {
-      RCLCPP_WARN(rclcpp::get_logger("dnn"),
-                  "Task Size: %d exceeds limit: %d",
+      RCLCPP_INFO(rclcpp::get_logger("dnn"),
+                  "Task Size: %d exceeds limit: %d. Prediction "
+                  "time(rt_stat.infer_time_ms in DnnNodeOutput) is too long "
+                  "for this model!",
                   thread_pool_->msg_handle_.GetTaskNum(),
                   thread_pool_->msg_limit_count_);
       // todo [20220622] 返回错误码告知用户推理失败原因
@@ -540,7 +595,7 @@ int DnnNodeImpl::RunImpl(
     InputType input_type,
     std::vector<std::shared_ptr<OutputDescription>> output_descs,
     const std::shared_ptr<DnnNodeOutput> output,
-    std::function<int(const std::shared_ptr<DnnNodeOutput> &)> post_process,
+    PostProcessCbType post_process,
     const std::shared_ptr<std::vector<hbDNNRoi>> rois,
     const int alloctask_timeout_ms,
     const int infer_timeout_ms) {
@@ -596,6 +651,7 @@ int DnnNodeImpl::RunImpl(
           rclcpp::get_logger("dnn"), "Set output desc to task id: %d", task_id);
     }
   }
+
   // 2 将准备好的模型输入数据inputs通过前处理接口输入给模型
   // 并通过推理任务的task_id指定推理任务
   if (PreProcess(inputs, tensor_inputs, input_type, task_id, rois) != 0) {

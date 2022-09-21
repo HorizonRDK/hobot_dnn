@@ -16,8 +16,8 @@
 #define DNN_NODE_H_
 
 #include <memory>
-#include <vector>
 #include <string>
+#include <vector>
 
 #include "dnn_node/dnn_node_data.h"
 
@@ -57,7 +57,7 @@ class DnnNode : public rclcpp::Node {
   int Run(std::vector<std::shared_ptr<DNNInput>> &inputs,
           const std::shared_ptr<DnnNodeOutput> &output = nullptr,
           const std::shared_ptr<std::vector<hbDNNRoi>> rois = nullptr,
-          const bool is_sync_mode = true,
+          const bool is_sync_mode = false,
           const int alloctask_timeout_ms = -1,
           const int infer_timeout_ms = 1000);
 
@@ -79,7 +79,7 @@ class DnnNode : public rclcpp::Node {
           std::vector<std::shared_ptr<OutputDescription>> &output_descs,
           const std::shared_ptr<DnnNodeOutput> &output = nullptr,
           const std::shared_ptr<std::vector<hbDNNRoi>> rois = nullptr,
-          const bool is_sync_mode = true,
+          const bool is_sync_mode = false,
           const int alloctask_timeout_ms = -1,
           const int infer_timeout_ms = 1000);
 
@@ -95,7 +95,7 @@ class DnnNode : public rclcpp::Node {
   int Run(std::vector<std::shared_ptr<DNNTensor>> &inputs,
           std::vector<std::shared_ptr<OutputDescription>> &output_descs,
           const std::shared_ptr<DnnNodeOutput> &output = nullptr,
-          const bool is_sync_mode = true,
+          const bool is_sync_mode = false,
           const int alloctask_timeout_ms = -1,
           const int infer_timeout_ms = 1000);
 

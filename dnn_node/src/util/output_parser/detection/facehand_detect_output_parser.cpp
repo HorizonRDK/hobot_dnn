@@ -41,6 +41,13 @@ int32_t FaceHandDetectionOutputParser::Parse(
     std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
     std::shared_ptr<OutputDescription> &output_description,
     std::shared_ptr<DNNTensor> &output_tensor) {
+      
+  if (!output) {
+    RCLCPP_INFO(rclcpp::get_logger("FaceHandDetectionOutputParser"),
+                  "Invalid output");
+    output = std::make_shared<Filter2DResult>();
+  }
+
   auto *detection_result =
       reinterpret_cast<uint8_t *>(output_tensor->sysMem[0].virAddr);
   auto tensor_properties_type = output_tensor->properties.tensorType;
