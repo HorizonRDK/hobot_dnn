@@ -38,7 +38,11 @@ struct DnnNodeTask {
     task_id = id;
     alloc_tp = std::chrono::system_clock::now();
   }
+  void SetBPUCoreID(BPUCoreIDType bpu_core_id) { core_id = bpu_core_id; }
   TaskId task_id = -1;
+  // 实际运行时使用的BPU核，必须为BPU_CORE_0或BPU_CORE_1
+  // 如果用户指定的是BPU_CORE_ANY，将会转成BPU_CORE_0或BPU_CORE_1
+  BPUCoreIDType core_id = BPUCoreIDType::BPU_CORE_0;
   std::chrono::high_resolution_clock::time_point alloc_tp;
 };
 

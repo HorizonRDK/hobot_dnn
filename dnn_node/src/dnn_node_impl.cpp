@@ -168,6 +168,18 @@ int DnnNodeImpl::TaskInit() {
     return -1;
   }
 
+  // bpu_core_ids必须为空或者size等于task_num
+  if (!dnn_node_para_ptr_->bpu_core_ids.empty() &&
+      static_cast<int>(dnn_node_para_ptr_->bpu_core_ids.size()) !=
+          dnn_node_para_ptr_->task_num) {
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"),
+                 "DnnNodePara of bpu_core_ids size %d should be zero or equal "
+                 "with task_num %d",
+                 dnn_node_para_ptr_->bpu_core_ids.size(),
+                 dnn_node_para_ptr_->task_num);
+    return -1;
+  }
+
   // 1. 为每个模型创建task
   // 此处只创建空的task，AllocTask才真正创建task，ReleaseTask时释放task
   // 原因是目前一个task不支持多次预测，即每次预测都要申请一个新的task
@@ -177,10 +189,52 @@ int DnnNodeImpl::TaskInit() {
   // 2. 创建idle running task
   {
     int task_num = dnn_rt_para_->tasks.size();
+    auto bpu_core_id = BPUCoreIDType::BPU_CORE_0;
     std::unique_lock<std::mutex> lg(dnn_rt_para_->task_mtx);
-    for (int idx = 0; idx < task_num; idx++) {
-      auto node_task = std::make_shared<DnnNodeTask>(idx);
-      dnn_rt_para_->idle_tasks[node_task->task_id] = node_task;
+    if (static_cast<int>(dnn_node_para_ptr_->bpu_core_ids.size()) == task_num) {
+      // 用户指定了BPU核
+      for (int idx = 0; idx < task_num; idx++) {
+        auto node_task = std::make_shared<DnnNodeTask>(idx);
+        if (dnn_node_para_ptr_->bpu_core_ids.at(idx) !=
+            BPUCoreIDType::BPU_CORE_ANY) {
+          // 指定的是BPU 0或1
+          node_task->SetBPUCoreID(dnn_node_para_ptr_->bpu_core_ids.at(idx));
+          dnn_rt_para_->idle_tasks[node_task->task_id] = node_task;
+        } else {
+          // 指定的是BPU_CORE_ANY，选择BPU 0或1
+          node_task->SetBPUCoreID(bpu_core_id);
+          dnn_rt_para_->idle_tasks[node_task->task_id] = node_task;
+          if (idx == task_num - 1) {
+            break;
+          }
+          // 更新bpu_core_id，保证每个task使用不同的BPU核
+          if (BPUCoreIDType::BPU_CORE_0 == bpu_core_id) {
+            bpu_core_id = BPUCoreIDType::BPU_CORE_1;
+          } else if (BPUCoreIDType::BPU_CORE_1 == bpu_core_id) {
+            bpu_core_id = BPUCoreIDType::BPU_CORE_0;
+          } else {
+            bpu_core_id = BPUCoreIDType::BPU_CORE_0;
+          }
+        }
+      }
+    } else {
+      // 没有指定BPU核，为每个task指定初始BPU核
+      for (int idx = 0; idx < task_num; idx++) {
+        auto node_task = std::make_shared<DnnNodeTask>(idx);
+        node_task->SetBPUCoreID(bpu_core_id);
+        dnn_rt_para_->idle_tasks[node_task->task_id] = node_task;
+        if (idx == task_num - 1) {
+          break;
+        }
+        // 更新bpu_core_id，保证每个task使用不同的BPU核
+        if (BPUCoreIDType::BPU_CORE_0 == bpu_core_id) {
+          bpu_core_id = BPUCoreIDType::BPU_CORE_1;
+        } else if (BPUCoreIDType::BPU_CORE_1 == bpu_core_id) {
+          bpu_core_id = BPUCoreIDType::BPU_CORE_0;
+        } else {
+          bpu_core_id = BPUCoreIDType::BPU_CORE_0;
+        }
+      }
     }
   }
 
@@ -385,6 +439,7 @@ int DnnNodeImpl::RunInfer(std::shared_ptr<DnnNodeOutput> node_output,
 TaskId DnnNodeImpl::AllocTask(int timeout_ms) {
   RCLCPP_DEBUG(rclcpp::get_logger("dnn"), "Alloc task");
   TaskId task_id = -1;
+  BPUCoreIDType bpu_core_id = BPUCoreIDType::BPU_CORE_0;
   if (!dnn_rt_para_) {
     return task_id;
   }
@@ -418,10 +473,11 @@ TaskId DnnNodeImpl::AllocTask(int timeout_ms) {
     return task_id;
   }
 
-  auto alloc_task = [this, &task_id]() {
+  auto alloc_task = [this, &task_id, &bpu_core_id]() {
     auto idle_task = dnn_rt_para_->idle_tasks.begin();
     idle_task->second->alloc_tp = std::chrono::system_clock::now();
     task_id = idle_task->first;
+    bpu_core_id = idle_task->second->core_id;
     dnn_rt_para_->running_tasks[task_id] = idle_task->second;
     dnn_rt_para_->idle_tasks.erase(task_id);
   };
@@ -455,6 +511,14 @@ TaskId DnnNodeImpl::AllocTask(int timeout_ms) {
     return -1;
   }
 
+  hobot::easy_dnn::DNNInferCtrlParam ctrl_param;
+  ctrl_param.bpuCoreId = static_cast<int32_t>(bpu_core_id);
+  RCLCPP_INFO(rclcpp::get_logger("dnn"),
+              "task id: %d set bpu core: %d",
+              task_id,
+              ctrl_param.bpuCoreId);
+  task->SetCtrlParam(ctrl_param);
+
   dnn_rt_para_->tasks[task_id] = std::move(task);
 
   return task_id;
@@ -467,6 +531,7 @@ int DnnNodeImpl::ReleaseTask(const TaskId &task_id) {
     RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid task_id: %d", task_id);
     return -1;
   }
+
   auto node_task = std::make_shared<DnnNodeTask>(task_id);
   std::unique_lock<std::mutex> lg(dnn_rt_para_->task_mtx);
   if (dnn_rt_para_->running_tasks.find(task_id) ==
@@ -475,6 +540,32 @@ int DnnNodeImpl::ReleaseTask(const TaskId &task_id) {
         rclcpp::get_logger("dnn"), "Task id: %d is not running", task_id);
     return -1;
   }
+
+  // 上一次推理任务使用的BPU核
+  auto last_bpu_core_id = dnn_rt_para_->running_tasks[task_id]->core_id;
+  // 本次推理任务使用的BPU核
+  auto present_bpu_core_id = last_bpu_core_id;
+  if (static_cast<int>(dnn_node_para_ptr_->bpu_core_ids.size()) ==
+          dnn_node_para_ptr_->task_num &&
+      task_id < dnn_node_para_ptr_->task_num &&
+      dnn_node_para_ptr_->bpu_core_ids.at(task_id) !=
+          BPUCoreIDType::BPU_CORE_ANY) {
+    // 用户指定的是BPU 0或1，本次推理直接使用上一次推理任务使用的BPU核
+    present_bpu_core_id = last_bpu_core_id;
+  } else {
+    // 交替使用BPU核
+    if (BPUCoreIDType::BPU_CORE_0 == last_bpu_core_id) {
+      present_bpu_core_id = BPUCoreIDType::BPU_CORE_1;
+    } else if (BPUCoreIDType::BPU_CORE_1 == last_bpu_core_id) {
+      present_bpu_core_id = BPUCoreIDType::BPU_CORE_0;
+    } else {
+      present_bpu_core_id = BPUCoreIDType::BPU_CORE_0;
+    }
+  }
+
+  // 设置本次推理任务使用的BPU核
+  node_task->SetBPUCoreID(present_bpu_core_id);
+
   dnn_rt_para_->idle_tasks[node_task->task_id] = node_task;
   dnn_rt_para_->running_tasks.erase(task_id);
   dnn_rt_para_->tasks[task_id] = nullptr;
@@ -495,6 +586,7 @@ std::shared_ptr<Task> DnnNodeImpl::GetTask(const TaskId &task_id) {
     return task;
   }
   task = dnn_rt_para_->tasks.at(task_id);
+
   return task;
 }
 
