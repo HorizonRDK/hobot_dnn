@@ -108,7 +108,8 @@ struct DnnNodePara {
   // 为task指定使用的BPU核，bpu_core_ids为空或者size等于task_num
   // 为空不指定，即使用BPU_CORE_ANY模式
   // 当bpu_core_ids size等于task_num时，分别为每个task指定对应的BPU核
-  // 例如task_num为2，bpu_core_ids为{0, 1}时，两个task分别运行在BPU 0和BPU 1上
+  // 例如task_num为2，bpu_core_ids为{BPUCoreIDType::BPU_CORE_0,
+  // BPUCoreIDType::BPU_CORE_1}时，两个task分别运行在BPU 0和BPU 1上
   std::vector<BPUCoreIDType> bpu_core_ids{};
 
   // 模型输出索引和对应的解析方式

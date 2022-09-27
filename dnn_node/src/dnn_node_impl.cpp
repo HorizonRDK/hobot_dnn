@@ -207,7 +207,7 @@ int DnnNodeImpl::TaskInit() {
           if (idx == task_num - 1) {
             break;
           }
-          // 更新bpu_core_id，保证每个task使用不同的BPU核
+          // 更新bpu_core_id，保证每个task交替使用不同的BPU核
           if (BPUCoreIDType::BPU_CORE_0 == bpu_core_id) {
             bpu_core_id = BPUCoreIDType::BPU_CORE_1;
           } else if (BPUCoreIDType::BPU_CORE_1 == bpu_core_id) {
@@ -226,7 +226,7 @@ int DnnNodeImpl::TaskInit() {
         if (idx == task_num - 1) {
           break;
         }
-        // 更新bpu_core_id，保证每个task使用不同的BPU核
+        // 更新bpu_core_id，保证每个task交替使用不同的BPU核
         if (BPUCoreIDType::BPU_CORE_0 == bpu_core_id) {
           bpu_core_id = BPUCoreIDType::BPU_CORE_1;
         } else if (BPUCoreIDType::BPU_CORE_1 == bpu_core_id) {
