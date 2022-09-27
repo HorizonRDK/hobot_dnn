@@ -101,6 +101,30 @@ int DnnNode::Init() {
     return -1;
   }
 
+  // 校验bpu_core_ids参数
+  if (!dnn_node_para_ptr_->bpu_core_ids.empty()) {
+    if (dnn_node_para_ptr_->bpu_core_ids.size() !=
+        dnn_node_para_ptr_->task_num) {
+      RCLCPP_ERROR(rclcpp::get_logger("dnn"),
+                   "DnnNodePara of bpu_core_ids size %d should be zero or "
+                   "equal with task_num %d",
+                   dnn_node_para_ptr_->bpu_core_ids.size(),
+                   dnn_node_para_ptr_->task_num);
+      return -1;
+    }
+    for (const auto &bpu_core_id : dnn_node_para_ptr_->bpu_core_ids) {
+      if (bpu_core_id < BPUCoreIDType::BPU_CORE_ANY ||
+          bpu_core_id > BPUCoreIDType::BPU_CORE_1) {
+        RCLCPP_ERROR(rclcpp::get_logger("dnn"),
+                     "Invalid bpu_core_id %d, which should be [%d, %d]",
+                     static_cast<int>(bpu_core_id),
+                     static_cast<int>(BPUCoreIDType::BPU_CORE_ANY),
+                     static_cast<int>(BPUCoreIDType::BPU_CORE_1));
+        return -1;
+      }
+    }
+  }
+
   // 2. model init
   ret = dnn_node_impl_->ModelInit();
   if (ret != 0) {

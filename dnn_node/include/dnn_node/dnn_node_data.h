@@ -76,6 +76,12 @@ enum class ModelTaskType {
   ModelRoiInferType = 2
 };
 
+// 推理任务使用的BPU核，包括以下几种类型
+// - BPU_CORE_ANY: 不指定BPU核，推理任务交替使用两个BPU核，实现负载均衡
+// - BPU_CORE_0: 推理任务使用BPU 0
+// - BPU_CORE_1: 推理任务使用BPU 1
+enum class BPUCoreIDType { BPU_CORE_ANY = 0, BPU_CORE_0 = 1, BPU_CORE_1 = 2 };
+
 struct DnnNodePara {
   // 模型文件名称
   std::string model_file;
@@ -98,6 +104,13 @@ struct DnnNodePara {
   // 创建的task数量，一个model支持由多个task执行
   // 如果算法推理耗时较长（推理输出帧率低于输入帧率），需要使用更多的task进行推理
   int task_num = 2;
+
+  // 为task指定使用的BPU核，bpu_core_ids为空或者size等于task_num
+  // 为空不指定，即使用BPU_CORE_ANY模式
+  // 当bpu_core_ids size等于task_num时，分别为每个task指定对应的BPU核
+  // 例如task_num为2，bpu_core_ids为{BPUCoreIDType::BPU_CORE_0,
+  // BPUCoreIDType::BPU_CORE_1}时，两个task分别运行在BPU 0和BPU 1上
+  std::vector<BPUCoreIDType> bpu_core_ids{};
 
   // 模型输出索引和对应的解析方式
   // 如果用户子类中没有override SetOutputParser接口，
