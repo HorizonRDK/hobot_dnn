@@ -617,6 +617,7 @@ void DnnExampleNode::RosImgProcess(
                       static_cast<float>(model_input_height_);
       float dst_ratio = std::max(ratio_w, ratio_h);
       int resized_width, resized_height;
+      //计算出等比例缩放后的宽高
       if (dst_ratio == ratio_w) {
         resized_width = model_input_width_;
         resized_height = static_cast<float>(img_msg->height) / dst_ratio;
@@ -624,18 +625,28 @@ void DnnExampleNode::RosImgProcess(
         resized_width = static_cast<float>(img_msg->width) / dst_ratio;
         resized_height = model_input_height_;
       }
-      resized_width =
-          resized_width % 2 == 0 ? resized_width : resized_width - 1;
+      // hobot_cv要求输出宽度为16的倍数
+      int remain = resized_width % 16;
+      if (remain != 0) {  //向下取16倍数，重新计算缩放系数
+        resized_width -= remain;
+        dst_ratio = static_cast<float>(img_msg->width) / resized_width;
+        resized_height = static_cast<float>(img_msg->height) / dst_ratio;
+      }
+      //高度向下取偶数
       resized_height =
           resized_height % 2 == 0 ? resized_height : resized_height - 1;
       dnn_output->ratio = dst_ratio;
       cv::Mat dst;
-      hobot_cv::hobotcv_resize(src,
-                               img_msg->height,
-                               img_msg->width,
-                               dst,
-                               resized_height,
-                               resized_width);
+      auto cv_ret = hobot_cv::hobotcv_resize(src,
+                                             img_msg->height,
+                                             img_msg->width,
+                                             dst,
+                                             resized_height,
+                                             resized_width);
+      if (cv_ret != 0) {
+        RCLCPP_ERROR(rclcpp::get_logger("example"), "hobot_cv resize failed!");
+        return;
+      }
       pyramid = ImageUtils::GetNV12PyramidFromNV12Mat(dst,
                                                       model_input_height_,
                                                       model_input_width_,
@@ -767,6 +778,7 @@ void DnnExampleNode::SharedMemImgProcess(
                       static_cast<float>(model_input_height_);
       float dst_ratio = std::max(ratio_w, ratio_h);
       int resized_width, resized_height;
+      //计算出等比例缩放后的宽高
       if (dst_ratio == ratio_w) {
         resized_width = model_input_width_;
         resized_height = static_cast<float>(img_msg->height) / dst_ratio;
@@ -774,18 +786,28 @@ void DnnExampleNode::SharedMemImgProcess(
         resized_width = static_cast<float>(img_msg->width) / dst_ratio;
         resized_height = model_input_height_;
       }
-      resized_width =
-          resized_width % 2 == 0 ? resized_width : resized_width - 1;
+      // hobot_cv要求输出宽度为16的倍数
+      int remain = resized_width % 16;
+      if (remain != 0) {  //向下取16倍数，重新计算缩放系数
+        resized_width -= remain;
+        dst_ratio = static_cast<float>(img_msg->width) / resized_width;
+        resized_height = static_cast<float>(img_msg->height) / dst_ratio;
+      }
+      //高度向下取偶数
       resized_height =
           resized_height % 2 == 0 ? resized_height : resized_height - 1;
       dnn_output->ratio = dst_ratio;
       cv::Mat dst;
-      hobot_cv::hobotcv_resize(src,
-                               img_msg->height,
-                               img_msg->width,
-                               dst,
-                               resized_height,
-                               resized_width);
+      auto cv_ret = hobot_cv::hobotcv_resize(src,
+                                             img_msg->height,
+                                             img_msg->width,
+                                             dst,
+                                             resized_height,
+                                             resized_width);
+      if (cv_ret != 0) {
+        RCLCPP_ERROR(rclcpp::get_logger("example"), "hobot_cv resize failed!");
+        return;
+      }
       pyramid = ImageUtils::GetNV12PyramidFromNV12Mat(dst,
                                                       model_input_height_,
                                                       model_input_width_,
