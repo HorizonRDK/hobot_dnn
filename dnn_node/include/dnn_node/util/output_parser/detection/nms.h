@@ -19,6 +19,8 @@
 
 #include "dnn_node/util/output_parser/perception_common.h"
 
+using hobot::dnn_node::output_parser::Detection;
+
 /**
  * Non-maximum suppression
  * @param[in] input

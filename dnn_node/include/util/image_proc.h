@@ -48,6 +48,29 @@ class ImageProc {
       const int& in_img_width,
       const int& scaled_img_height,
       const int& scaled_img_width);
+      
+  // 使用nv12编码格式图片数据生成NV12PyramidInput
+  // 要求输入图片分辨率<=模型输入分辨率，将输入图片padding到中间，并设置padding参数
+  // - 参数
+  //   - [in] in_img_data 输入图片数据
+  //   - [in] in_img_height 输入图片的高度
+  //   - [in] in_img_width 输入图片的宽度
+  //   - [in] scaled_img_height 模型输入的高度
+  //   - [in] scaled_img_width 模型输入的宽度
+  //   - [in/out] padding_l 左边padding的像素数
+  //   - [in/out] padding_t 上方padding的像素数
+  //   - [in/out] padding_r 右边padding的像素数
+  //   - [in/out] padding_b 下边padding的像素数
+  static std::shared_ptr<NV12PyramidInput> GetNV12PyramidFromNV12Img(
+      const char* in_img_data,
+      const int& in_img_height,
+      const int& in_img_width,
+      const int& scaled_img_height,
+      const int& scaled_img_width,
+      int& padding_l,
+      int& padding_t,
+      int& padding_r,
+      int& padding_b);
 };
 
 }  // namespace dnn_node

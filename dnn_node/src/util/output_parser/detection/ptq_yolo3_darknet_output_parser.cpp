@@ -16,7 +16,6 @@
 
 #include <queue>
 
-#include "dnn_node/util/output_parser/algorithm.h"
 #include "dnn_node/util/output_parser/detection/nms.h"
 #include "dnn_node/util/output_parser/utils.h"
 #include "rapidjson/document.h"
@@ -24,6 +23,46 @@
 
 namespace hobot {
 namespace dnn_node {
+namespace parser_yolov3 {
+
+/**
+ * Finds the greatest element in the range [first, last)
+ * @tparam[in] ForwardIterator: iterator type
+ * @param[in] first: fist iterator
+ * @param[in] last: last iterator
+ * @return Iterator to the greatest element in the range [first, last)
+ */
+template <class ForwardIterator>
+inline size_t argmax(ForwardIterator first, ForwardIterator last) {
+  return std::distance(first, std::max_element(first, last));
+}
+
+/**
+ * Config definition for Yolo3
+ */
+struct PTQYolo3DarknetConfig {
+  std::vector<int> strides;
+  std::vector<std::vector<std::pair<double, double>>> anchors_table;
+  int class_num;
+  std::vector<std::string> class_names;
+
+  std::string Str() {
+    std::stringstream ss;
+    ss << "strides: ";
+    for (const auto &stride : strides) {
+      ss << stride << " ";
+    }
+
+    ss << "; anchors_table: ";
+    for (const auto &anchors : anchors_table) {
+      for (auto data : anchors) {
+        ss << "[" << data.first << "," << data.second << "] ";
+      }
+    }
+    ss << "; class_num: " << class_num;
+    return ss.str();
+  }
+};
 
 PTQYolo3DarknetConfig default_ptq_yolo3_darknet_config = {
     {32, 16, 8},
@@ -59,44 +98,30 @@ PTQYolo3DarknetConfig default_ptq_yolo3_darknet_config = {
      "vase",          "scissors",     "teddy bear",
      "hair drier",    "toothbrush"}};
 
-int32_t Yolo3DarknetOutputParser::Parse(
-    std::shared_ptr<Dnn_Parser_Result> &output,
-    std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
-    std::shared_ptr<OutputDescription> &output_descriptions,
-    std::shared_ptr<DNNTensor> &output_tensor,
-    std::vector<std::shared_ptr<OutputDescription>> &depend_output_descs,
-    std::vector<std::shared_ptr<DNNTensor>> &depend_output_tensors,
-    std::vector<std::shared_ptr<DNNResult>> &depend_outputs) {
-  if (output_descriptions) {
-    RCLCPP_DEBUG(rclcpp::get_logger("Yolo3Darknet_detection_parser"),
-                 "type: %s, GetDependencies size: %d",
-                 output_descriptions->GetType().c_str(),
-                 output_descriptions->GetDependencies().size());
-    if (!output_descriptions->GetDependencies().empty()) {
-      RCLCPP_DEBUG(rclcpp::get_logger("Yolo3Darknet_detection_parser"),
-                   "Dependencies: %d",
-                   output_descriptions->GetDependencies().front());
-    }
-  }
-  RCLCPP_INFO(rclcpp::get_logger("Yolo3Darknet_detection_parser"),
-              "dep out size: %d %d",
-              depend_output_descs.size(),
-              depend_output_tensors.size());
-  if (depend_output_tensors.size() < 3) {
-    RCLCPP_ERROR(rclcpp::get_logger("Yolo3Darknet_detection_parser"),
-                 "depend out tensor size invalid cast");
-    return -1;
+int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
+                Perception &perception);
+
+void PostProcessNHWC(std::shared_ptr<DNNTensor> tensor,
+                     int layer,
+                     std::vector<Detection> &dets);
+
+void PostProcessNCHW(std::shared_ptr<DNNTensor> tensor,
+                     int layer,
+                     std::vector<Detection> &dets);
+
+PTQYolo3DarknetConfig yolo3_config_ = default_ptq_yolo3_darknet_config;
+float score_threshold_ = 0.3;
+float nms_threshold_ = 0.45;
+int nms_top_k_ = 500;
+
+int32_t Parse(
+    const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output,
+    std::shared_ptr<DnnParserResult> &result) {
+  if (!result) {
+    result = std::make_shared<DnnParserResult>();
   }
 
-  std::shared_ptr<Dnn_Parser_Result> result;
-  if (!output) {
-    result = std::make_shared<Dnn_Parser_Result>();
-    output = result;
-  } else {
-    result = std::dynamic_pointer_cast<Dnn_Parser_Result>(output);
-  }
-
-  int ret = PostProcess(depend_output_tensors, result->perception);
+  int ret = PostProcess(node_output->output_tensors, result->perception);
   if (ret != 0) {
     RCLCPP_INFO(rclcpp::get_logger("Yolo3Darknet_detection_parser"),
                 "postprocess return error, code = %d",
@@ -111,8 +136,8 @@ int32_t Yolo3DarknetOutputParser::Parse(
   return ret;
 }
 
-int Yolo3DarknetOutputParser::PostProcess(
-    std::vector<std::shared_ptr<DNNTensor>> &tensors, Perception &perception) {
+int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &tensors,
+                Perception &perception) {
   perception.type = Perception::DET;
   std::vector<Detection> dets;
   for (size_t i = 0; i < yolo3_config_.strides.size(); i++) {
@@ -128,10 +153,9 @@ int Yolo3DarknetOutputParser::PostProcess(
   return 0;
 }
 
-void Yolo3DarknetOutputParser::PostProcessNHWC(
-    std::shared_ptr<DNNTensor> tensor,
-    int layer,
-    std::vector<Detection> &dets) {
+void PostProcessNHWC(std::shared_ptr<DNNTensor> tensor,
+                     int layer,
+                     std::vector<Detection> &dets) {
   hbSysFlushMem(&(tensor->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
   auto *data = reinterpret_cast<float *>(tensor->sysMem[0].virAddr);
   int num_classes = yolo3_config_.class_num;
@@ -144,7 +168,8 @@ void Yolo3DarknetOutputParser::PostProcessNHWC(
 
   // int *shape = tensor->data_shape.d;
   int height, width;
-  auto ret = get_tensor_hw(tensor, &height, &width);
+  auto ret =
+      hobot::dnn_node::output_parser::get_tensor_hw(tensor, &height, &width);
   if (ret != 0) {
     RCLCPP_WARN(rclcpp::get_logger("dnn_ptq_yolo3"), "get_tensor_hw failed");
   }
@@ -203,10 +228,9 @@ void Yolo3DarknetOutputParser::PostProcessNHWC(
   }
 }
 
-void Yolo3DarknetOutputParser::PostProcessNCHW(
-    std::shared_ptr<DNNTensor> tensor,
-    int layer,
-    std::vector<Detection> &dets) {
+void PostProcessNCHW(std::shared_ptr<DNNTensor> tensor,
+                     int layer,
+                     std::vector<Detection> &dets) {
   hbSysFlushMem(&(tensor->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
   auto *data = reinterpret_cast<float *>(tensor->sysMem[0].virAddr);
   int num_classes = yolo3_config_.class_num;
@@ -218,7 +242,8 @@ void Yolo3DarknetOutputParser::PostProcessNCHW(
       yolo3_config_.anchors_table[layer];
 
   int height, width;
-  auto ret = get_tensor_hw(tensor, &height, &width);
+  auto ret =
+      hobot::dnn_node::output_parser::get_tensor_hw(tensor, &height, &width);
   if (ret != 0) {
     RCLCPP_WARN(rclcpp::get_logger("dnn_ptq_yolo3"), "get_tensor_hw failed");
   }
@@ -281,5 +306,6 @@ void Yolo3DarknetOutputParser::PostProcessNCHW(
   }
 }
 
+}  // namespace parser_yolov3
 }  // namespace dnn_node
 }  // namespace hobot

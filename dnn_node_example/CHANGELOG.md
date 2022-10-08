@@ -1,5 +1,9 @@
 # Changelog for package dnn_node_example
 
+tros_1.1.3 (2022-10-08)
+------------------
+1. 算法后处理中使用dnn node重构后的算法输出解析方法。
+
 hhp_1.0.6 (2022-08-31)
 ------------------
 1. example中算法前处理使用hobot_cv进行图片resize。

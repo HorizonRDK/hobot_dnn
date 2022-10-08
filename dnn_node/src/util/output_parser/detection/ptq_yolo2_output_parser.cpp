@@ -16,7 +16,6 @@
 
 #include <queue>
 
-#include "dnn_node/util/output_parser/algorithm.h"
 #include "dnn_node/util/output_parser/detection/nms.h"
 #include "dnn_node/util/output_parser/utils.h"
 #include "rapidjson/document.h"
@@ -24,6 +23,40 @@
 
 namespace hobot {
 namespace dnn_node {
+namespace parser_yolov2 {
+
+/**
+ * Finds the greatest element in the range [first, last)
+ * @tparam[in] ForwardIterator: iterator type
+ * @param[in] first: fist iterator
+ * @param[in] last: last iterator
+ * @return Iterator to the greatest element in the range [first, last)
+ */
+template <class ForwardIterator>
+inline size_t argmax(ForwardIterator first, ForwardIterator last) {
+  return std::distance(first, std::max_element(first, last));
+}
+
+/**
+ * Config definition for Yolo2
+ */
+struct PTQYolo2Config {
+  int stride;
+  std::vector<std::pair<double, double>> anchors_table;
+  int class_num;
+  std::vector<std::string> class_names;
+
+  std::string Str() {
+    std::stringstream ss;
+    ss << "stride: " << stride;
+    ss << "; anchors_table: ";
+    for (auto anchors : anchors_table) {
+      ss << "[" << anchors.first << "," << anchors.second << "] ";
+    }
+    ss << "; class_num: " << class_num;
+    return ss.str();
+  }
+};
 
 PTQYolo2Config default_ptq_yolo2_config = {
     32,
@@ -61,29 +94,22 @@ PTQYolo2Config default_ptq_yolo2_config = {
      "vase",          "scissors",     "teddy bear",
      "hair drier",    "toothbrush"}};
 
-int32_t Yolo2OutputParser::Parse(
-    std::shared_ptr<Dnn_Parser_Result> &output,
-    std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
-    std::shared_ptr<OutputDescription> &output_description,
-    std::shared_ptr<DNNTensor> &output_tensor) {
-  if (!output_tensor) {
-    RCLCPP_ERROR(rclcpp::get_logger("Yolo2_detection_parser"),
-                 "output_tensor invalid cast");
-    return -1;
+int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
+                Perception &perception);
+
+PTQYolo2Config yolo2_config_ = default_ptq_yolo2_config;
+float score_threshold_ = 0.3;
+float nms_threshold_ = 0.45;
+int nms_top_k_ = 500;
+
+int32_t Parse(
+    const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output,
+    std::shared_ptr<DnnParserResult> &result) {
+  if (!result) {
+    result = std::make_shared<DnnParserResult>();
   }
 
-  std::shared_ptr<Dnn_Parser_Result> result;
-  if (!output) {
-    result = std::make_shared<Dnn_Parser_Result>();
-    output = result;
-  } else {
-    result = std::dynamic_pointer_cast<Dnn_Parser_Result>(output);
-  }
-
-  auto depend_output_tensors =
-      std::vector<std::shared_ptr<DNNTensor>>{output_tensor};
-
-  int ret = PostProcess(depend_output_tensors, result->perception);
+  int ret = PostProcess(node_output->output_tensors, result->perception);
   if (ret != 0) {
     RCLCPP_INFO(rclcpp::get_logger("Yolo2_detection_parser"),
                 "postprocess return error, code = %d",
@@ -97,8 +123,8 @@ int32_t Yolo2OutputParser::Parse(
   return ret;
 }
 
-int Yolo2OutputParser::PostProcess(
-    std::vector<std::shared_ptr<DNNTensor>> &tensors, Perception &perception) {
+int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &tensors,
+                Perception &perception) {
   perception.type = Perception::DET;
   hbSysFlushMem(&(tensors[0]->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
   auto *data = reinterpret_cast<float *>(tensors[0]->sysMem[0].virAddr);
@@ -110,7 +136,7 @@ int Yolo2OutputParser::PostProcess(
   std::vector<float> class_pred(num_classes, 0.0);
 
   int height, width;
-  get_tensor_hw(tensors[0], &height, &width);
+  hobot::dnn_node::output_parser::get_tensor_hw(tensors[0], &height, &width);
   // int *shape = tensor->data_shape.d;
   for (int h = 0; h < height; h++) {
     for (int w = 0; w < width; w++) {
@@ -170,5 +196,6 @@ int Yolo2OutputParser::PostProcess(
   return 0;
 }
 
+}  // namespace parser_yolov2
 }  // namespace dnn_node
 }  // namespace hobot

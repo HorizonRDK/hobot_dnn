@@ -23,6 +23,10 @@
 
 using hobot::dnn_node::DNNTensor;
 
+namespace hobot {
+namespace dnn_node {
+namespace output_parser {
+
 /**
  *
  * @param[in] tensor
@@ -83,4 +87,7 @@ class TensorUtils {
 
 static inline float Sigmoid(float x) { return 1.0 / (1 + exp(-x)); }
 
+}  // namespace output_parser
+}  // namespace dnn_node
+}  // namespace hobot
 #endif  // _OUTPUT_PARSER_UTILS_H_

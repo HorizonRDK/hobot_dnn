@@ -32,6 +32,9 @@ def generate_launch_description():
         "image", default_value=TextSubstitution(text="config/test.jpg")
     )
 
+    model_launch_arg = DeclareLaunchArgument(
+        "model", default_value=TextSubstitution(text="invalid")
+    )
 
     # 拷贝config中文件
     dnn_node_example_path = os.path.join(
@@ -64,6 +67,7 @@ def generate_launch_description():
     return LaunchDescription([
         config_file_launch_arg,
         img_file_launch_arg,
+        model_launch_arg,
         # 启动单目rgb人体、人头、人脸、人手框和人体关键点检测pkg
         Node(
             package='dnn_node_example',
@@ -71,6 +75,7 @@ def generate_launch_description():
             output='screen',
             parameters=[
                 {"feed_type": 0},
+                {"model": LaunchConfiguration('model')},
                 {"config_file": LaunchConfiguration('config_file')},
                 {"image": LaunchConfiguration('image')},
                 {"image_type": 0},

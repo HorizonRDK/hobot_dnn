@@ -68,6 +68,9 @@ def generate_launch_description():
     config_file_launch_arg = DeclareLaunchArgument(
         "config_file", default_value=TextSubstitution(text="config/fcosworkconfig.json")
     )
+    model_launch_arg = DeclareLaunchArgument(
+        "model", default_value=TextSubstitution(text="invalid")
+    )
     dump_render_launch_arg = DeclareLaunchArgument(
         "dump_render_img", default_value=TextSubstitution(text="0")
     )
@@ -148,10 +151,11 @@ def generate_launch_description():
         executable='example',
         output='screen',
         parameters=[
+            {"model": LaunchConfiguration('model')},
             {"config_file": LaunchConfiguration('config_file')},
             {"dump_render_img": LaunchConfiguration('dump_render_img')},
             {"feed_type": 1},
-            {"is_sync_mode": 0},
+            {"is_sync_mode": 1},
             {"is_shared_mem_sub": 1},
             {"msg_pub_topic_name": "hobot_dnn_detection"}
         ],
@@ -191,6 +195,7 @@ def generate_launch_description():
     if camera_type_mipi:
         return LaunchDescription([
             web_service_launch_include,
+            model_launch_arg,
             config_file_launch_arg,
             dump_render_launch_arg,
             image_width_launch_arg,
@@ -207,6 +212,7 @@ def generate_launch_description():
     else:
         return LaunchDescription([
             web_service_launch_include,
+            model_launch_arg,
             config_file_launch_arg,
             dump_render_launch_arg,
             image_width_launch_arg,

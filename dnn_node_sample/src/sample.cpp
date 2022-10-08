@@ -43,7 +43,16 @@ int ResizeNV12Img(const char* in_img_data,
     resized_width = static_cast<float>(in_img_width) / dst_ratio;
     resized_height = scaled_img_height;
   }
-  resized_width = resized_width % 2 == 0 ? resized_width : resized_width - 1;
+
+  // hobot_cv要求输出宽度为16的倍数
+  int remain = resized_width % 16;
+  if (remain != 0) {
+    //向下取16倍数，重新计算缩放系数
+    resized_width -= remain;
+    dst_ratio = static_cast<float>(in_img_width) / resized_width;
+    resized_height = static_cast<float>(in_img_height) / dst_ratio;
+  }
+  //高度向下取偶数
   resized_height =
       resized_height % 2 == 0 ? resized_height : resized_height - 1;
   ratio = dst_ratio;
@@ -254,6 +263,7 @@ int DNNNodeSample::PostProcess(
     roi.rect.set__y_offset(rect->ymin);
     roi.rect.set__width(rect->xmax - rect->xmin);
     roi.rect.set__height(rect->ymax - rect->ymin);
+    roi.set__confidence(rect->score);
 
     ai_msgs::msg::Target target;
     target.set__type(rect->class_name);

@@ -17,13 +17,26 @@
 #include <iostream>
 #include <queue>
 
-#include "dnn_node/util/output_parser/algorithm.h"
 #include "dnn_node/util/output_parser/detection/nms.h"
 #include "dnn_node/util/output_parser/utils.h"
 #include "rclcpp/rclcpp.hpp"
 
 namespace hobot {
 namespace dnn_node {
+namespace parser_fcos {
+
+struct ScoreId {
+  float score;
+  int id;
+};
+
+// FcosConfig
+struct FcosConfig {
+  std::vector<int> strides;
+  int class_num;
+  std::vector<std::string> class_names;
+  std::string det_name_list;
+};
 
 FcosConfig default_fcos_config = {
     {{8, 16, 32, 64, 128}},
@@ -57,50 +70,28 @@ FcosConfig default_fcos_config = {
      "hair drier",    "toothbrush"},
     ""};
 
-struct ScoreId {
-  float score;
-  int id;
-};
+void GetBboxAndScoresNHWC(std::vector<std::shared_ptr<DNNTensor>> &tensors,
+                          std::vector<Detection> &dets);
 
-int32_t FcosDetectionOutputParser::Parse(
-    std::shared_ptr<Dnn_Parser_Result> &output,
-    std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
-    std::shared_ptr<OutputDescription> &output_descriptions,
-    std::shared_ptr<DNNTensor> &output_tensor,
-    std::vector<std::shared_ptr<OutputDescription>> &depend_output_descs,
-    std::vector<std::shared_ptr<DNNTensor>> &depend_output_tensors,
-    std::vector<std::shared_ptr<DNNResult>> &depend_outputs) {
-  if (output_descriptions) {
-    RCLCPP_DEBUG(rclcpp::get_logger("fcos_detection_parser"),
-                 "type: %s, GetDependencies size: %d",
-                 output_descriptions->GetType().c_str(),
-                 output_descriptions->GetDependencies().size());
-    if (!output_descriptions->GetDependencies().empty()) {
-      RCLCPP_DEBUG(rclcpp::get_logger("fcos_detection_parser"),
-                   "Dependencies: %d",
-                   output_descriptions->GetDependencies().front());
-    }
+void GetBboxAndScoresNCHW(std::vector<std::shared_ptr<DNNTensor>> &tensors,
+                          std::vector<Detection> &dets);
+
+int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &tensors,
+                Perception &perception);
+
+float score_threshold_ = 0.5;
+float nms_threshold_ = 0.6;
+int nms_top_k_ = 500;
+FcosConfig fcos_config_ = default_fcos_config;
+
+int32_t Parse(
+    const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output,
+    std::shared_ptr<DnnParserResult> &result) {
+  if (!result) {
+    result = std::make_shared<DnnParserResult>();
   }
 
-  RCLCPP_INFO(rclcpp::get_logger("fcos_detection_parser"),
-              "dep out size: %d %d",
-              depend_output_descs.size(),
-              depend_output_tensors.size());
-  if (depend_output_tensors.size() < 15) {
-    RCLCPP_ERROR(rclcpp::get_logger("fcos_detection_parser"),
-                 "depend out tensor size invalid cast");
-    return -1;
-  }
-
-  std::shared_ptr<Dnn_Parser_Result> result;
-  if (!output) {
-    result = std::make_shared<Dnn_Parser_Result>();
-    output = result;
-  } else {
-    result = std::dynamic_pointer_cast<Dnn_Parser_Result>(output);
-  }
-
-  int ret = PostProcess(depend_output_tensors, result->perception);
+  int ret = PostProcess(node_output->output_tensors, result->perception);
   if (ret != 0) {
     RCLCPP_INFO(rclcpp::get_logger("fcos_detection_parser"),
                 "postprocess return error, code = %d",
@@ -110,9 +101,8 @@ int32_t FcosDetectionOutputParser::Parse(
   return ret;
 }
 
-void FcosDetectionOutputParser::GetBboxAndScoresNHWC(
-    std::vector<std::shared_ptr<DNNTensor>> &tensors,
-    std::vector<Detection> &dets) {
+void GetBboxAndScoresNHWC(std::vector<std::shared_ptr<DNNTensor>> &tensors,
+                          std::vector<Detection> &dets) {
   // fcos stride is {8, 16, 32, 64, 128}
   for (size_t i = 0; i < fcos_config_.strides.size(); ++i) {
     auto *cls_data = reinterpret_cast<float *>(tensors[i]->sysMem[0].virAddr);
@@ -149,13 +139,12 @@ void FcosDetectionOutputParser::GetBboxAndScoresNHWC(
 
         // get detection box
         int index = 4 * (h * tensor_w + w);
-        double xmin = 
-            ((w + 0.5) * fcos_config_.strides[i] - bbox_data[index]);
-        double ymin  =
+        double xmin = ((w + 0.5) * fcos_config_.strides[i] - bbox_data[index]);
+        double ymin =
             ((h + 0.5) * fcos_config_.strides[i] - bbox_data[index + 1]);
         double xmax =
             ((w + 0.5) * fcos_config_.strides[i] + bbox_data[index + 2]);
-        double ymax  =
+        double ymax =
             ((h + 0.5) * fcos_config_.strides[i] + bbox_data[index + 3]);
 
         Detection detection;
@@ -172,9 +161,8 @@ void FcosDetectionOutputParser::GetBboxAndScoresNHWC(
   }
 }
 
-void FcosDetectionOutputParser::GetBboxAndScoresNCHW(
-    std::vector<std::shared_ptr<DNNTensor>> &tensors,
-    std::vector<Detection> &dets) {
+void GetBboxAndScoresNCHW(std::vector<std::shared_ptr<DNNTensor>> &tensors,
+                          std::vector<Detection> &dets) {
   auto &strides = fcos_config_.strides;
   for (size_t i = 0; i < strides.size(); ++i) {
     auto *cls_data = reinterpret_cast<float *>(tensors[i]->sysMem[0].virAddr);
@@ -211,13 +199,12 @@ void FcosDetectionOutputParser::GetBboxAndScoresNCHW(
 
         // get detection box
         int index = 4 * (h * tensor_w + w);
-        double xmin = 
-            ((w + 0.5) * fcos_config_.strides[i] - bbox_data[index]);
-        double ymin  =
+        double xmin = ((w + 0.5) * fcos_config_.strides[i] - bbox_data[index]);
+        double ymin =
             ((h + 0.5) * fcos_config_.strides[i] - bbox_data[index + 1]);
         double xmax =
             ((w + 0.5) * fcos_config_.strides[i] + bbox_data[index + 2]);
-        double ymax  =
+        double ymax =
             ((h + 0.5) * fcos_config_.strides[i] + bbox_data[index + 3]);
 
         Detection detection;
@@ -234,14 +221,15 @@ void FcosDetectionOutputParser::GetBboxAndScoresNCHW(
   }
 }
 
-int FcosDetectionOutputParser::PostProcess(
-    std::vector<std::shared_ptr<DNNTensor>> &tensors, Perception &perception) {
+int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &tensors,
+                Perception &perception) {
   if (!tensors[0]) {
     RCLCPP_INFO(rclcpp::get_logger("fcos_example"), "tensor layout error.");
     return -1;
   }
   int h_index, w_index, c_index;
-  int ret = get_tensor_hwc_index(tensors[0], &h_index, &w_index, &c_index);
+  int ret = hobot::dnn_node::output_parser::get_tensor_hwc_index(
+      tensors[0], &h_index, &w_index, &c_index);
   if (ret != 0 &&
       fcos_config_.class_names.size() !=
           tensors[0]->properties.alignedShape.dimensionSize[c_index]) {
@@ -274,5 +262,6 @@ int FcosDetectionOutputParser::PostProcess(
   return 0;
 }
 
+}  // namespace parser_fcos
 }  // namespace dnn_node
 }  // namespace hobot

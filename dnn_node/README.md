@@ -246,7 +246,7 @@ root@ubuntu:~# tree /opt/tros/include/dnn_node/util/output_parser
         std::make_shared<hobot::dnn_node::Yolo5OutputParser>();
 
     // 2 创建解析输出数据，Dnn_Parser_Result是hobot_dnn中内置的解析方法对应的算法输出数据类型
-    auto det_result = std::make_shared<Dnn_Parser_Result>();
+    auto det_result = std::make_shared<DnnParserResult>();
 
     // 3 创建解析需要的其他输入，只有node_output->output_tensors是必备的
     auto input_desc = std::vector<std::shared_ptr<hobot::dnn_node::InputDescription>>{};
@@ -256,7 +256,7 @@ root@ubuntu:~# tree /opt/tros/include/dnn_node/util/output_parser
     auto output_tensors = node_output->output_tensors;
     std::vector<std::shared_ptr<hobot::dnn_node::DNNResult>> depend_outputs;
     
-    // 5 开始解析
+    // 4 开始解析
     if (box_out_parser->Parse(det_result, input_desc, output_desc, output_tensor, depend_output_descs, output_tensors, depend_outputs) < 0) {
       RCLCPP_ERROR(rclcpp::get_logger("dnn_node_sample"),
                   "Parse output_tensors fail!");
@@ -264,3 +264,6 @@ root@ubuntu:~# tree /opt/tros/include/dnn_node/util/output_parser
     }
     
 ```
+
+
+如何使用内置的后处理进行二次开发？

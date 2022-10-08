@@ -25,9 +25,9 @@
 #include <utility>
 #include <vector>
 
-#include "easy_dnn/data_structure.h"
-
-using hobot::easy_dnn::DNNResult;
+namespace hobot {
+namespace dnn_node {
+namespace output_parser {
 
 typedef struct Anchor {
   float cx;
@@ -98,10 +98,6 @@ typedef struct Detection {
 
   ~Detection() {}
 } Detection;
-
-// static bool greater(Detection det1, Detection det2) {
-//   return (det1.score >= det2.score);
-// }
 
 typedef struct Classification {
   int id;
@@ -211,10 +207,10 @@ struct Perception {
   }
 };
 
-class Dnn_Parser_Result : public DNNResult {
- public:
+// 算法输出数据类型
+struct DnnParserResult {
   Perception perception;
-  void Reset() override {
+  void Reset() {
     perception.seg.seg.clear();
     perception.seg.data.clear();
     perception.det.clear();
@@ -222,4 +218,7 @@ class Dnn_Parser_Result : public DNNResult {
   }
 };
 
+}  // namespace output_parser
+}  // namespace dnn_node
+}  // namespace hobot
 #endif  // _OUTPUT_PARSER_PERCEPTION_COMMON_H_
