@@ -194,33 +194,28 @@ dnn node中内置了多种检测、分类和分割算法的模型输出解析方
 ```shell
 root@ubuntu:~# tree /opt/tros/include/dnn_node/util/output_parser
 /opt/tros/include/dnn_node/util/output_parser
-├── algorithm.h
 ├── classification
-│   ├── classification_output_parser.h
 │   └── ptq_classification_output_parser.h
 ├── detection
-│   ├── detection_data_structure.h
-│   ├── facehand_detect_output_parser.h
-│   ├── fasterrcnn_kps_output_parser.h
+│   ├── fasterrcnn_output_parser.h
 │   ├── fcos_output_parser.h
-│   ├── filter2d_output_parser.h
 │   ├── nms.h
 │   ├── ptq_efficientdet_output_parser.h
 │   ├── ptq_ssd_output_parser.h
 │   ├── ptq_yolo2_output_parser.h
 │   ├── ptq_yolo3_darknet_output_parser.h
 │   └── ptq_yolo5_output_parser.h
-├── output_description_parser.h
-├── parsing_output_parser.h
 ├── perception_common.h
 ├── segmentation
 │   └── ptq_unet_output_parser.h
 └── utils.h
 
-3 directories, 19 files
+3 directories, 12 files
 ```
 
 可以看到`/opt/tros/include/dnn_node/util/output_parser`路径下有`classification`、`detection`和`segmentation`三个路径，分别对应分类、检测和分割算法的模型输出解析方法。
+
+perception_common.h为定义的解析后的感知结果数据类型。
 
 算法模型和对应的输出解析方法如下：
 
@@ -232,35 +227,23 @@ root@ubuntu:~# tree /opt/tros/include/dnn_node/util/output_parser
 | 目标检测       | [YoloV2](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_yolov2.html)       |   ptq_yolo2_output_parser.h       |
 | 目标检测       | [YoloV3](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_yolov2.html)       |    ptq_yolo3_darknet_output_parser.h       |
 | 目标检测       | [YoloV5](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_yolov2.html)       |  ptq_yolo5_output_parser.h        |
-| 人体框检测     | [FasterRcnn](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_adv/face_body_skeleton.html)       |   facehand_detect_output_parser.h       |
-| 人体关键点检测 | [FasterRcnn](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_adv/face_body_skeleton.html)       |   fasterrcnn_kps_output_parser.h       |
-| 图片分类       | [mobilenetv2](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/classification/mobilenetv2.html)       |  ptq_classification_output_parser.h        |
-| 语义分割       | [mobilenet_unet](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/fragmentation/index.html)       |  ptq_unet_output_parser.h        |
+| 人体检测       | [FasterRcnn](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_adv/face_body_skeleton.html)             |  fasterrcnn_output_parser.h       |
+| 图片分类       | [mobilenetv2](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/classification/mobilenetv2.html)  |  ptq_classification_output_parser.h        |
+| 语义分割       | [mobilenet_unet](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/fragmentation/index.html)      |  ptq_unet_output_parser.h        |
 
 
 在推理结果回调`PostProcess(const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output)`中，使用`hobot_dnn`中内置的解析方法解析`YoloV5`算法输出举例：
 
 ```C++
-    // 1 创建解析方法实例，hobot_dnn中内置的YoloV5算法的解析方法为Yolo5OutputParser，对应的输出数据类型为Dnn_Parser_Result
-    auto box_out_parser =
-        std::make_shared<hobot::dnn_node::Yolo5OutputParser>();
-
-    // 2 创建解析输出数据，Dnn_Parser_Result是hobot_dnn中内置的解析方法对应的算法输出数据类型
-    auto det_result = std::make_shared<DnnParserResult>();
-
-    // 3 创建解析需要的其他输入，只有node_output->output_tensors是必备的
-    auto input_desc = std::vector<std::shared_ptr<hobot::dnn_node::InputDescription>>{};
-    std::shared_ptr<hobot::dnn_node::OutputDescription> output_desc = nullptr;
-    std::shared_ptr<hobot::dnn_node::DNNTensor> output_tensor = nullptr;
-    std::vector<std::shared_ptr<hobot::dnn_node::OutputDescription>> depend_output_descs;
-    auto output_tensors = node_output->output_tensors;
-    std::vector<std::shared_ptr<hobot::dnn_node::DNNResult>> depend_outputs;
+    // 1 创建解析输出数据，DnnParserResult是hobot_dnn中内置的解析方法对应的算法输出数据类型
+    std::shared_ptr<DnnParserResult> det_result = nullptr;
     
-    // 4 开始解析
-    if (box_out_parser->Parse(det_result, input_desc, output_desc, output_tensor, depend_output_descs, output_tensors, depend_outputs) < 0) {
+    // 2 开始解析
+    if (hobot::dnn_node::parser_yolov5::Parse(node_output, det_result) < 0) {
       RCLCPP_ERROR(rclcpp::get_logger("dnn_node_sample"),
                   "Parse output_tensors fail!");
       return -1;
     }
     
+    // 3 使用解析后的算法结果det_result
 ```
