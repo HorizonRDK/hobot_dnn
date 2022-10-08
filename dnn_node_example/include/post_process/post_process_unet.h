@@ -17,7 +17,6 @@
 #include <rclcpp/rclcpp.hpp>
 #include <string>
 
-#include "include/post_process/post_process_base.h"
 #include "opencv2/core/core.hpp"
 #include "opencv2/core/mat.hpp"
 #include "opencv2/core/matx.hpp"
@@ -27,26 +26,27 @@
 #include "sensor_msgs/msg/compressed_image.hpp"
 #include "sensor_msgs/msg/image.hpp"
 #include "dnn_node/util/output_parser/segmentation/ptq_unet_output_parser.h"
+#include "ai_msgs/msg/perception_targets.hpp"
 
 #ifndef POST_PROCESS_UNET_H
 #define POST_PROCESS_UNET_H
 
-class UnetPostProcess : public PostProcessBase {
- public:
-  explicit UnetPostProcess(int32_t model_output_count, int dump_render)
-      : PostProcessBase(model_output_count), dump_render_img_(dump_render) {}
+namespace hobot {
+namespace dnn_node {
+namespace parser_unet {
 
-  ai_msgs::msg::PerceptionTargets::UniquePtr PostProcess(
-      const std::shared_ptr<DnnNodeOutput>& outputs) override;
+ai_msgs::msg::PerceptionTargets::UniquePtr PostProcess(
+    const std::shared_ptr<hobot::dnn_node::DnnNodeOutput>& outputs,
+    int img_w,
+    int img_h,
+    int model_w,
+    int model_h,
+    bool dump_render_img);
 
-  int SetOutParser(Model* model_manage) override;
+int RenderUnet(const std::shared_ptr<hobot::dnn_node::DnnNodeOutput>& node_output,
+                Parsing& seg);
 
- private:
-  int RenderUnet(const std::shared_ptr<DnnNodeOutput>& node_output,
-                 Parsing& seg);
-
- private:
-  int dump_render_img_ = 0;
-};
-
+}
+}
+}
 #endif  // POST_PROCESS_UNET_H

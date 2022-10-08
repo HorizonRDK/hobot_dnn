@@ -16,60 +16,63 @@
 
 #include <queue>
 
-#include "dnn_node/util/output_parser/algorithm.h"
 #include "dnn_node/util/output_parser/utils.h"
 #include "rclcpp/rclcpp.hpp"
 
 namespace hobot {
 namespace dnn_node {
+namespace parser_unet {
 
-int32_t UnetOutputParser::Parse(
-    std::shared_ptr<Dnn_Parser_Result>& output,
-    std::vector<std::shared_ptr<InputDescription>>& input_descriptions,
-    std::shared_ptr<OutputDescription>& output_description,
-    std::shared_ptr<DNNTensor>& output_tensor) {
-  if (!output_tensor) {
-    RCLCPP_ERROR(rclcpp::get_logger("UnetOutputParser"),
-                 "output_tensor invalid cast");
+class UnetOutputDescription : public OutputDescription {
+ public:
+  UnetOutputDescription(Model* mode, int index, std::string type = "")
+      : OutputDescription(mode, index, std::move(type)) {}
+  ~UnetOutputDescription() override = default;
+
+  uint32_t valid_w = 0;
+  uint32_t valid_h = 0;
+  int parse_render = 0;
+};
+
+int PostProcess(std::vector<std::shared_ptr<DNNTensor>>& output_tensors,
+                Perception& perception,
+                int valid_w,
+                int valid_h);
+
+int ParseRenderPostProcess(
+    std::vector<std::shared_ptr<DNNTensor>>& output_tensors,
+    Perception& perception);
+
+int num_classes_ = 20;
+
+int32_t Parse(
+    const std::shared_ptr<hobot::dnn_node::DnnNodeOutput>& node_output,
+    int img_w,
+    int img_h,
+    int model_w,
+    int model_h,
+    bool parser_render,
+    std::shared_ptr<DnnParserResult>& result) {
+  if (!result) {
+    result = std::make_shared<DnnParserResult>();
+  }
+  if (node_output->output_tensors.empty()) {
+    RCLCPP_ERROR(rclcpp::get_logger("ClassficationOutputParser"),
+                 "output_tensors is empty");
     return -1;
   }
 
-  if (!input_descriptions.empty()) {
-    RCLCPP_DEBUG(rclcpp::get_logger("UnetOutputParser"),
-                 "empty input_descriptions");
-  }
+  int valid_w = img_w > static_cast<uint32_t>(model_w)
+                    ? static_cast<uint32_t>(model_w)
+                    : img_w;
+  int valid_h = img_h > static_cast<uint32_t>(model_h)
+                    ? static_cast<uint32_t>(model_h)
+                    : img_h;
 
-  auto unet_output_desc =
-      std::dynamic_pointer_cast<UnetOutputDescription>(output_description);
-  int valid_h = 0, valid_w = 0, parser_render = 0;
-  if (unet_output_desc) {
-    valid_h = unet_output_desc->valid_h;
-    valid_w = unet_output_desc->valid_w;
-    parser_render = unet_output_desc->parse_render;
-
-  } else {
-    RCLCPP_ERROR(rclcpp::get_logger("UnetOutputParser"),
-                 "output_description invalid cast");
-    return -1;
-  }
-
-  std::shared_ptr<Dnn_Parser_Result> result = nullptr;
-  if (!output) {
-    result = std::make_shared<Dnn_Parser_Result>();
-    result->Reset();
-    output = result;
-  } else {
-    result = std::dynamic_pointer_cast<Dnn_Parser_Result>(output);
-    result->Reset();
-  }
-
-  auto depend_output_tensors =
-      std::vector<std::shared_ptr<DNNTensor>>{output_tensor};
-
-  int ret = 0;
-  PostProcess(depend_output_tensors, result->perception, valid_w, valid_h);
+  int ret = PostProcess(
+      node_output->output_tensors, result->perception, valid_w, valid_h);
   if (1 == parser_render) {
-    ParseRenderPostProcess(depend_output_tensors, result->perception);
+    ParseRenderPostProcess(node_output->output_tensors, result->perception);
   }
   if (ret != 0) {
     RCLCPP_INFO(rclcpp::get_logger("UnetOutputParser"),
@@ -83,17 +86,17 @@ int32_t UnetOutputParser::Parse(
   return ret;
 }
 
-int UnetOutputParser::PostProcess(
-    std::vector<std::shared_ptr<DNNTensor>>& tensors,
-    Perception& perception,
-    int valid_w,
-    int valid_h) {
+int PostProcess(std::vector<std::shared_ptr<DNNTensor>>& tensors,
+                Perception& perception,
+                int valid_w,
+                int valid_h) {
   perception.type = Perception::SEG;
   hbSysFlushMem(&(tensors[0]->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
 
   // get shape
   int h_index, w_index, c_index;
-  get_tensor_hwc_index(tensors[0], &h_index, &w_index, &c_index);
+  hobot::dnn_node::output_parser::get_tensor_hwc_index(
+      tensors[0], &h_index, &w_index, &c_index);
   int height = tensors[0]->properties.validShape.dimensionSize[h_index];
   int width = tensors[0]->properties.validShape.dimensionSize[w_index];
   int channel = tensors[0]->properties.validShape.dimensionSize[c_index];
@@ -118,14 +121,15 @@ int UnetOutputParser::PostProcess(
   return 0;
 }
 
-int UnetOutputParser::ParseRenderPostProcess(
-    std::vector<std::shared_ptr<DNNTensor>>& tensors, Perception& perception) {
+int ParseRenderPostProcess(std::vector<std::shared_ptr<DNNTensor>>& tensors,
+                           Perception& perception) {
   perception.type = Perception::SEG;
   hbSysFlushMem(&(tensors[0]->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
 
   // get shape
   int h_index, w_index, c_index;
-  get_tensor_hwc_index(tensors[0], &h_index, &w_index, &c_index);
+  hobot::dnn_node::output_parser::get_tensor_hwc_index(
+      tensors[0], &h_index, &w_index, &c_index);
   int height = tensors[0]->properties.validShape.dimensionSize[h_index];
   int width = tensors[0]->properties.validShape.dimensionSize[w_index];
   int channel = tensors[0]->properties.validShape.dimensionSize[c_index];
@@ -160,5 +164,6 @@ int UnetOutputParser::ParseRenderPostProcess(
   return 0;
 }
 
+}  // namespace parser_unet
 }  // namespace dnn_node
 }  // namespace hobot

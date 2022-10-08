@@ -129,7 +129,6 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 | image_type         | 图片格式，0：bgr，1：nv12             | 否                   | 0                   |                                                                         |
 | image_width        | 本地回灌nv12格式图片的宽度            | nv12格式图片必须设置 | 0                   |                                                                         |
 | image_height       | 本地回灌nv12格式图片的高度            | nv12格式图片必须设置 | 0                   |                                                                         |
-| is_sync_mode       | 同步或异步模式 0: 异步 1: 同步        | 否                   | 0                   |                                                                         |
 | is_shared_mem_sub  | 使用shared mem通信方式订阅图片        | 否                   | 0                   |                                                                         |
 | config_file        | 配置文件路径                          | 否                   | ""                  | 更改配置文件配置不同模型调用不同后处理算法,默认启用fasterrcnn模型后处理 |
 | dump_render_img    | 是否进行渲染，0：否；1：是            | 否                   | 0                   |                                                                         |
@@ -153,18 +152,18 @@ cp -r PATH/lib/dnn_benchmark_example/config/runtime/ ./config (其中PATH为Toge
 
 # 运行模式1：
 使用本地jpg格式图片通过同步模式进行回灌预测，并存储渲染后的图片
-ros2 run dnn_node_example example --ros-args -p is_sync_mode:=1 -p feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1
+ros2 run dnn_node_example example --ros-args -p feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1
 配置使用yolov3模型和dnn_node中内置的yolov3后处理算法，使用本地jpg格式图片通过同步模式进行回灌预测，并存储渲染后的图片
-ros2 run dnn_node_example example --ros-args -p is_sync_mode:=1 -p feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1 -p config_file:=config/yolov3workconfig.json
+ros2 run dnn_node_example example --ros-args -p feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1 -p config_file:=config/yolov3workconfig.json
 
 # 运行模式2：
 使用订阅到的image msg(topic为/image_raw)通过异步模式进行预测，并设置log级别为warn
-ros2 run dnn_node_example example --ros-args -p feed_type:=1 -p is_sync_mode:=0 --ros-args --log-level warn
+ros2 run dnn_node_example example --ros-args -p feed_type:=1 --ros-args --log-level warn
 配置使用yolov2模型和dnn_node中内置的yolov2后处理算法，使用订阅到的image msg(topic为/image_raw)通过异步模式进行预测，并设置log级别为warn
-ros2 run dnn_node_example example --ros-args -p feed_type:=1 -p is_sync_mode:=0 --ros-args --log-level warn -p config_file:=config/yolov2workconfig.json
+ros2 run dnn_node_example example --ros-args -p feed_type:=1 --ros-args --log-level warn -p config_file:=config/yolov2workconfig.json
 
 # 运行模式3：使用shared mem通信方式(topic为/hbmem_img)通过异步模式进行预测，并设置log级别为warn
-ros2 run dnn_node_example example --ros-args -p feed_type:=1 -p is_sync_mode:=0 -p is_shared_mem_sub:=1 --ros-args --log-level warn
+ros2 run dnn_node_example example --ros-args -p feed_type:=1 -p is_shared_mem_sub:=1 --ros-args --log-level warn
 
 ```
 
@@ -180,7 +179,7 @@ cp -r install/lib/dnn_benchmark_example/config/runtime/ ./config
 
 # 启动launch文件，使用F37 sensor通过shared mem方式发布nv12格式图片
 # 默认运行fcos算法，启动命令中使用参数config_file切换算法，如使用unet算法config_file:="config/mobilenet_unet_workconfig.json"
-ros2 launch install/share/dnn_node_example/launch/hobot_dnn_node_example.launch.py 
+ros2 launch dnn_node_example hobot_dnn_node_example.launch.py
 ```
 
 ## X3 yocto系统上运行
@@ -196,13 +195,13 @@ cp -r install/lib/dnn_node_example/config/ .
 cp -r PATH/lib/dnn_benchmark_example/config/runtime/ ./config (其中PATH为TogetherROS的安装路径)
 
 # 运行模式1：使用本地jpg格式图片通过同步模式进行回灌预测，并存储渲染后的图片
-./install/lib/dnn_node_example/example --ros-args -p is_sync_mode:=1 -p feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1
+./install/lib/dnn_node_example/example --ros-args -p  feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1
 
 # 运行模式2：使用订阅到的image msg(topic为/image_raw)通过异步模式进行预测，并设置log级别为warn
-./install/lib/dnn_node_example/example --ros-args -p feed_type:=1 -p is_sync_mode:=0 --log-level warn
+./install/lib/dnn_node_example/example --ros-args -p feed_type:=1 --log-level warn
 
 # 运行模式3：使用shared mem通信方式(topic为/hbmem_img)通过异步模式进行预测，并设置log级别为warn
-./install/lib/dnn_node_example/example --ros-args -p feed_type:=1 -p is_sync_mode:=0 -p is_shared_mem_sub:=1 --ros-args --log-level warn
+./install/lib/dnn_node_example/example --ros-args -p feed_type:=1 -p is_shared_mem_sub:=1 --ros-args --log-level warn
 
 ```
 
@@ -250,7 +249,6 @@ log：
  image: config/test.jpg
  image_type: 0
  dump_render_img: 1
- is_sync_mode_: 1
  is_shared_mem_sub: 0
  model_file_name: config/runtime/yolov3/yolov3_416x416_nv12.bin
  model_name: yolov3_416x416_nv12
@@ -342,7 +340,7 @@ ros2 run hobot_codec hobot_codec_republish --ros-args -p channel:=1 -p in_mode:=
 ros2 run websocket websocket --ros-args -p image_topic:=/image_jpeg -p image_type:=mjpeg -p smart_topic:=/hobot_dnn_detection --log-level error &
 
 5.使用订阅图片异步加载方式启动dnn_node_example
-ros2 run dnn_node_example example --ros-args -p feed_type:=1 -p is_sync_mode:=0 -p is_shared_mem_sub:=1 -p msg_pub_topic_name:=hobot_dnn_detection -p config_file:=config/yolov2workconfig.json
+ros2 run dnn_node_example example --ros-args -p feed_type:=1 -p is_shared_mem_sub:=1 -p msg_pub_topic_name:=hobot_dnn_detection -p config_file:=config/yolov2workconfig.json
 ```
 
 web效果截图：

@@ -24,59 +24,19 @@
 #include "dnn_node/dnn_node_data.h"
 #include "dnn_node/util/output_parser/perception_common.h"
 
+using hobot::dnn_node::output_parser::Bbox;
+using hobot::dnn_node::output_parser::Detection;
+using hobot::dnn_node::output_parser::DnnParserResult;
+using hobot::dnn_node::output_parser::Perception;
+
 namespace hobot {
 namespace dnn_node {
+namespace parser_fcos {
+int32_t Parse(
+    const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output,
+    std::shared_ptr<DnnParserResult> &output);
 
-// FcosConfig
-struct FcosConfig {
-  std::vector<int> strides;
-  int class_num;
-  std::vector<std::string> class_names;
-  std::string det_name_list;
-};
-extern FcosConfig default_fcos_config;
-
-class FcosDetectionAssistParser
-    : public SingleBranchOutputParser<Dnn_Parser_Result> {
- public:
-  int32_t Parse(
-      std::shared_ptr<Dnn_Parser_Result> &output,
-      std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
-      std::shared_ptr<OutputDescription> &output_description,
-      std::shared_ptr<DNNTensor> &output_tensor) override {
-    return 0;
-  }
-};
-
-class FcosDetectionOutputParser
-    : public MultiBranchOutputParser<Dnn_Parser_Result> {
- public:
-  int32_t Parse(
-      std::shared_ptr<Dnn_Parser_Result> &output,
-      std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
-      std::shared_ptr<OutputDescription> &output_descriptions,
-      std::shared_ptr<DNNTensor> &output_tensor,
-      std::vector<std::shared_ptr<OutputDescription>> &depend_output_descs,
-      std::vector<std::shared_ptr<DNNTensor>> &depend_output_tensors,
-      std::vector<std::shared_ptr<DNNResult>> &depend_outputs) override;
-
- private:
-  void GetBboxAndScoresNHWC(std::vector<std::shared_ptr<DNNTensor>> &tensors,
-                            std::vector<Detection> &dets);
-
-  void GetBboxAndScoresNCHW(std::vector<std::shared_ptr<DNNTensor>> &tensors,
-                            std::vector<Detection> &dets);
-
-  int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &tensors,
-                  Perception &perception);
-
- private:
-  float score_threshold_ = 0.5;
-  float nms_threshold_ = 0.6;
-  int nms_top_k_ = 500;
-  FcosConfig fcos_config_ = default_fcos_config;
-};
-
+}  // namespace parser_fcos
 }  // namespace dnn_node
 }  // namespace hobot
 #endif  // _DETECTION_FCOS_OUTPUT_PARSER_H

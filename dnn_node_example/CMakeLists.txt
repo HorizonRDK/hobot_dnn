@@ -40,15 +40,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(ai_msgs REQUIRED)
 find_package(dnn_node REQUIRED)
 find_package(hobot_cv REQUIRED)
-
-option(CV_BRIDGE_PKG "using cv_bridge pkg" OFF)
-if (${CV_BRIDGE_PKG})
-  message("using cv_bridge pkg")
-  find_package(cv_bridge REQUIRED)
-  add_definitions(-DCV_BRIDGE_PKG_ENABLED)
-else()
-  message("not using cv_bridge pkg")
-endif ()
+find_package(cv_bridge REQUIRED)
 
 option(SHARED_MEM "using shared mem" ON)
 if (${SHARED_MEM})
@@ -93,15 +85,6 @@ add_executable(example
 src/example.cpp
 src/dnn_example_node.cpp
 src/image_utils.cpp
-src/post_process/post_process_base.cpp
-src/post_process/post_process_fasterrcnn.cpp
-src/post_process/post_process_yolov2.cpp
-src/post_process/post_process_yolov3.cpp
-src/post_process/post_process_yolov5.cpp
-src/post_process/post_process_classification.cpp
-src/post_process/post_process_ssd.cpp
-src/post_process/post_process_efficientdet.cpp
-src/post_process/post_process_fcos.cpp
 src/post_process/post_process_unet.cpp
 )
 
@@ -112,6 +95,7 @@ ament_target_dependencies(
   sensor_msgs
   ai_msgs
   hobot_cv
+  cv_bridge
 )
 
 if (${SHARED_MEM})
@@ -127,13 +111,6 @@ endif ()
 include_directories(include
 ${PROJECT_SOURCE_DIR}
 )
-
-if (${CV_BRIDGE_PKG})
-ament_target_dependencies(
-  example
-  cv_bridge
-)
-endif()
 
 # Install executables
 install(

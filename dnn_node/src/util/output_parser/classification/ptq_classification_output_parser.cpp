@@ -21,9 +21,19 @@
 
 namespace hobot {
 namespace dnn_node {
+namespace parser_mobilenetv2 {
 
-int ClassficationOutputParser::InitClassNames(
-    const std::string &cls_name_file) {
+int PostProcess(std::shared_ptr<DNNTensor> &tensors, Perception &perception);
+
+void GetTopkResult(std::shared_ptr<DNNTensor> &tensor,
+                   std::vector<Classification> &top_k_cls);
+
+const char *GetClsName(int id);
+
+int top_k_ = 1;
+std::vector<std::string> class_names_;
+
+int InitClassNames(const std::string &cls_name_file) {
   std::ifstream fi(cls_name_file);
   if (fi) {
     std::string line;
@@ -39,26 +49,18 @@ int ClassficationOutputParser::InitClassNames(
   return 0;
 }
 
-int32_t ClassficationOutputParser::Parse(
-    std::shared_ptr<Dnn_Parser_Result> &output,
-    std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
-    std::shared_ptr<OutputDescription> &output_description,
-    std::shared_ptr<DNNTensor> &output_tensor) {
-  if (!output_tensor) {
+int32_t Parse(
+    const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output,
+    std::shared_ptr<DnnParserResult> &result) {
+  if (!result) {
+    result = std::make_shared<DnnParserResult>();
+  }
+  if (node_output->output_tensors.empty()) {
     RCLCPP_ERROR(rclcpp::get_logger("ClassficationOutputParser"),
-                 "output_tensor invalid cast");
+                 "output_tensors is empty");
     return -1;
   }
-
-  std::shared_ptr<Dnn_Parser_Result> result;
-  if (!output) {
-    result = std::make_shared<Dnn_Parser_Result>();
-    output = result;
-  } else {
-    result = std::dynamic_pointer_cast<Dnn_Parser_Result>(output);
-  }
-
-  int ret = PostProcess(output_tensor, result->perception);
+  int ret = PostProcess(node_output->output_tensors.at(0), result->perception);
   if (ret != 0) {
     RCLCPP_INFO(rclcpp::get_logger("ClassficationOutputParser"),
                 "postprocess return error, code = %d",
@@ -72,16 +74,15 @@ int32_t ClassficationOutputParser::Parse(
   return ret;
 }
 
-int ClassficationOutputParser::PostProcess(
-    std::shared_ptr<DNNTensor> &output_tensors, Perception &perception) {
+int PostProcess(std::shared_ptr<DNNTensor> &output_tensors,
+                Perception &perception) {
   perception.type = Perception::CLS;
   GetTopkResult(output_tensors, perception.cls);
   return 0;
 }
 
-void ClassficationOutputParser::GetTopkResult(
-    std::shared_ptr<DNNTensor> &tensor,
-    std::vector<Classification> &top_k_cls) {
+void GetTopkResult(std::shared_ptr<DNNTensor> &tensor,
+                   std::vector<Classification> &top_k_cls) {
   hbSysFlushMem(&(tensor->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
   std::priority_queue<Classification,
                       std::vector<Classification>,
@@ -107,12 +108,13 @@ void ClassficationOutputParser::GetTopkResult(
   std::reverse(top_k_cls.begin(), top_k_cls.end());
 }
 
-const char *ClassficationOutputParser::GetClsName(int id) {
+const char *GetClsName(int id) {
   if (!class_names_.empty()) {
     return class_names_[id].c_str();
   }
   return nullptr;
 }
 
+}  // namespace parser_mobilenetv2
 }  // namespace dnn_node
 }  // namespace hobot

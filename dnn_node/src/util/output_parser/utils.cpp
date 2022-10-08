@@ -14,6 +14,10 @@
 
 #include "dnn_node/util/output_parser/utils.h"
 
+namespace hobot {
+namespace dnn_node {
+namespace output_parser {
+
 int get_tensor_hwc_index(std::shared_ptr<DNNTensor> tensor,
                          int *h_index,
                          int *w_index,
@@ -133,3 +137,7 @@ void Utils::GetRoiScale(float &scale_h,
   scale_w = static_cast<float>(step_w) / 256.0f;
   scale_h = static_cast<float>(step_h) / 256.0f;
 }
+
+}  // namespace output_parser
+}  // namespace dnn_node
+}  // namespace hobot

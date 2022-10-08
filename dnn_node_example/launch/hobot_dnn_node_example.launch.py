@@ -151,7 +151,6 @@ def generate_launch_description():
             {"config_file": LaunchConfiguration('config_file')},
             {"dump_render_img": LaunchConfiguration('dump_render_img')},
             {"feed_type": 1},
-            {"is_sync_mode": 0},
             {"is_shared_mem_sub": 1},
             {"msg_pub_topic_name": "hobot_dnn_detection"}
         ],

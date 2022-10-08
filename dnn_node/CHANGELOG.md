@@ -1,5 +1,9 @@
 # Changelog for package dnn_node
 
+tros_1.1.3 (2022-10-08)
+------------------
+1. 重构内置的算法输出解析方法。
+
 tros_1.1.2 (2022-09-26)
 ------------------
 1. Node输出数据类型DnnNodeOutput增加消息头和模型输出tensor成员，支持用户直接解析tensor。

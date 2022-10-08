@@ -16,13 +16,13 @@
 
 #include <queue>
 
-#include "dnn_node/util/output_parser/algorithm.h"
 #include "dnn_node/util/output_parser/detection/nms.h"
 #include "dnn_node/util/output_parser/utils.h"
 #include "rapidjson/document.h"
 
 namespace hobot {
 namespace dnn_node {
+namespace parser_ssd {
 
 inline float fastExp(float x) {
   union {
@@ -34,6 +34,68 @@ inline float fastExp(float x) {
 }
 
 #define SSD_CLASS_NUM_P1 21
+
+/**
+ * Config definition for SSD
+ */
+struct SSDConfig {
+  std::vector<float> std;
+  std::vector<float> mean;
+  std::vector<float> offset;
+  std::vector<int> step;
+  std::vector<std::pair<float, float>> anchor_size;
+  std::vector<std::vector<float>> anchor_ratio;
+  int class_num;
+  std::vector<std::string> class_names;
+};
+
+/**
+ * Default ssd config
+ * std: [0.1, 0.1, 0.2, 0.2]
+ * mean: [0, 0, 0, 0]
+ * offset: [0.5, 0.5]
+ * step: [8, 16, 32, 64, 100, 300]
+ * anchor_size: [[30, 60], [60, 111], [111, 162], [162, 213], [213, 264],
+ *              [264,315]]
+ * anchor_ratio: [[2, 0.5, 0, 0], [2, 0.5, 3, 1.0 / 3],
+ *              [2, 0.5,3, 1.0 / 3], [2, 0.5, 3, 1.0 / 3],
+ *              [2, 0.5, 0, 0], [2,0.5, 0, 0]]
+ * class_num: 20
+ * class_names: ["aeroplane",   "bicycle", "bird",  "boaupdate", "bottle",
+     "bus",         "car",     "cat",   "chair",     "cow",
+     "diningtable", "dog",     "horse", "motorbike", "person",
+     "pottedplant", "sheep",   "sofa",  "train",     "tvmonitor"]
+ */
+extern SSDConfig default_ssd_config;
+
+/**
+ * Post process
+ * @param[in] tensor: Model output tensors
+ * @param[in] image_tensor: Input image tensor
+ * @param[out] perception: Perception output data
+ * @return 0 if success
+ */
+int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
+                Perception &perception);
+
+int SsdAnchors(std::vector<Anchor> &anchors,
+               int layer,
+               int layer_height,
+               int layer_width);
+
+int GetBboxAndScores(std::shared_ptr<DNNTensor> c_tensor,
+                     std::shared_ptr<DNNTensor> bbox_tensor,
+                     std::vector<Detection> &dets,
+                     std::vector<Anchor> &anchors,
+                     int class_num,
+                     float cut_off_threshold);
+
+SSDConfig ssd_config_ = default_ssd_config;
+std::vector<std::vector<Anchor>> anchors_table_;
+float score_threshold_ = 0.25;
+float nms_threshold_ = 0.45;
+bool is_performance_ = true;
+int nms_top_k_ = 200;
 
 SSDConfig default_ssd_config = {
     {0.1, 0.1, 0.2, 0.2},
@@ -53,44 +115,14 @@ SSDConfig default_ssd_config = {
      "diningtable", "dog",     "horse", "motorbike", "person",
      "pottedplant", "sheep",   "sofa",  "train",     "tvmonitor"}};
 
-int32_t SSDOutputParser::Parse(
-    std::shared_ptr<Dnn_Parser_Result> &output,
-    std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
-    std::shared_ptr<OutputDescription> &output_descriptions,
-    std::shared_ptr<DNNTensor> &output_tensor,
-    std::vector<std::shared_ptr<OutputDescription>> &depend_output_descs,
-    std::vector<std::shared_ptr<DNNTensor>> &depend_output_tensors,
-    std::vector<std::shared_ptr<DNNResult>> &depend_outputs) {
-  if (output_descriptions) {
-    RCLCPP_DEBUG(rclcpp::get_logger("SSDOutputParser"),
-                 "type: %s, GetDependencies size: %d",
-                 output_descriptions->GetType().c_str(),
-                 output_descriptions->GetDependencies().size());
-    if (!output_descriptions->GetDependencies().empty()) {
-      RCLCPP_DEBUG(rclcpp::get_logger("SSDOutputParser"),
-                   "Dependencies: %d",
-                   output_descriptions->GetDependencies().front());
-    }
-  }
-  RCLCPP_INFO(rclcpp::get_logger("SSDOutputParser"),
-              "dep out size: %d %d",
-              depend_output_descs.size(),
-              depend_output_tensors.size());
-  if (depend_output_tensors.size() < 3) {
-    RCLCPP_ERROR(rclcpp::get_logger("SSDOutputParser"),
-                 "depend out tensor size invalid cast");
-    return -1;
+int32_t Parse(
+    const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output,
+    std::shared_ptr<DnnParserResult> &result) {
+  if (!result) {
+    result = std::make_shared<DnnParserResult>();
   }
 
-  std::shared_ptr<Dnn_Parser_Result> result;
-  if (!output) {
-    result = std::make_shared<Dnn_Parser_Result>();
-    output = result;
-  } else {
-    result = std::dynamic_pointer_cast<Dnn_Parser_Result>(output);
-  }
-
-  PostProcess(depend_output_tensors, result->perception);
+  int ret = PostProcess(node_output->output_tensors, result->perception);
   std::stringstream ss;
   ss << "PTQSSDPostProcessMethod DoProcess finished, predict result: "
      << result->perception;
@@ -98,8 +130,8 @@ int32_t SSDOutputParser::Parse(
   return 0;
 }
 
-int SSDOutputParser::PostProcess(
-    std::vector<std::shared_ptr<DNNTensor>> &tensors, Perception &perception) {
+int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &tensors,
+                Perception &perception) {
   perception.type = Perception::DET;
   int layer_num = ssd_config_.step.size();
   if (anchors_table_.empty()) {
@@ -108,7 +140,8 @@ int SSDOutputParser::PostProcess(
     for (int i = 0; i < layer_num; i++) {
       int height, width;
       std::vector<Anchor> &anchors = anchors_table_[i];
-      get_tensor_hw(tensors[i * 2], &height, &width);
+      hobot::dnn_node::output_parser::get_tensor_hw(
+          tensors[i * 2], &height, &width);
       SsdAnchors(anchors_table_[i], i, height, width);
     }
   }
@@ -127,10 +160,10 @@ int SSDOutputParser::PostProcess(
   return 0;
 }
 
-int SSDOutputParser::SsdAnchors(std::vector<Anchor> &anchors,
-                                int layer,
-                                int layer_height,
-                                int layer_width) {
+int SsdAnchors(std::vector<Anchor> &anchors,
+               int layer,
+               int layer_height,
+               int layer_width) {
   int step = ssd_config_.step[layer];
   float min_size = ssd_config_.anchor_size[layer].first;
   float max_size = ssd_config_.anchor_size[layer].second;
@@ -158,16 +191,17 @@ int SSDOutputParser::SsdAnchors(std::vector<Anchor> &anchors,
   return 0;
 }
 
-int SSDOutputParser::GetBboxAndScores(std::shared_ptr<DNNTensor> c_tensor,
-                                      std::shared_ptr<DNNTensor> bbox_tensor,
-                                      std::vector<Detection> &dets,
-                                      std::vector<Anchor> &anchors,
-                                      int class_num,
-                                      float cut_off_threshold) {
+int GetBboxAndScores(std::shared_ptr<DNNTensor> c_tensor,
+                     std::shared_ptr<DNNTensor> bbox_tensor,
+                     std::vector<Detection> &dets,
+                     std::vector<Anchor> &anchors,
+                     int class_num,
+                     float cut_off_threshold) {
   int *shape = c_tensor->properties.validShape.dimensionSize;
   int32_t c_batch_size = shape[0];
   int h_idx, w_idx, c_idx;
-  get_tensor_hwc_index(c_tensor, &h_idx, &w_idx, &c_idx);
+  hobot::dnn_node::output_parser::get_tensor_hwc_index(
+      c_tensor, &h_idx, &w_idx, &c_idx);
 
   int32_t c_hnum = shape[h_idx];
   int32_t c_wnum = shape[w_idx];
@@ -176,7 +210,8 @@ int SSDOutputParser::GetBboxAndScores(std::shared_ptr<DNNTensor> c_tensor,
 
   shape = bbox_tensor->properties.validShape.dimensionSize;
   int32_t b_batch_size = shape[0];
-  get_tensor_hwc_index(c_tensor, &h_idx, &w_idx, &c_idx);
+  hobot::dnn_node::output_parser::get_tensor_hwc_index(
+      c_tensor, &h_idx, &w_idx, &c_idx);
 
   int32_t b_hnum = shape[h_idx];
   int32_t b_wnum = shape[w_idx];
@@ -280,5 +315,6 @@ int SSDOutputParser::GetBboxAndScores(std::shared_ptr<DNNTensor> c_tensor,
   return 0;
 }
 
+}  // namespace parser_ssd
 }  // namespace dnn_node
 }  // namespace hobot

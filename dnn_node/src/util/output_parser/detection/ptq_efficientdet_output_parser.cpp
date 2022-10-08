@@ -18,7 +18,6 @@
 
 #include <queue>
 
-#include "dnn_node/util/output_parser/algorithm.h"
 #include "dnn_node/util/output_parser/detection/nms.h"
 #include "dnn_node/util/output_parser/utils.h"
 #include "rapidjson/document.h"
@@ -27,8 +26,39 @@
 
 namespace hobot {
 namespace dnn_node {
+namespace parser_efficientdet {
 
 const int kEfficientDetClassNum = 80;
+
+/**
+ * Config definition for EfficientDet
+ */
+struct EfficientDetConfig {
+  std::vector<std::vector<double>> anchor_scales;
+  std::vector<double> anchor_ratio;
+  std::vector<int> feature_strides;
+  int class_num;
+  std::vector<std::string> class_names;
+  std::vector<std::vector<float>> scales;
+};
+
+struct EDBaseAnchor {
+  EDBaseAnchor(float x1, float y1, float x2, float y2)
+      : x1_(x1), y1_(y1), x2_(x2), y2_(y2) {}
+  float x1_;
+  float y1_;
+  float x2_;
+  float y2_;
+};
+
+struct EDAnchor {
+  EDAnchor(float c_x, float c_y, float w, float h)
+      : c_x_(c_x), c_y_(c_y), w_(w), h_(h) {}
+  float c_x_;
+  float c_y_;
+  float w_;
+  float h_;
+};
 
 EfficientDetConfig default_efficient_det_config = {
     {{4.0, 5.039684199579493, 6.3496042078727974},
@@ -67,10 +97,42 @@ EfficientDetConfig default_efficient_det_config = {
      "vase",          "scissors",     "teddy bear",
      "hair drier",    "toothbrush"}};
 
-int EfficientDetOutputParser::Setdequanti_file(
-    const std::string &dequanti_file) {
+/**
+ * Post process
+ * @param[in] tensor: Model output tensors
+ * @param[in] image_tensor: Input image tensor
+ * @param[out] perception: Perception output data
+ * @return 0 if success
+ */
+int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
+                Perception &perception);
+
+int GetAnchors(std::vector<EDAnchor> &anchors,
+               int layer,
+               int feat_height,
+               int feat_width);
+
+int GetBboxAndScores(std::shared_ptr<DNNTensor> c_tensor,
+                     std::shared_ptr<DNNTensor> bbox_tensor,
+                     std::vector<Detection> &dets,
+                     std::vector<EDAnchor> &anchors,
+                     int class_num,
+                     int tensor_index);
+
+EfficientDetConfig efficient_det_config_ = default_efficient_det_config;
+float score_threshold_ = 0.05;
+float nms_threshold_ = 0.5;
+int nms_top_k_ = 100;
+bool anchor_init_ = false;
+std::vector<std::vector<EDAnchor>> anchors_table_;
+
+std::string dequanti_file_ = "";
+bool has_dequanti_node_ = true;
+std::mutex anchors_mtx;
+
+int LoadDequantiFile(const std::string &dequanti_file) {
   if (dequanti_file.empty()) return 0;
-  this->dequanti_file_ = dequanti_file;
+  dequanti_file_ = dequanti_file;
   // resize vector size
   efficient_det_config_.scales.resize(10);
   for (int i = 0; i < 5; i++) {
@@ -91,48 +153,18 @@ int EfficientDetOutputParser::Setdequanti_file(
       infile >> efficient_det_config_.scales[i][j];
     }
   }
-  this->has_dequanti_node_ = false;
+  has_dequanti_node_ = false;
   return 0;
 };
 
-int32_t EfficientDetOutputParser::Parse(
-    std::shared_ptr<Dnn_Parser_Result> &output,
-    std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
-    std::shared_ptr<OutputDescription> &output_descriptions,
-    std::shared_ptr<DNNTensor> &output_tensor,
-    std::vector<std::shared_ptr<OutputDescription>> &depend_output_descs,
-    std::vector<std::shared_ptr<DNNTensor>> &depend_output_tensors,
-    std::vector<std::shared_ptr<DNNResult>> &depend_outputs) {
-  if (output_descriptions) {
-    RCLCPP_DEBUG(rclcpp::get_logger("EfficientDetOutputParser"),
-                 "type: %s, GetDependencies size: %d",
-                 output_descriptions->GetType().c_str(),
-                 output_descriptions->GetDependencies().size());
-    if (!output_descriptions->GetDependencies().empty()) {
-      RCLCPP_DEBUG(rclcpp::get_logger("EfficientDetOutputParser"),
-                   "Dependencies: %d",
-                   output_descriptions->GetDependencies().front());
-    }
-  }
-  RCLCPP_INFO(rclcpp::get_logger("EfficientDetOutputParser"),
-              "dep out size: %d %d",
-              depend_output_descs.size(),
-              depend_output_tensors.size());
-  if (depend_output_tensors.size() < 10) {
-    RCLCPP_ERROR(rclcpp::get_logger("EfficientDetOutputParser"),
-                 "depend out tensor size invalid cast");
-    return -1;
+int32_t Parse(
+    const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output,
+    std::shared_ptr<DnnParserResult> &result) {
+  if (!result) {
+    result = std::make_shared<DnnParserResult>();
   }
 
-  std::shared_ptr<Dnn_Parser_Result> result;
-  if (!output) {
-    result = std::make_shared<Dnn_Parser_Result>();
-    output = result;
-  } else {
-    result = std::dynamic_pointer_cast<Dnn_Parser_Result>(output);
-  }
-
-  int ret = PostProcess(depend_output_tensors, result->perception);
+  int ret = PostProcess(node_output->output_tensors, result->perception);
   if (ret != 0) {
     RCLCPP_INFO(rclcpp::get_logger("EfficientDetOutputParser"),
                 "postprocess return error, code = %d",
@@ -146,10 +178,10 @@ int32_t EfficientDetOutputParser::Parse(
   return ret;
 }
 
-int EfficientDetOutputParser::GetAnchors(std::vector<EDAnchor> &anchors,
-                                         int layer,
-                                         int feat_height,
-                                         int feat_width) {
+int GetAnchors(std::vector<EDAnchor> &anchors,
+               int layer,
+               int feat_height,
+               int feat_width) {
   int stride = default_efficient_det_config.feature_strides[layer];
   auto scales = default_efficient_det_config.anchor_scales[layer];
   const auto &ratios = default_efficient_det_config.anchor_ratio;
@@ -257,17 +289,17 @@ static std::pair<float, int> MaxScoreID(int32_t *input,
   return result_id_score;
 }
 
-int EfficientDetOutputParser::GetBboxAndScores(
-    std::shared_ptr<DNNTensor> c_tensor,
-    std::shared_ptr<DNNTensor> bbox_tensor,
-    std::vector<Detection> &dets,
-    std::vector<EDAnchor> &anchors,
-    int class_num,
-    int tensor_index) {
+int GetBboxAndScores(std::shared_ptr<DNNTensor> c_tensor,
+                     std::shared_ptr<DNNTensor> bbox_tensor,
+                     std::vector<Detection> &dets,
+                     std::vector<EDAnchor> &anchors,
+                     int class_num,
+                     int tensor_index) {
   auto *shape = c_tensor->properties.validShape.dimensionSize;
   int32_t c_batch_size = shape[0];
   int h_idx, w_idx, c_idx;
-  get_tensor_hwc_index(c_tensor, &h_idx, &w_idx, &c_idx);
+  hobot::dnn_node::output_parser::get_tensor_hwc_index(
+      c_tensor, &h_idx, &w_idx, &c_idx);
 
   int32_t c_hnum = shape[h_idx];
   int32_t c_wnum = shape[w_idx];
@@ -276,7 +308,8 @@ int EfficientDetOutputParser::GetBboxAndScores(
 
   shape = bbox_tensor->properties.validShape.dimensionSize;
   int32_t b_batch_size = shape[0];
-  get_tensor_hwc_index(bbox_tensor, &h_idx, &w_idx, &c_idx);
+  hobot::dnn_node::output_parser::get_tensor_hwc_index(
+      bbox_tensor, &h_idx, &w_idx, &c_idx);
   int32_t b_hnum = shape[h_idx];
   int32_t b_wnum = shape[w_idx];
   int32_t b_cnum = shape[c_idx];
@@ -288,7 +321,7 @@ int EfficientDetOutputParser::GetBboxAndScores(
   hbSysFlushMem(&(c_tensor->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
   hbSysFlushMem(&(bbox_tensor->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
 
-  if (this->has_dequanti_node_) {
+  if (has_dequanti_node_) {
     auto *raw_cls_data = reinterpret_cast<float *>(c_tensor->sysMem[0].virAddr);
     auto *raw_box_data =
         reinterpret_cast<float *>(bbox_tensor->sysMem[0].virAddr);
@@ -455,8 +488,8 @@ int EfficientDetOutputParser::GetBboxAndScores(
   return 0;
 }
 
-int EfficientDetOutputParser::PostProcess(
-    std::vector<std::shared_ptr<DNNTensor>> &tensors, Perception &perception) {
+int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &tensors,
+                Perception &perception) {
   perception.type = Perception::DET;
 
   int layer_num = efficient_det_config_.feature_strides.size();
@@ -466,7 +499,8 @@ int EfficientDetOutputParser::PostProcess(
       anchors_table_.resize(layer_num);
       for (int i = 0; i < layer_num; i++) {
         int height, width;
-        get_tensor_aligned_hw(tensors[i], &height, &width);
+        hobot::dnn_node::output_parser::get_tensor_aligned_hw(
+            tensors[i], &height, &width);
         GetAnchors(anchors_table_[i], i, height, width);
       }
       anchor_init_ = true;
@@ -494,5 +528,6 @@ int EfficientDetOutputParser::PostProcess(
   return 0;
 }
 
+}  // namespace parser_efficientdet
 }  // namespace dnn_node
 }  // namespace hobot

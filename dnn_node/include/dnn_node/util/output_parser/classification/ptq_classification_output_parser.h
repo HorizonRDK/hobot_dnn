@@ -23,33 +23,21 @@
 #include "dnn_node/dnn_node_data.h"
 #include "dnn_node/util/output_parser/perception_common.h"
 
+using hobot::dnn_node::output_parser::Classification;
+using hobot::dnn_node::output_parser::DnnParserResult;
+using hobot::dnn_node::output_parser::Perception;
+
 namespace hobot {
 namespace dnn_node {
+namespace parser_mobilenetv2 {
 
-class ClassficationOutputParser
-    : public SingleBranchOutputParser<Dnn_Parser_Result> {
- public:
-  int32_t Parse(
-      std::shared_ptr<Dnn_Parser_Result> &output,
-      std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
-      std::shared_ptr<OutputDescription> &output_description,
-      std::shared_ptr<DNNTensor> &output_tensor) override;
+int InitClassNames(const std::string &cls_name_file);
 
-  int InitClassNames(const std::string &cls_name_file);
+int32_t Parse(
+    const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output,
+    std::shared_ptr<DnnParserResult> &output);
 
- private:
-  int PostProcess(std::shared_ptr<DNNTensor> &tensors, Perception &perception);
-
-  void GetTopkResult(std::shared_ptr<DNNTensor> &tensor,
-                     std::vector<Classification> &top_k_cls);
-
-  const char *GetClsName(int id);
-
- private:
-  int top_k_ = 1;
-  std::vector<std::string> class_names_;
-};
-
+}  // namespace parser_mobilenetv2
 }  // namespace dnn_node
 }  // namespace hobot
 

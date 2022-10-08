@@ -1,5 +1,12 @@
 # Changelog for package dnn_node_example
 
+tros_1.1.3 (2022-10-08)
+------------------
+1. 算法后处理中使用dnn node重构后的算法输出解析方法。
+2. 删除cv_bridge编译宏控制，默认使用cv_bridge。
+3. 删除同步或异步推理模式配置项is_sync_mode，使用效率更高的异步推理模式。
+
+
 hhp_1.0.6 (2022-08-31)
 ------------------
 1. example中算法前处理使用hobot_cv进行图片resize。

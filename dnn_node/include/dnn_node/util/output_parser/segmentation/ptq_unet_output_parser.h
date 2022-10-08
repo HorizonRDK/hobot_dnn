@@ -24,42 +24,25 @@
 #include "dnn_node/dnn_node_data.h"
 #include "dnn_node/util/output_parser/perception_common.h"
 
+using hobot::dnn_node::output_parser::Bbox;
+using hobot::dnn_node::output_parser::Detection;
+using hobot::dnn_node::output_parser::DnnParserResult;
+using hobot::dnn_node::output_parser::Parsing;
+using hobot::dnn_node::output_parser::Perception;
+
 namespace hobot {
 namespace dnn_node {
+namespace parser_unet {
+int32_t Parse(
+    const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output,
+    int img_w,
+    int img_h,
+    int model_w,
+    int model_h,
+    bool parser_render,
+    std::shared_ptr<DnnParserResult> &output);
 
-class UnetOutputDescription : public OutputDescription {
- public:
-  UnetOutputDescription(Model* mode, int index, std::string type = "")
-      : OutputDescription(mode, index, std::move(type)) {}
-  ~UnetOutputDescription() override = default;
-
-  uint32_t valid_w = 0;
-  uint32_t valid_h = 0;
-  int parse_render = 0;
-};
-
-class UnetOutputParser : public SingleBranchOutputParser<Dnn_Parser_Result> {
- public:
-  int32_t Parse(
-      std::shared_ptr<Dnn_Parser_Result>& output,
-      std::vector<std::shared_ptr<InputDescription>>& input_descriptions,
-      std::shared_ptr<OutputDescription>& output_description,
-      std::shared_ptr<DNNTensor>& output_tensor) override;
-
- private:
-  int PostProcess(std::vector<std::shared_ptr<DNNTensor>>& output_tensors,
-                  Perception& perception,
-                  int valid_w,
-                  int valid_h);
-
-  int ParseRenderPostProcess(
-      std::vector<std::shared_ptr<DNNTensor>>& output_tensors,
-      Perception& perception);
-
- private:
-  int num_classes_ = 20;
-};
-
+}
 }  // namespace dnn_node
 }  // namespace hobot
 

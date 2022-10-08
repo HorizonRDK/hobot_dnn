@@ -27,41 +27,38 @@
 #include "include/dnn_example_node.h"
 #include "include/image_utils.h"
 
-int UnetPostProcess::SetOutParser(Model *model_manage) {
-  RCLCPP_INFO(rclcpp::get_logger("UnetPostProcess"), "Set out parser");
-  output_index_ = model_output_count_ - 1;
+namespace hobot {
+namespace dnn_node {
+namespace parser_unet {
 
-  auto unetParser = std::make_shared<hobot::dnn_node::UnetOutputParser>();
-  std::shared_ptr<OutputParser> parser =
-      std::dynamic_pointer_cast<OutputParser>(unetParser);
-  model_manage->SetOutputParser(output_index_, parser);
-  return 0;
-}
-
-ai_msgs::msg::PerceptionTargets::UniquePtr UnetPostProcess::PostProcess(
-    const std::shared_ptr<DnnNodeOutput> &node_output) {
-  const auto &outputs = node_output->outputs;
-  RCLCPP_INFO(rclcpp::get_logger("UnetPostProcess"),
-              "outputs size: %d",
-              outputs.size());
-  if (outputs.empty() ||
-      static_cast<int32_t>(outputs.size()) < model_output_count_) {
-    RCLCPP_ERROR(rclcpp::get_logger("UnetPostProcess"), "Invalid outputs");
+ai_msgs::msg::PerceptionTargets::UniquePtr PostProcess(
+    const std::shared_ptr<DnnNodeOutput> &node_output,
+    int img_w,
+    int img_h,
+    int model_w,
+    int model_h,
+    bool dump_render_img) {
+  std::shared_ptr<DnnParserResult> det_result = nullptr;
+  if (hobot::dnn_node::parser_unet::Parse(node_output, 
+                                            img_w,
+                                            img_h,
+                                            model_w,
+                                            model_h,
+                                            dump_render_img,
+                                            det_result) < 0) {
+    RCLCPP_ERROR(rclcpp::get_logger("example"), "Parse fail");
     return nullptr;
   }
 
+  if (!det_result) {
+    RCLCPP_INFO(rclcpp::get_logger("UnetPostProcess"), "invalid cast");
+    return nullptr;
+  }
   ai_msgs::msg::PerceptionTargets::UniquePtr pub_data(
       new ai_msgs::msg::PerceptionTargets());
   ai_msgs::msg::Capture capture;
-
-  auto *det_result =
-      dynamic_cast<Dnn_Parser_Result *>(outputs[output_index_].get());
-  if (!det_result) {
-    RCLCPP_INFO(rclcpp::get_logger("UnetPostProcess"), "invalid cast");
-    return 0;
-  }
   auto &seg = det_result->perception.seg;
-  if (dump_render_img_) {
+  if (dump_render_img) {
     RenderUnet(node_output, seg);
   }
 
@@ -84,7 +81,7 @@ ai_msgs::msg::PerceptionTargets::UniquePtr UnetPostProcess::PostProcess(
   return pub_data;
 }
 
-int UnetPostProcess::RenderUnet(
+int RenderUnet(
     const std::shared_ptr<DnnNodeOutput> &node_output, Parsing &seg) {
   static uint8_t bgr_putpalette[] = {
       128, 64,  128, 244, 35,  232, 70,  70,  70,  102, 102, 156, 190, 153, 153,
@@ -136,9 +133,9 @@ int UnetPostProcess::RenderUnet(
   cv::Mat dst;
   addWeighted(mat, alpha_f, parsing_img, 1 - alpha_f, 0.0, dst);
   mat = std::move(dst);
-  std::string saving_path = "render_unet_" + dnnExampleOutput->frame_id + "_" +
-                            std::to_string(dnnExampleOutput->stamp.sec) + "_" +
-                            std::to_string(dnnExampleOutput->stamp.sec) +
+  std::string saving_path = "render_unet_" + dnnExampleOutput->msg_header->frame_id + "_" +
+                            std::to_string(dnnExampleOutput->msg_header->stamp.sec) + "_" +
+                            std::to_string(dnnExampleOutput->msg_header->stamp.sec) +
                             ".jpeg";
 
   RCLCPP_INFO(rclcpp::get_logger("UnetPostProcess"),
@@ -146,4 +143,8 @@ int UnetPostProcess::RenderUnet(
               saving_path.c_str());
   cv::imwrite(saving_path, mat);
   return 0;
+}
+
+}
+}
 }
