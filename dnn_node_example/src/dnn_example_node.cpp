@@ -121,21 +121,29 @@ DnnExampleNode::DnnExampleNode(const std::string &node_name,
   this->get_parameter<std::string>("config_file", config_file);
   this->get_parameter<std::string>("msg_pub_topic_name", msg_pub_topic_name_);
 
-  std::stringstream ss;
-  ss << "Parameter:"
-     << "\n feed_type(0:local, 1:sub): " << feed_type_ << "\n image: " << image_
-     << "\n image_type: " << image_type_
-     << "\n dump_render_img: " << dump_render_img_
-     << "\n is_shared_mem_sub: " << is_shared_mem_sub_
-     << "\n model_file_name: " << model_file_name_
-     << "\n model_name: " << model_name_;
-  RCLCPP_WARN(rclcpp::get_logger("example"), "%s", ss.str().c_str());
-
+  {
+    std::stringstream ss;
+    ss << "Parameter:"
+      << "\n feed_type(0:local, 1:sub): " << feed_type_ << "\n image: " << image_
+      << "\n image_type: " << image_type_
+      << "\n dump_render_img: " << dump_render_img_
+      << "\n is_shared_mem_sub: " << is_shared_mem_sub_
+      << "\n config_file: " << config_file
+      << "\n msg_pub_topic_name_: " << msg_pub_topic_name_;
+    RCLCPP_WARN(rclcpp::get_logger("example"), "%s", ss.str().c_str());
+  }
   // 加载配置文件config_file
   if (LoadConfig() < 0) {
     RCLCPP_ERROR(rclcpp::get_logger("example"), "Load config fail!");
     rclcpp::shutdown();
     return;
+  }
+  {
+    std::stringstream ss;
+    ss << "Parameter:"
+      << "\n model_file_name: " << model_file_name_
+      << "\n model_name: " << model_name_;
+    RCLCPP_WARN(rclcpp::get_logger("example"), "%s", ss.str().c_str());
   }
 
   // 使用基类接口初始化，加载模型

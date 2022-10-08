@@ -264,6 +264,3 @@ root@ubuntu:~# tree /opt/tros/include/dnn_node/util/output_parser
     }
     
 ```
-
-
-如何使用内置的后处理进行二次开发？
