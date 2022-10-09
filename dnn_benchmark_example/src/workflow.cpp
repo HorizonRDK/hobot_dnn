@@ -20,7 +20,6 @@
 #include "rapidjson/istreamwrapper.h"
 #include "rapidjson/writer.h"
 #include "include/plugin/input_plugin.h"
-#include "include/utils/null_output_parser.h"
 
 Workflow::Workflow(const std::string node_name,
                                const NodeOptions &options) :
@@ -181,25 +180,6 @@ int Workflow::SetNodePara()
   dnn_node_para_ptr_->model_name = model_name_;
   dnn_node_para_ptr_->model_task_type = model_task_type_;
   dnn_node_para_ptr_->task_num = 2;
-  return 0;
-}
-
-int Workflow::SetOutputParser()
-{
-  RCLCPP_INFO(rclcpp::get_logger("example"), "Set output parser.");
-  // set output parser
-  auto model_manage = GetModel();
-  if (!model_manage || !dnn_node_para_ptr_) {
-    RCLCPP_ERROR(rclcpp::get_logger("example"), "Invalid model");
-    return -1;
-  }
-
-  model_output_count_ = model_manage->GetOutputCount();
-
-  std::shared_ptr<OutputParser> box_out_parser =
-      std::make_shared<nullOutputParser>();
-  model_manage->SetOutputParser(0, box_out_parser);
-
   return 0;
 }
 

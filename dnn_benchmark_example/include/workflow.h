@@ -71,8 +71,6 @@ class Workflow : public DnnNode
 
  protected:
   int SetNodePara() override;
-  int SetOutputParser() override;
-
   int PostProcess(const std::shared_ptr<DnnNodeOutput> &outputs)
       override;
 
