@@ -62,7 +62,6 @@ add_executable(${PROJECT_NAME}
   src/plugin/input_plugin.cpp
   src/utils/image_utils.cpp
   src/utils/utils.cpp
-  src/utils/null_output_parser.cpp
 )
 
 ament_target_dependencies(
