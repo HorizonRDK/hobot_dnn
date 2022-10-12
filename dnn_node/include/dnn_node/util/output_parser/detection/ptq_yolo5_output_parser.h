@@ -32,6 +32,20 @@ using hobot::dnn_node::output_parser::Perception;
 namespace hobot {
 namespace dnn_node {
 namespace parser_yolov5 {
+
+float score_threshold_ = 0.4;
+float nms_threshold_ = 0.5;
+int nms_top_k_ = 5000;
+
+int InitClassNum(const int &class_num);
+
+int InitClassNames(const std::string &cls_name_file);
+
+int InitStrides(const std::vector<int> &strides, const int &model_output_count);
+
+int InitAnchorsTables(const std::vector<std::vector<std::vector<double>>> &anchors_tables, 
+                      const int &model_output_count);
+
 int32_t Parse(
     const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output,
     std::shared_ptr<DnnParserResult> &output);

@@ -98,9 +98,63 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
                 Perception &perception);
 
 PTQYolo2Config yolo2_config_ = default_ptq_yolo2_config;
-float score_threshold_ = 0.3;
-float nms_threshold_ = 0.45;
-int nms_top_k_ = 500;
+
+int InitClassNum(const int &class_num) {
+  if(class_num > 0){
+    yolo2_config_.class_num = class_num;
+  } else {
+    RCLCPP_ERROR(rclcpp::get_logger("Yolo2_detection_parser"),
+                 "class_num = %d is not allowed, only support class_num > 0",
+                 class_num);
+    return -1;
+  }
+  return 0;
+}
+
+int InitClassNames(const std::string &cls_name_file) {
+  std::ifstream fi(cls_name_file);
+  if (fi) {
+    yolo2_config_.class_names.clear();
+    std::string line;
+    while (std::getline(fi, line)) {
+      yolo2_config_.class_names.push_back(line);
+    }
+    int size = yolo2_config_.class_names.size();
+    if(size != yolo2_config_.class_num){
+      RCLCPP_ERROR(rclcpp::get_logger("Yolo2_detection_parser"),
+                 "class_names length %d is not equal to class_num %d",
+                 size, yolo2_config_.class_num);
+      return -1;
+    }
+  } else {
+    RCLCPP_ERROR(rclcpp::get_logger("Yolo2_detection_parser"),
+                 "can not open cls name file: %s",
+                 cls_name_file.c_str());
+    return -1;
+  }
+  return 0;
+}
+
+int InitStride(const int &stride){
+  yolo2_config_.stride = stride;
+  return 0;
+}
+
+int InitAnchorsTables(const std::vector<std::vector<double>> &anchors_tables){
+  yolo2_config_.anchors_table.clear();
+  for (size_t i = 0; i < anchors_tables.size(); i++){
+    if(anchors_tables[i].size() != 2){
+      RCLCPP_ERROR(rclcpp::get_logger("Yolo2_detection_parser"),
+                  "anchors_tables[%d] size is not equal to 2", i);
+      return -1;
+    }
+    std::pair<double, double> table;
+    table.first = anchors_tables[i][0];
+    table.second = anchors_tables[i][1];
+    yolo2_config_.anchors_table.push_back(table);
+  }
+  return 0;
+}
 
 int32_t Parse(
     const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output,

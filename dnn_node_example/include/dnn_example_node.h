@@ -101,6 +101,7 @@ class DnnExampleNode : public DnnNode {
   DnnParserType parser = DnnParserType::INVALID_PARSER;
   std::string model_file_name_ = "";
   std::string model_name_ = "";
+  int model_output_count_ = 0;
 
   // 加载模型后，查询出模型输入分辨率
   int model_input_width_ = -1;

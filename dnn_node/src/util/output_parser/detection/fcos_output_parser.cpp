@@ -79,10 +79,58 @@ void GetBboxAndScoresNCHW(std::vector<std::shared_ptr<DNNTensor>> &tensors,
 int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &tensors,
                 Perception &perception);
 
-float score_threshold_ = 0.5;
-float nms_threshold_ = 0.6;
-int nms_top_k_ = 500;
 FcosConfig fcos_config_ = default_fcos_config;
+
+int InitClassNum(const int &class_num) {
+  if(class_num > 0){
+    fcos_config_.class_num = class_num;
+  } else {
+    RCLCPP_ERROR(rclcpp::get_logger("fcos_detection_parser"),
+                 "class_num = %d is not allowed, only support class_num > 0",
+                 class_num);
+    return -1;
+  }
+  return 0;
+}
+
+int InitClassNames(const std::string &cls_name_file) {
+  std::ifstream fi(cls_name_file);
+  if (fi) {
+    fcos_config_.class_names.clear();
+    std::string line;
+    while (std::getline(fi, line)) {
+      fcos_config_.class_names.push_back(line);
+    }
+    int size = fcos_config_.class_names.size();
+    if(size != fcos_config_.class_num){
+      RCLCPP_ERROR(rclcpp::get_logger("fcos_detection_parser"),
+                 "class_names length %d is not equal to class_num %d",
+                 size, fcos_config_.class_num);
+      return -1;
+    }
+  } else {
+    RCLCPP_ERROR(rclcpp::get_logger("fcos_detection_parser"),
+                 "can not open cls name file: %s",
+                 cls_name_file.c_str());
+    return -1;
+  }
+  return 0;
+}
+
+int InitStrides(const std::vector<int> &strides, const int &model_output_count){
+  int size = strides.size() * 3;
+  if(size != model_output_count){
+    RCLCPP_ERROR(rclcpp::get_logger("fcos_detection_parser"),
+                "strides size %d is not realated to model_output_count %d",
+                size, model_output_count);
+    return -1;
+  }
+  fcos_config_.strides.clear();
+  for (size_t i = 0; i < strides.size(); i++){
+    fcos_config_.strides.push_back(strides[i]);
+  }
+  return 0;
+}
 
 int32_t Parse(
     const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output,

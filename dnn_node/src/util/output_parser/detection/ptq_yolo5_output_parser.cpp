@@ -107,10 +107,90 @@ PTQYolo5Config default_ptq_yolo5_config = {
      "hair drier",    "toothbrush"}};
 
 PTQYolo5Config yolo5_config_ = default_ptq_yolo5_config;
-float score_threshold_ = 0.4;
-float nms_threshold_ = 0.5;
-int nms_top_k_ = 5000;
-bool has_dequanti_node_ = true;
+
+int InitClassNum(const int &class_num) {
+  if(class_num > 0){
+    yolo5_config_.class_num = class_num;
+  } else {
+    RCLCPP_ERROR(rclcpp::get_logger("Yolo5_detection_parser"),
+                 "class_num = %d is not allowed, only support class_num > 0",
+                 class_num);
+    return -1;
+  }
+  return 0;
+}
+
+int InitClassNames(const std::string &cls_name_file) {
+  std::ifstream fi(cls_name_file);
+  if (fi) {
+    yolo5_config_.class_names.clear();
+    std::string line;
+    while (std::getline(fi, line)) {
+      yolo5_config_.class_names.push_back(line);
+    }
+    int size = yolo5_config_.class_names.size();
+    if(size != yolo5_config_.class_num){
+      RCLCPP_ERROR(rclcpp::get_logger("Yolo5_detection_parser"),
+                 "class_names length %d is not equal to class_num %d",
+                 size, yolo5_config_.class_num);
+      return -1;
+    }
+  } else {
+    RCLCPP_ERROR(rclcpp::get_logger("Yolo5_detection_parser"),
+                 "can not open cls name file: %s",
+                 cls_name_file.c_str());
+    return -1;
+  }
+  return 0;
+}
+
+int InitStrides(const std::vector<int> &strides, const int &model_output_count){
+  int size = strides.size();
+  if(size != model_output_count){
+    RCLCPP_ERROR(rclcpp::get_logger("Yolo5_detection_parser"),
+                "strides size %d is not equal to model_output_count %d",
+                size, model_output_count);
+    return -1;
+  }
+  yolo5_config_.strides.clear();
+  for (size_t i = 0; i < strides.size(); i++){
+    yolo5_config_.strides.push_back(strides[i]);
+  }
+  return 0;
+}
+
+int InitAnchorsTables(const std::vector<std::vector<std::vector<double>>> &anchors_tables, 
+                      const int &model_output_count){
+  int size = anchors_tables.size();
+  if(size != model_output_count){
+    RCLCPP_ERROR(rclcpp::get_logger("Yolo5_detection_parser"),
+                "anchors_tables size %d is not equal to model_output_count %d",
+                size, model_output_count);
+    return -1;
+  }
+  yolo5_config_.anchors_table.clear();
+  for (size_t i = 0; i < anchors_tables.size(); i++){
+    if(anchors_tables[i].size() != 3){
+      RCLCPP_ERROR(rclcpp::get_logger("Yolo5_detection_parser"),
+                  "anchors_tables[%d] size is not equal to 3", i);
+      return -1;      
+    }
+    std::vector<std::pair<double, double>> tables;
+    for (size_t j = 0; j < anchors_tables[i].size(); j++){
+      if(anchors_tables[i][j].size() != 2){
+        RCLCPP_ERROR(rclcpp::get_logger("Yolo5_detection_parser"),
+                    "anchors_tables[%d][%d] size is not equal to 2", i, j);
+        return -1;
+      }
+      std::pair<double, double> table;
+      table.first = anchors_tables[i][j][0];
+      table.second = anchors_tables[i][j][1];
+      tables.push_back(table);
+    }
+    yolo5_config_.anchors_table.push_back(tables);
+  }
+  return 0;
+}
 
 int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
                 Perception &perception);
