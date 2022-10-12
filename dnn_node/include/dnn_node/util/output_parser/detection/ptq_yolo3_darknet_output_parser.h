@@ -34,11 +34,6 @@ using hobot::dnn_node::output_parser::Perception;
 namespace hobot {
 namespace dnn_node {
 namespace parser_yolov3 {
-
-float score_threshold_ = 0.3;
-float nms_threshold_ = 0.45;
-int nms_top_k_ = 500;
-
 int LoadConfig(rapidjson::Document &document);
 
 int32_t Parse(

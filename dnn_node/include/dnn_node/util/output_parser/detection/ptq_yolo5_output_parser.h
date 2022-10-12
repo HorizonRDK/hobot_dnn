@@ -33,11 +33,6 @@ using hobot::dnn_node::output_parser::Perception;
 namespace hobot {
 namespace dnn_node {
 namespace parser_yolov5 {
-
-float score_threshold_ = 0.4;
-float nms_threshold_ = 0.5;
-int nms_top_k_ = 5000;
-
 int LoadConfig(rapidjson::Document &document);
 
 int32_t Parse(

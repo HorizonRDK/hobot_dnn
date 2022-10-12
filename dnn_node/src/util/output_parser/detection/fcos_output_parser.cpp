@@ -80,6 +80,9 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &tensors,
                 Perception &perception);
 
 FcosConfig fcos_config_ = default_fcos_config;
+float score_threshold_ = 0.5;
+float nms_threshold_ = 0.6;
+int nms_top_k_ = 500;
 
 int InitClassNum(const int &class_num) {
   if(class_num > 0){

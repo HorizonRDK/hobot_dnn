@@ -109,6 +109,9 @@ void PostProcessNCHW(std::shared_ptr<DNNTensor> tensor,
                      std::vector<Detection> &dets);
 
 PTQYolo3DarknetConfig yolo3_config_ = default_ptq_yolo3_darknet_config;
+float score_threshold_ = 0.3;
+float nms_threshold_ = 0.45;
+int nms_top_k_ = 500;
 
 int InitClassNum(const int &class_num) {
   if(class_num > 0){

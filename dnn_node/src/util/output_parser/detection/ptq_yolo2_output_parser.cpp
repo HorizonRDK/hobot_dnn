@@ -97,6 +97,9 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
                 Perception &perception);
 
 PTQYolo2Config yolo2_config_ = default_ptq_yolo2_config;
+float score_threshold_ = 0.3;
+float nms_threshold_ = 0.45;
+int nms_top_k_ = 500;
 
 int InitClassNum(const int &class_num) {
   if(class_num > 0){

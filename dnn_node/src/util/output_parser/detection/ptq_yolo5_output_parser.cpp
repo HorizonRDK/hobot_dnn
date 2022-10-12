@@ -107,6 +107,9 @@ PTQYolo5Config default_ptq_yolo5_config = {
      "hair drier",    "toothbrush"}};
 
 PTQYolo5Config yolo5_config_ = default_ptq_yolo5_config;
+float score_threshold_ = 0.4;
+float nms_threshold_ = 0.5;
+int nms_top_k_ = 5000;
 
 int InitClassNum(const int &class_num) {
   if(class_num > 0){
