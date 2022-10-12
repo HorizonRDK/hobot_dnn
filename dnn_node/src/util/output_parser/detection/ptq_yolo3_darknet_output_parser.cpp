@@ -18,7 +18,6 @@
 
 #include "dnn_node/util/output_parser/detection/nms.h"
 #include "dnn_node/util/output_parser/utils.h"
-#include "rapidjson/document.h"
 #include "rclcpp/rclcpp.hpp"
 
 namespace hobot {
@@ -113,6 +112,150 @@ PTQYolo3DarknetConfig yolo3_config_ = default_ptq_yolo3_darknet_config;
 float score_threshold_ = 0.3;
 float nms_threshold_ = 0.45;
 int nms_top_k_ = 500;
+
+int InitClassNum(const int &class_num) {
+  if(class_num > 0){
+    yolo3_config_.class_num = class_num;
+  } else {
+    RCLCPP_ERROR(rclcpp::get_logger("Yolo3Darknet_detection_parser"),
+                 "class_num = %d is not allowed, only support class_num > 0",
+                 class_num);
+    return -1;
+  }
+  return 0;
+}
+
+int InitClassNames(const std::string &cls_name_file) {
+  std::ifstream fi(cls_name_file);
+  if (fi) {
+    yolo3_config_.class_names.clear();
+    std::string line;
+    while (std::getline(fi, line)) {
+      yolo3_config_.class_names.push_back(line);
+    }
+    int size = yolo3_config_.class_names.size();
+    if(size != yolo3_config_.class_num){
+      RCLCPP_ERROR(rclcpp::get_logger("Yolo3Darknet_detection_parser"),
+                 "class_names length %d is not equal to class_num %d",
+                 size, yolo3_config_.class_num);
+      return -1;
+    }
+  } else {
+    RCLCPP_ERROR(rclcpp::get_logger("Yolo3Darknet_detection_parser"),
+                 "can not open cls name file: %s",
+                 cls_name_file.c_str());
+    return -1;
+  }
+  return 0;
+}
+
+int InitStrides(const std::vector<int> &strides, const int &model_output_count){
+  int size = strides.size();
+  if(size != model_output_count){
+    RCLCPP_ERROR(rclcpp::get_logger("Yolo3Darknet_detection_parser"),
+                "strides size %d is not equal to model_output_count %d",
+                size, model_output_count);
+    return -1;
+  }
+  yolo3_config_.strides.clear();
+  for (size_t i = 0; i < strides.size(); i++){
+    yolo3_config_.strides.push_back(strides[i]);
+  }
+  return 0;
+}
+
+int InitAnchorsTables(const std::vector<std::vector<std::vector<double>>> &anchors_tables, 
+                      const int &model_output_count){
+  int size = anchors_tables.size();
+  if(size != model_output_count){
+    RCLCPP_ERROR(rclcpp::get_logger("Yolo3Darknet_detection_parser"),
+                "anchors_tables size %d is not equal to model_output_count %d",
+                size, model_output_count);
+    return -1;
+  }
+  yolo3_config_.anchors_table.clear();
+  for (size_t i = 0; i < anchors_tables.size(); i++){
+    if(anchors_tables[i].size() != 3){
+      RCLCPP_ERROR(rclcpp::get_logger("Yolo3Darknet_detection_parser"),
+                  "anchors_tables[%d] size is not equal to 3", i);
+      return -1;      
+    }
+    std::vector<std::pair<double, double>> tables;
+    for (size_t j = 0; j < anchors_tables[i].size(); j++){
+      if(anchors_tables[i][j].size() != 2){
+        RCLCPP_ERROR(rclcpp::get_logger("Yolo3Darknet_detection_parser"),
+                    "anchors_tables[%d][%d] size is not equal to 2", i, j);
+        return -1;
+      }
+      std::pair<double, double> table;
+      table.first = anchors_tables[i][j][0];
+      table.second = anchors_tables[i][j][1];
+      tables.push_back(table);
+    }
+    yolo3_config_.anchors_table.push_back(tables);
+  }
+  return 0;
+}
+
+int LoadConfig(const rapidjson::Document &document){
+  int model_output_count = 0;
+  if (document.HasMember("model_output_count")) {
+    model_output_count = document["model_output_count"].GetInt();
+    if (model_output_count <= 0){
+      RCLCPP_ERROR(rclcpp::get_logger("Yolo3Darknet_detection_parser"),
+              "model_output_count = %d <= 0 is not allowed", model_output_count);
+      return -1;
+    }
+  }
+  if (document.HasMember("class_num")){
+    int class_num = document["class_num"].GetInt();
+    if (InitClassNum(class_num) < 0) {
+      return -1;
+    }
+  } 
+  if (document.HasMember("cls_names_list")) {
+    std::string cls_name_file = document["cls_names_list"].GetString();
+    if (InitClassNames(cls_name_file) < 0) {
+      return -1;
+    }
+  }
+  if (document.HasMember("strides")) {
+    std::vector<int> strides;
+    for(size_t i = 0; i < document["strides"].Size(); i++){
+      strides.push_back(document["strides"][i].GetInt());
+    }
+    if (InitStrides(strides, model_output_count) < 0){
+      return -1;
+    }
+  }
+  if (document.HasMember("anchors_table")) {
+    std::vector<std::vector<std::vector<double>>> anchors_tables;
+    for(size_t i = 0; i < document["anchors_table"].Size(); i++){
+      std::vector<std::vector<double>> anchors_table;
+      for(size_t j = 0; j < document["anchors_table"][i].Size(); j++){
+        std::vector<double> table;
+        for(size_t k = 0; k < document["anchors_table"][i][j].Size(); k++){
+          table.push_back(document["anchors_table"][i][j][k].GetDouble());
+        }
+        anchors_table.push_back(table);
+      }
+      anchors_tables.push_back(anchors_table);
+    }
+    if (InitAnchorsTables(anchors_tables, model_output_count) < 0){
+      return -1;
+    }
+  }
+  if (document.HasMember("score_threshold")) {
+    score_threshold_ = document["score_threshold"].GetFloat();
+  }
+  if (document.HasMember("nms_threshold")) {
+    nms_threshold_ = document["nms_threshold"].GetFloat();
+  }
+  if (document.HasMember("nms_top_k")) {
+    nms_top_k_ = document["nms_top_k"].GetInt();
+  }
+  return 0;
+}
 
 int32_t Parse(
     const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output,

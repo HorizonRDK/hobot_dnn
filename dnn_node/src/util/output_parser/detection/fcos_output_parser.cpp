@@ -79,10 +79,103 @@ void GetBboxAndScoresNCHW(std::vector<std::shared_ptr<DNNTensor>> &tensors,
 int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &tensors,
                 Perception &perception);
 
+FcosConfig fcos_config_ = default_fcos_config;
 float score_threshold_ = 0.5;
 float nms_threshold_ = 0.6;
 int nms_top_k_ = 500;
-FcosConfig fcos_config_ = default_fcos_config;
+
+int InitClassNum(const int &class_num) {
+  if(class_num > 0){
+    fcos_config_.class_num = class_num;
+  } else {
+    RCLCPP_ERROR(rclcpp::get_logger("fcos_detection_parser"),
+                 "class_num = %d is not allowed, only support class_num > 0",
+                 class_num);
+    return -1;
+  }
+  return 0;
+}
+
+int InitClassNames(const std::string &cls_name_file) {
+  std::ifstream fi(cls_name_file);
+  if (fi) {
+    fcos_config_.class_names.clear();
+    std::string line;
+    while (std::getline(fi, line)) {
+      fcos_config_.class_names.push_back(line);
+    }
+    int size = fcos_config_.class_names.size();
+    if(size != fcos_config_.class_num){
+      RCLCPP_ERROR(rclcpp::get_logger("fcos_detection_parser"),
+                 "class_names length %d is not equal to class_num %d",
+                 size, fcos_config_.class_num);
+      return -1;
+    }
+  } else {
+    RCLCPP_ERROR(rclcpp::get_logger("fcos_detection_parser"),
+                 "can not open cls name file: %s",
+                 cls_name_file.c_str());
+    return -1;
+  }
+  return 0;
+}
+
+int InitStrides(const std::vector<int> &strides, const int &model_output_count){
+  int size = strides.size() * 3;
+  if(size != model_output_count){
+    RCLCPP_ERROR(rclcpp::get_logger("fcos_detection_parser"),
+                "strides size %d is not realated to model_output_count %d",
+                size, model_output_count);
+    return -1;
+  }
+  fcos_config_.strides.clear();
+  for (size_t i = 0; i < strides.size(); i++){
+    fcos_config_.strides.push_back(strides[i]);
+  }
+  return 0;
+}
+
+int LoadConfig(const rapidjson::Document &document) {
+  int model_output_count = 0;
+  if (document.HasMember("model_output_count")) {
+    model_output_count = document["model_output_count"].GetInt();
+    if (model_output_count <= 0){
+      RCLCPP_ERROR(rclcpp::get_logger("Yolo3Darknet_detection_parser"),
+              "model_output_count = %d <= 0 is not allowed", model_output_count);
+      return -1;
+    }
+  }
+  if (document.HasMember("class_num")){
+    int class_num = document["class_num"].GetInt();
+    if (InitClassNum(class_num) < 0) {
+      return -1;
+    }
+  } 
+  if (document.HasMember("cls_names_list")) {
+    std::string cls_name_file = document["cls_names_list"].GetString();
+    if (InitClassNames(cls_name_file) < 0) {
+      return -1;
+    }
+  }
+  if (document.HasMember("strides")) {
+    std::vector<int> strides;
+    for(size_t i = 0; i < document["strides"].Size(); i++){
+      strides.push_back(document["strides"][i].GetInt());
+    }
+    if (InitStrides(strides, model_output_count) < 0){
+      return -1;
+    }
+  }
+  if (document.HasMember("score_threshold")) {
+    score_threshold_ = document["score_threshold"].GetFloat();
+  }
+  if (document.HasMember("nms_threshold")) {
+    nms_threshold_ = document["nms_threshold"].GetFloat();
+  }
+  if (document.HasMember("nms_top_k")) {
+    nms_top_k_ = document["nms_top_k"].GetInt();
+  }
+}
 
 int32_t Parse(
     const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output,

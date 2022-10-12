@@ -18,7 +18,6 @@
 
 #include "dnn_node/util/output_parser/detection/nms.h"
 #include "dnn_node/util/output_parser/utils.h"
-#include "rapidjson/document.h"
 #include "rclcpp/rclcpp.hpp"
 
 namespace hobot {
@@ -101,6 +100,112 @@ PTQYolo2Config yolo2_config_ = default_ptq_yolo2_config;
 float score_threshold_ = 0.3;
 float nms_threshold_ = 0.45;
 int nms_top_k_ = 500;
+
+int InitClassNum(const int &class_num) {
+  if(class_num > 0){
+    yolo2_config_.class_num = class_num;
+  } else {
+    RCLCPP_ERROR(rclcpp::get_logger("Yolo2_detection_parser"),
+                 "class_num = %d is not allowed, only support class_num > 0",
+                 class_num);
+    return -1;
+  }
+  return 0;
+}
+
+int InitClassNames(const std::string &cls_name_file) {
+  std::ifstream fi(cls_name_file);
+  if (fi) {
+    yolo2_config_.class_names.clear();
+    std::string line;
+    while (std::getline(fi, line)) {
+      yolo2_config_.class_names.push_back(line);
+    }
+    int size = yolo2_config_.class_names.size();
+    if(size != yolo2_config_.class_num){
+      RCLCPP_ERROR(rclcpp::get_logger("Yolo2_detection_parser"),
+                 "class_names length %d is not equal to class_num %d",
+                 size, yolo2_config_.class_num);
+      return -1;
+    }
+  } else {
+    RCLCPP_ERROR(rclcpp::get_logger("Yolo2_detection_parser"),
+                 "can not open cls name file: %s",
+                 cls_name_file.c_str());
+    return -1;
+  }
+  return 0;
+}
+
+int InitStride(const int &stride){
+  yolo2_config_.stride = stride;
+  return 0;
+}
+
+int InitAnchorsTables(const std::vector<std::vector<double>> &anchors_tables){
+  yolo2_config_.anchors_table.clear();
+  for (size_t i = 0; i < anchors_tables.size(); i++){
+    if(anchors_tables[i].size() != 2){
+      RCLCPP_ERROR(rclcpp::get_logger("Yolo2_detection_parser"),
+                  "anchors_tables[%d] size is not equal to 2", i);
+      return -1;
+    }
+    std::pair<double, double> table;
+    table.first = anchors_tables[i][0];
+    table.second = anchors_tables[i][1];
+    yolo2_config_.anchors_table.push_back(table);
+  }
+  return 0;
+}
+
+int LoadConfig(const rapidjson::Document &document) {
+  int model_output_count = 0;
+  if (document.HasMember("model_output_count")) {
+    model_output_count = document["model_output_count"].GetInt();
+    if (model_output_count <= 0){
+      RCLCPP_ERROR(rclcpp::get_logger("Yolo2_detection_parser"),
+              "model_output_count = %d <= 0 is not allowed", model_output_count);
+      return -1;
+    }
+  }
+  if (document.HasMember("class_num")){
+    int class_num = document["class_num"].GetInt();
+    if (InitClassNum(class_num) < 0) {
+      return -1;
+    }
+  } 
+  if (document.HasMember("cls_names_list")) {
+    std::string cls_name_file = document["cls_names_list"].GetString();
+    if (InitClassNames(cls_name_file) < 0) {
+      return -1;
+    }
+  }
+  if (document.HasMember("stride")) {
+    InitStride(document["stride"].GetInt());
+  }
+  if (document.HasMember("anchors_table")) {
+    std::vector<std::vector<double>> anchors_tables;
+    for(size_t i = 0; i < document["anchors_table"].Size(); i++){
+      std::vector<double> anchors_table;
+      for(size_t j = 0; j < document["anchors_table"][i].Size(); j++){
+        anchors_table.push_back(document["anchors_table"][i][j].GetDouble());
+      }
+      anchors_tables.push_back(anchors_table);
+    }
+    if (InitAnchorsTables(anchors_tables) < 0){
+      return -1;
+    }
+  }
+  if (document.HasMember("score_threshold")) {
+    score_threshold_ = document["score_threshold"].GetFloat();
+  }
+  if (document.HasMember("nms_threshold")) {
+    nms_threshold_ = document["nms_threshold"].GetFloat();
+  }
+  if (document.HasMember("nms_top_k")) {
+    nms_top_k_ = document["nms_top_k"].GetInt();
+  }
+}
 
 int32_t Parse(
     const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output,

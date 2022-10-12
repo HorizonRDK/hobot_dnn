@@ -247,31 +247,23 @@ int DnnExampleNode::LoadConfig() {
   if (document.HasMember("model_name")) {
     model_name_ = document["model_name"].GetString();
   }
-
+  
+  int ret = 0;
   // 更新parser，后处理中根据parser类型选择解析方法
   if (document.HasMember("dnn_Parser")) {
     std::string str_parser = document["dnn_Parser"].GetString();
     if ("yolov2" == str_parser) {
       parser = DnnParserType::YOLOV2_PARSER;
+      ret = hobot::dnn_node::parser_yolov2::LoadConfig(document);
     } else if ("yolov3" == str_parser) {
       parser = DnnParserType::YOLOV3_PARSER;
+      ret = hobot::dnn_node::parser_yolov3::LoadConfig(document);
     } else if ("yolov5" == str_parser) {
       parser = DnnParserType::YOLOV5_PARSER;
+      ret = hobot::dnn_node::parser_yolov5::LoadConfig(document);
     } else if ("classification" == str_parser) {
       parser = DnnParserType::CLASSIFICATION_PARSER;
-      if (document.HasMember("cls_names_list")) {
-        std::string cls_name_file = document["cls_names_list"].GetString();
-        if (hobot::dnn_node::parser_mobilenetv2::InitClassNames(cls_name_file) <
-            0) {
-          RCLCPP_WARN(rclcpp::get_logger("example"),
-                      "Load classification file [%s] fail",
-                      cls_name_file.data());
-          return -1;
-        }
-      } else {
-        RCLCPP_WARN(rclcpp::get_logger("example"),
-                    "classification file is not set");
-      }
+      ret = hobot::dnn_node::parser_mobilenetv2::LoadConfig(document);
     } else if ("ssd" == str_parser) {
       parser = DnnParserType::SSD_PARSER;
     } else if ("efficient_det" == str_parser) {
@@ -291,6 +283,7 @@ int DnnExampleNode::LoadConfig() {
       }
     } else if ("fcos" == str_parser) {
       parser = DnnParserType::FCOS_PARSER;
+      ret = hobot::dnn_node::parser_fcos::LoadConfig(document);
     } else if ("unet" == str_parser) {
       parser = DnnParserType::UNET_PARSER;
     } else {
@@ -300,6 +293,12 @@ int DnnExampleNode::LoadConfig() {
          << " efficient_det, classification, unet are supported";
       RCLCPP_ERROR(rclcpp::get_logger("example"), "%s", ss.str().c_str());
       return -3;
+    }
+    if (ret < 0) {
+      RCLCPP_ERROR(rclcpp::get_logger("example"),
+                  "Load %s Parser config file fail",
+                  str_parser.data());
+      return -1;
     }
   }
 

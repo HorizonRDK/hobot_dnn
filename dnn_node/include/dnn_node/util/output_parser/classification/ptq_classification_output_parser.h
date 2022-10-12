@@ -19,6 +19,8 @@
 #include <string>
 #include <vector>
 
+#include "rapidjson/document.h"
+
 #include "dnn/hb_dnn_ext.h"
 #include "dnn_node/dnn_node_data.h"
 #include "dnn_node/util/output_parser/perception_common.h"
@@ -30,8 +32,7 @@ using hobot::dnn_node::output_parser::Perception;
 namespace hobot {
 namespace dnn_node {
 namespace parser_mobilenetv2 {
-
-int InitClassNames(const std::string &cls_name_file);
+int LoadConfig(const rapidjson::Document &document);
 
 int32_t Parse(
     const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output,
