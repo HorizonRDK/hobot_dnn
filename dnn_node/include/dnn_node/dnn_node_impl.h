@@ -223,6 +223,14 @@ class DnnNodeImpl {
 
   // 默认的解析方法
   std::shared_ptr<OutputParser> dnn_default_output_parser_ = nullptr;
+
+  // 配置task参数使能开关（使用SetCtrlParam接口配置，如推理使用的BPU核）
+  // true: 允许用户配置，false: 禁止用户配置
+  // 如果用户配置task参数后导致推理失败，尝试使用默认参数推理。
+  // 如果尝试成功，将自动设置en_set_task_para_为true，之后的推理任务不再配置task参数。
+  // 例如dnn node推理默认使用负载均衡模式（交替指定两个BPU核），
+  // 而对于多核模型，推理任务会同时使用两个BPU核，因此如果指定了BPU核将会推理失败。
+  bool en_set_task_para_ = true;
 };
 
 }  // namespace dnn_node

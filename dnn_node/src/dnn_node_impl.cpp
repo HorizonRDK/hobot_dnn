@@ -21,6 +21,7 @@
 #include <utility>
 #include <vector>
 
+#include "easy_dnn/status.h"
 #include "rclcpp/rclcpp.hpp"
 
 namespace hobot {
@@ -358,7 +359,7 @@ int DnnNodeImpl::RunInfer(std::shared_ptr<DnnNodeOutput> node_output,
   ret = task->ProcessInput();
   if (ret != 0) {
     RCLCPP_ERROR(
-        rclcpp::get_logger("dnn"), "Failed to run infer task, ret[%d]", ret);
+        rclcpp::get_logger("dnn"), "Failed to process input, ret[%d]", ret);
     return ret;
   }
 
@@ -366,13 +367,31 @@ int DnnNodeImpl::RunInfer(std::shared_ptr<DnnNodeOutput> node_output,
   if (ret != 0) {
     RCLCPP_ERROR(
         rclcpp::get_logger("dnn"), "Failed to run infer task, ret[%d]", ret);
-    return ret;
+
+    if (hobot::easy_dnn::DNN_INVALID_ARGUMENT == ret) {
+      // task参数错误导致推理失败，尝试使用默认参数
+      RCLCPP_WARN(rclcpp::get_logger("dnn"),
+                  "Try to reset dnn infer ctrl param");
+      hobot::easy_dnn::DNNInferCtrlParam ctrl_param;
+      task->SetCtrlParam(ctrl_param);
+      ret = task->RunInfer();
+      if (ret == 0) {
+        // 使用默认参数推理成功，设置禁止配置task参数
+        RCLCPP_WARN(rclcpp::get_logger("dnn"),
+                    "Run infer success after reset dnn infer ctrl param. Task "
+                    "para set will be enable!");
+        en_set_task_para_ = false;
+      }
+    }
+    if (ret != 0) {
+      return ret;
+    }
   }
 
   ret = task->WaitInferDone(timeout_ms);
   if (ret != 0) {
     RCLCPP_ERROR(
-        rclcpp::get_logger("dnn"), "Failed to run infer task, ret[%d]", ret);
+        rclcpp::get_logger("dnn"), "Failed to wait infer done, ret[%d]", ret);
     return ret;
   }
 
@@ -511,13 +530,16 @@ TaskId DnnNodeImpl::AllocTask(int timeout_ms) {
     return -1;
   }
 
-  hobot::easy_dnn::DNNInferCtrlParam ctrl_param;
-  ctrl_param.bpuCoreId = static_cast<int32_t>(bpu_core_id);
-  RCLCPP_INFO(rclcpp::get_logger("dnn"),
-              "task id: %d set bpu core: %d",
-              task_id,
-              ctrl_param.bpuCoreId);
-  task->SetCtrlParam(ctrl_param);
+  if (en_set_task_para_) {
+    // 允许配置task参数
+    hobot::easy_dnn::DNNInferCtrlParam ctrl_param;
+    ctrl_param.bpuCoreId = static_cast<int32_t>(bpu_core_id);
+    RCLCPP_INFO(rclcpp::get_logger("dnn"),
+                "task id: %d set bpu core: %d",
+                task_id,
+                ctrl_param.bpuCoreId);
+    task->SetCtrlParam(ctrl_param);
+  }
 
   dnn_rt_para_->tasks[task_id] = std::move(task);
 
