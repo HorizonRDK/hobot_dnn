@@ -158,7 +158,7 @@ int InitAnchorsTables(const std::vector<std::vector<double>> &anchors_tables){
   return 0;
 }
 
-int LoadConfig(rapidjson::Document &document) {
+int LoadConfig(const rapidjson::Document &document) {
   int model_output_count = 0;
   if (document.HasMember("model_output_count")) {
     model_output_count = document["model_output_count"].GetInt();

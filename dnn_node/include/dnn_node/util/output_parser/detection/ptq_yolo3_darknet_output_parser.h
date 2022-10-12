@@ -34,7 +34,7 @@ using hobot::dnn_node::output_parser::Perception;
 namespace hobot {
 namespace dnn_node {
 namespace parser_yolov3 {
-int LoadConfig(rapidjson::Document &document);
+int LoadConfig(const rapidjson::Document &document);
 
 int32_t Parse(
     const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output,

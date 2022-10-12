@@ -49,6 +49,23 @@ int InitClassNames(const std::string &cls_name_file) {
   return 0;
 }
 
+int LoadConfig(const rapidjson::Document &document) {
+  if (document.HasMember("cls_names_list")) {
+    std::string cls_name_file = document["cls_names_list"].GetString();
+    if (InitClassNames(cls_name_file) < 0) {
+      RCLCPP_ERROR(rclcpp::get_logger("example"),
+                  "Load classification file [%s] fail",
+                  cls_name_file.data());
+      return -1;
+    }
+  } else {
+    RCLCPP_ERROR(rclcpp::get_logger("example"),
+                "classification file is not set");
+    return -1;
+  }
+  return 0;
+}
+
 int32_t Parse(
     const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output,
     std::shared_ptr<DnnParserResult> &result) {
