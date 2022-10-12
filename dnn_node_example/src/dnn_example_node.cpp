@@ -247,149 +247,24 @@ int DnnExampleNode::LoadConfig() {
   if (document.HasMember("model_name")) {
     model_name_ = document["model_name"].GetString();
   }
-  if (document.HasMember("model_output_count")) {
-    model_output_count_ = document["model_output_count"].GetInt();
-  }
   
   // 更新parser，后处理中根据parser类型选择解析方法
   if (document.HasMember("dnn_Parser")) {
     std::string str_parser = document["dnn_Parser"].GetString();
     if ("yolov2" == str_parser) {
       parser = DnnParserType::YOLOV2_PARSER;
-      if (document.HasMember("class_num")){
-        int class_num = document["class_num"].GetInt();
-        if (hobot::dnn_node::parser_yolov2::InitClassNum(class_num) < 0) {
-          return -1;
-        }
-      } 
-      if (document.HasMember("cls_names_list")) {
-        std::string cls_name_file = document["cls_names_list"].GetString();
-        if (hobot::dnn_node::parser_yolov2::InitClassNames(cls_name_file) < 0) {
-          return -1;
-        }
-      }
-      if (document.HasMember("stride")) {
-        hobot::dnn_node::parser_yolov2::InitStride(document["stride"].GetInt());
-      }
-      if (document.HasMember("anchors_table")) {
-        std::vector<std::vector<double>> anchors_tables;
-        for(size_t i = 0; i < document["anchors_table"].Size(); i++){
-          std::vector<double> anchors_table;
-          for(size_t j = 0; j < document["anchors_table"][i].Size(); j++){
-            anchors_table.push_back(document["anchors_table"][i][j].GetDouble());
-          }
-          anchors_tables.push_back(anchors_table);
-        }
-        if (hobot::dnn_node::parser_yolov2::InitAnchorsTables(anchors_tables) < 0){
-          return -1;
-        }
-      }
-      if (document.HasMember("score_threshold")) {
-        hobot::dnn_node::parser_yolov2::score_threshold_ = document["score_threshold"].GetFloat();
-      }
-      if (document.HasMember("nms_threshold")) {
-        hobot::dnn_node::parser_yolov2::nms_threshold_ = document["nms_threshold"].GetFloat();
-      }
-      if (document.HasMember("nms_top_k")) {
-        hobot::dnn_node::parser_yolov2::nms_top_k_ = document["nms_top_k"].GetInt();
+      if (hobot::dnn_node::parser_yolov2::LoadConfig(document) < 0){
+        return -1;
       }
     } else if ("yolov3" == str_parser) {
       parser = DnnParserType::YOLOV3_PARSER;
-      if (document.HasMember("class_num")){
-        int class_num = document["class_num"].GetInt();
-        if (hobot::dnn_node::parser_yolov3::InitClassNum(class_num) < 0) {
-          return -1;
-        }
-      } 
-      if (document.HasMember("cls_names_list")) {
-        std::string cls_name_file = document["cls_names_list"].GetString();
-        if (hobot::dnn_node::parser_yolov3::InitClassNames(cls_name_file) < 0) {
-          return -1;
-        }
-      }
-      if (document.HasMember("strides")) {
-        std::vector<int> strides;
-        for(size_t i = 0; i < document["strides"].Size(); i++){
-          strides.push_back(document["strides"][i].GetInt());
-        }
-        if (hobot::dnn_node::parser_yolov3::InitStrides(strides, model_output_count_) < 0){
-          return -1;
-        }
-      }
-      if (document.HasMember("anchors_table")) {
-        std::vector<std::vector<std::vector<double>>> anchors_tables;
-        for(size_t i = 0; i < document["anchors_table"].Size(); i++){
-          std::vector<std::vector<double>> anchors_table;
-          for(size_t j = 0; j < document["anchors_table"][i].Size(); j++){
-            std::vector<double> table;
-            for(size_t k = 0; k < document["anchors_table"][i][j].Size(); k++){
-              table.push_back(document["anchors_table"][i][j][k].GetDouble());
-            }
-            anchors_table.push_back(table);
-          }
-          anchors_tables.push_back(anchors_table);
-        }
-        if (hobot::dnn_node::parser_yolov3::InitAnchorsTables(anchors_tables, model_output_count_) < 0){
-          return -1;
-        }
-      }
-      if (document.HasMember("score_threshold")) {
-        hobot::dnn_node::parser_yolov3::score_threshold_ = document["score_threshold"].GetFloat();
-      }
-      if (document.HasMember("nms_threshold")) {
-        hobot::dnn_node::parser_yolov3::nms_threshold_ = document["nms_threshold"].GetFloat();
-      }
-      if (document.HasMember("nms_top_k")) {
-        hobot::dnn_node::parser_yolov3::nms_top_k_ = document["nms_top_k"].GetInt();
+      if (hobot::dnn_node::parser_yolov3::LoadConfig(document) < 0){
+        return -1;
       }
     } else if ("yolov5" == str_parser) {
       parser = DnnParserType::YOLOV5_PARSER;
-      if (document.HasMember("class_num")){
-        int class_num = document["class_num"].GetInt();
-        if (hobot::dnn_node::parser_yolov5::InitClassNum(class_num) < 0) {
-          return -1;
-        }
-      } 
-      if (document.HasMember("cls_names_list")) {
-        std::string cls_name_file = document["cls_names_list"].GetString();
-        if (hobot::dnn_node::parser_yolov5::InitClassNames(cls_name_file) < 0) {
-          return -1;
-        }
-      }
-      if (document.HasMember("strides")) {
-        std::vector<int> strides;
-        for(size_t i = 0; i < document["strides"].Size(); i++){
-          strides.push_back(document["strides"][i].GetInt());
-        }
-        if (hobot::dnn_node::parser_yolov5::InitStrides(strides, model_output_count_) < 0){
-          return -1;
-        }
-      }
-      if (document.HasMember("anchors_table")) {
-        std::vector<std::vector<std::vector<double>>> anchors_tables;
-        for(size_t i = 0; i < document["anchors_table"].Size(); i++){
-          std::vector<std::vector<double>> anchors_table;
-          for(size_t j = 0; j < document["anchors_table"][i].Size(); j++){
-            std::vector<double> table;
-            for(size_t k = 0; k < document["anchors_table"][i][j].Size(); k++){
-              table.push_back(document["anchors_table"][i][j][k].GetDouble());
-            }
-            anchors_table.push_back(table);
-          }
-          anchors_tables.push_back(anchors_table);
-        }
-        if (hobot::dnn_node::parser_yolov5::InitAnchorsTables(anchors_tables, model_output_count_) < 0){
-          return -1;
-        }
-      }
-      if (document.HasMember("score_threshold")) {
-        hobot::dnn_node::parser_yolov5::score_threshold_ = document["score_threshold"].GetFloat();
-      }
-      if (document.HasMember("nms_threshold")) {
-        hobot::dnn_node::parser_yolov5::nms_threshold_ = document["nms_threshold"].GetFloat();
-      }
-      if (document.HasMember("nms_top_k")) {
-        hobot::dnn_node::parser_yolov5::nms_top_k_ = document["nms_top_k"].GetInt();
+      if (hobot::dnn_node::parser_yolov5::LoadConfig(document) < 0){
+        return -1;
       }
     } else if ("classification" == str_parser) {
       parser = DnnParserType::CLASSIFICATION_PARSER;
@@ -425,35 +300,8 @@ int DnnExampleNode::LoadConfig() {
       }
     } else if ("fcos" == str_parser) {
       parser = DnnParserType::FCOS_PARSER;
-      if (document.HasMember("class_num")){
-        int class_num = document["class_num"].GetInt();
-        if (hobot::dnn_node::parser_fcos::InitClassNum(class_num) < 0) {
-          return -1;
-        }
-      } 
-      if (document.HasMember("cls_names_list")) {
-        std::string cls_name_file = document["cls_names_list"].GetString();
-        if (hobot::dnn_node::parser_fcos::InitClassNames(cls_name_file) < 0) {
-          return -1;
-        }
-      }
-      if (document.HasMember("strides")) {
-        std::vector<int> strides;
-        for(size_t i = 0; i < document["strides"].Size(); i++){
-          strides.push_back(document["strides"][i].GetInt());
-        }
-        if (hobot::dnn_node::parser_fcos::InitStrides(strides, model_output_count_) < 0){
-          return -1;
-        }
-      }
-      if (document.HasMember("score_threshold")) {
-        hobot::dnn_node::parser_fcos::score_threshold_ = document["score_threshold"].GetFloat();
-      }
-      if (document.HasMember("nms_threshold")) {
-        hobot::dnn_node::parser_fcos::nms_threshold_ = document["nms_threshold"].GetFloat();
-      }
-      if (document.HasMember("nms_top_k")) {
-        hobot::dnn_node::parser_fcos::nms_top_k_ = document["nms_top_k"].GetInt();
+      if (hobot::dnn_node::parser_fcos::LoadConfig(document) < 0){
+        return -1;
       }
     } else if ("unet" == str_parser) {
       parser = DnnParserType::UNET_PARSER;

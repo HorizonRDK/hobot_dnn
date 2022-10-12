@@ -20,6 +20,8 @@
 #include <utility>
 #include <vector>
 
+#include "rapidjson/document.h"
+
 #include "dnn/hb_dnn_ext.h"
 #include "dnn_node/dnn_node_data.h"
 #include "dnn_node/util/output_parser/perception_common.h"
@@ -37,14 +39,7 @@ float score_threshold_ = 0.3;
 float nms_threshold_ = 0.45;
 int nms_top_k_ = 500;
 
-int InitClassNum(const int &class_num);
-
-int InitClassNames(const std::string &cls_name_file);
-
-int InitStrides(const std::vector<int> &strides, const int &model_output_count);
-
-int InitAnchorsTables(const std::vector<std::vector<std::vector<double>>> &anchors_tables, 
-                      const int &model_output_count);
+int LoadConfig(rapidjson::Document &document);
 
 int32_t Parse(
     const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output,

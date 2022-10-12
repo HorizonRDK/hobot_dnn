@@ -18,7 +18,6 @@
 
 #include "dnn_node/util/output_parser/detection/nms.h"
 #include "dnn_node/util/output_parser/utils.h"
-#include "rapidjson/document.h"
 #include "rclcpp/rclcpp.hpp"
 
 namespace hobot {
@@ -154,6 +153,55 @@ int InitAnchorsTables(const std::vector<std::vector<double>> &anchors_tables){
     yolo2_config_.anchors_table.push_back(table);
   }
   return 0;
+}
+
+int LoadConfig(rapidjson::Document &document) {
+  int model_output_count = 0;
+  if (document.HasMember("model_output_count")) {
+    model_output_count = document["model_output_count"].GetInt();
+    if (model_output_count <= 0){
+      RCLCPP_ERROR(rclcpp::get_logger("Yolo2_detection_parser"),
+              "model_output_count = %d <= 0 is not allowed", model_output_count);
+      return -1;
+    }
+  }
+  if (document.HasMember("class_num")){
+    int class_num = document["class_num"].GetInt();
+    if (InitClassNum(class_num) < 0) {
+      return -1;
+    }
+  } 
+  if (document.HasMember("cls_names_list")) {
+    std::string cls_name_file = document["cls_names_list"].GetString();
+    if (InitClassNames(cls_name_file) < 0) {
+      return -1;
+    }
+  }
+  if (document.HasMember("stride")) {
+    InitStride(document["stride"].GetInt());
+  }
+  if (document.HasMember("anchors_table")) {
+    std::vector<std::vector<double>> anchors_tables;
+    for(size_t i = 0; i < document["anchors_table"].Size(); i++){
+      std::vector<double> anchors_table;
+      for(size_t j = 0; j < document["anchors_table"][i].Size(); j++){
+        anchors_table.push_back(document["anchors_table"][i][j].GetDouble());
+      }
+      anchors_tables.push_back(anchors_table);
+    }
+    if (InitAnchorsTables(anchors_tables) < 0){
+      return -1;
+    }
+  }
+  if (document.HasMember("score_threshold")) {
+    score_threshold_ = document["score_threshold"].GetFloat();
+  }
+  if (document.HasMember("nms_threshold")) {
+    nms_threshold_ = document["nms_threshold"].GetFloat();
+  }
+  if (document.HasMember("nms_top_k")) {
+    nms_top_k_ = document["nms_top_k"].GetInt();
+  }
 }
 
 int32_t Parse(
