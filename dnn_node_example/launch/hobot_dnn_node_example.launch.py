@@ -77,6 +77,9 @@ def generate_launch_description():
     image_height_launch_arg = DeclareLaunchArgument(
         "image_height", default_value=TextSubstitution(text="544")
     )
+    msg_pub_topic_name_launch_arg = DeclareLaunchArgument(
+        "msg_pub_topic_name", default_value=TextSubstitution(text="hobot_dnn_detection")
+    )
 
     # mipi cam图片发布pkg
     mipi_node = Node(
@@ -152,7 +155,7 @@ def generate_launch_description():
             {"dump_render_img": LaunchConfiguration('dump_render_img')},
             {"feed_type": 1},
             {"is_shared_mem_sub": 1},
-            {"msg_pub_topic_name": "hobot_dnn_detection"}
+            {"msg_pub_topic_name": LaunchConfiguration("msg_pub_topic_name")}
         ],
         arguments=['--ros-args', '--log-level', 'warn']
     )
@@ -165,7 +168,7 @@ def generate_launch_description():
         parameters=[
             {"image_topic": "/image"},
             {"image_type": "mjpeg"},
-            {"smart_topic": "/hobot_dnn_detection"}
+            {"smart_topic": LaunchConfiguration("msg_pub_topic_name")}
         ],
         arguments=['--ros-args', '--log-level', 'error']
     )
@@ -194,6 +197,7 @@ def generate_launch_description():
             dump_render_launch_arg,
             image_width_launch_arg,
             image_height_launch_arg,
+            msg_pub_topic_name_launch_arg,
             # 图片发布pkg
             cam_node,
             # 图片编解码&发布pkg
@@ -210,6 +214,7 @@ def generate_launch_description():
             dump_render_launch_arg,
             image_width_launch_arg,
             image_height_launch_arg,
+            msg_pub_topic_name_launch_arg,
             # 图片发布pkg
             cam_node,
             # 图片编解码&发布pkg
