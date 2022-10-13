@@ -6,7 +6,7 @@ tros_1.1.3 (2022-10-13)
 2. 删除cv_bridge编译宏控制，默认使用cv_bridge。
 3. 删除同步或异步推理模式配置项is_sync_mode，使用效率更高的异步推理模式。
 4. 更新yolov2、yolov3、yolov5、fcos算法参数可外部配置方式。
-5. 拓展launch文件配置接口
+5. 拓展launch文件配置接口"msg_pub_topic_name"：支持自定义ai_msg
 
 
 hhp_1.0.6 (2022-08-31)
