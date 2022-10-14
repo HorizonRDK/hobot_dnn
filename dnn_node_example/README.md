@@ -21,22 +21,6 @@ ros package：
 - ai_msgs
 - hobot_cv
 
-其中cv_bridge为ROS开源的package，需要手动安装，具体安装方法：
-
-```cpp
-# 方法1，直接使用apt安装，以cv_bridge安装举例
-sudo apt-get install ros-foxy-cv-bridge -y
-
-# 方法2，使用rosdep检查并自动安装pkg编译的依赖项
-# 安装ros pkg依赖下载⼯具rosdep
-sudo apt-get install python3-pip
-sudo pip install rosdep
-sudo rosdep init
-rosdep update
-# 在ros的⼯程路径下执⾏安装依赖，需要指定pkg所在路径。默认为所有pkg安装依赖，也可以指定为某个pkg安装依赖
-rosdep install -i --from-path . --rosdistro foxy -y
-```
-
 hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图片传输，hbm_img_msgs pkg定义在hobot_msgs中，因此如果使用shared mem进行图片传输，需要依赖此pkg。
 
 ## 开发环境
@@ -52,13 +36,7 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 
 ### 编译选项
 
-1、CV_BRIDGE_PKG
-
-- cv_bridge pkg依赖的使能开关，默认关闭（OFF），编译时使用-DCV_BRIDGE_PKG=ON命令打开。
-- 如果打开，编译和运行会依赖cv_bridge pkg，支持使用订阅到的rgb8, bgr8和nv12格式图片进行模型推理。
-- 如果关闭，编译和运行不依赖cv_bridge pkg，只支持使用订阅到的nv12格式图片进行模型推理。
-
-2、SHARED_MEM
+1、SHARED_MEM
 
 - shared mem（共享内存传输）使能开关，默认打开（ON），编译时使用-DSHARED_MEM=OFF命令关闭。
 - 如果打开，编译和运行会依赖hbm_img_msgs pkg，并且需要使用tros进行编译。
@@ -73,12 +51,10 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 - 当前编译终端已设置TogetherROS环境变量：`source PATH/setup.bash`。其中PATH为TogetherROS的安装路径。
 - 已安装ROS2编译工具colcon。安装的ROS不包含编译工具colcon，需要手动安装colcon。colcon安装命令：`pip install -U colcon-common-extensions`
 - 已编译dnn node package
-- 已安装cv_bridge package（安装方法见Dependency部分）
 
 2、编译
 
-- 编译命令：`colcon build --packages-select dnn_node_example --cmake-args -DCV_BRIDGE_PKG=ON -DSHARED_MEM=OFF`
-- 编译和运行会依赖cv_bridge pkg，不使用shared mem通信方式。支持使用订阅到的rgb8, bgr8和nv12格式图片进行模型推理。
+- 编译命令：`colcon build --packages-select dnn_node_example`
 
 ### docker交叉编译
 
@@ -105,7 +81,7 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
      -DCMAKE_TOOLCHAIN_FILE=`pwd`/robot_dev_config/aarch64_toolchainfile.cmake
   ```
 
-- 编译选项中关闭了cv_bridge pkg依赖，打开了shared mem通信方式，只支持订阅nv12格式图片进行推理。
+- 编译选项中默认打开了shared mem通信方式。
 
 ## 注意事项
 
