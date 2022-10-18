@@ -1,7 +1,7 @@
 {
-	"model_file": "config/runtime/efficient_det/efficient_det_no_dequanti_512x512_nv12.bin",
+	"model_file": "/app/model/basic/efficient_det_no_dequanti_512x512_nv12.bin",
 	"model_name": "efficient_det_512x512_nv12",
 	"dnn_Parser": "efficient_det",
 	"model_output_count": 10,
-	"dequanti_file": "config/runtime/efficient_det/deleted_nodes_info.txt"
+	"dequanti_file": "config/efficient_det/deleted_nodes_info.txt"
 }

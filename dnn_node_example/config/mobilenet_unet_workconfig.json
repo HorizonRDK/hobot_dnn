@@ -1,5 +1,5 @@
 {
-	"model_file": "config/runtime/mobilenet_unet/mobilenet_unet_1024x2048_nv12.bin",
+	"model_file": "/app/model/basic/mobilenet_unet_1024x2048_nv12.bin",
 	"model_name": "mobilenet_unet_1024x2048_nv12",
 	"dnn_Parser": "unet",
 	"model_output_count": 1

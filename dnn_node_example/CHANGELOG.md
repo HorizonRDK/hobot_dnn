@@ -1,12 +1,13 @@
 # Changelog for package dnn_node_example
 
-tros_1.1.3 (2022-10-13)
+tros_1.1.2rc1 (2022-10-17)
 ------------------
 1. 算法后处理中使用dnn node重构后的算法输出解析方法。
 2. 删除cv_bridge编译宏控制，默认使用cv_bridge。
 3. 删除同步或异步推理模式配置项is_sync_mode，使用效率更高的异步推理模式。
 4. 更新yolov2、yolov3、yolov5、fcos算法参数可外部配置方式。
-5. 拓展launch文件配置接口"msg_pub_topic_name"：支持自定义ai_msg
+5. 支持用户通过配置launch文件中"msg_pub_topic_name"成员，指定发布的AI消息topic。
+6. 使用板端安装在/app/model/basic/路径下的模型文件。
 
 
 hhp_1.0.6 (2022-08-31)

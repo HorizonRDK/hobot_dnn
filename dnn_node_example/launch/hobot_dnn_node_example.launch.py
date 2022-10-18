@@ -45,24 +45,6 @@ def generate_launch_description():
     print("cp_cmd is ", cp_cmd)
     os.system(cp_cmd)
 
-    # benchmark runtime中模型太大，创建一个软连接
-    if os.access("config/runtime", os.F_OK):
-        print("runtime path is existing")
-    else:
-        print("runtime path is not existing, creat soft link.")
-        # 创建runtime软连接
-        dnn_benchmark_example_path = os.path.join(
-            get_package_prefix('dnn_benchmark_example'),
-            "lib/dnn_benchmark_example")
-        print("dnn_benchmark_example_path is ", dnn_benchmark_example_path)
-        link_cmd = "ln -s " + dnn_benchmark_example_path + "/config/runtime config/runtime"
-        print("link_cmd is ", link_cmd)
-        os.system(link_cmd)
-        # 等待一段时间，避免link生效前被访问
-        time.sleep(0.5)
-        os.system("ls config")
-        os.system("ls config/runtime")
-
 
     # args that can be set from the command line or a default will be used
     config_file_launch_arg = DeclareLaunchArgument(

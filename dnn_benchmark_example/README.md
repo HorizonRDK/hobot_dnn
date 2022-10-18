@@ -102,8 +102,8 @@ ros2 run dnn_benchmark_example dnn_benchmark_example --ros-args --log-level warn
 ros2 run dnn_benchmark_example dnn_benchmark_example --ros-args --log-level warn -p show_fps_log:=0 -p statistic_cycle:=1000
 
 # 更换评测模型
-dnn_benchmark_example在config/runtime下提供了一些测试模型，在运行时通过-p选项更换评测模型。如果用户需要评测自己的模型，将模型放在config文件夹下，同样将模型文件路径和模型名通过-p重新配置即可。例如，对fcos模型进行评测，通过配置参数-p model_file_name:=config/runtime/fcos/fcos_512x512_nv12.bin更改模型文件，-p model_name:=fcos_512x512_nv12更改模型名称，-p statistic_cycle:=50将处理周期图片个数更改为50个(即评测fcos_512x512_nv12.bin模型，每处理50张图片输出一次性能指标)
-ros2 run dnn_benchmark_example dnn_benchmark_example --ros-args --log-level warn -p model_file_name:=config/runtime/fcos/fcos_512x512_nv12.bin -p model_name:=fcos_512x512_nv12 -p statistic_cycle:=50
+dnn_benchmark_example的测试模型在X3派开发板的/app/model/basic路径下，通过`apt install hobot_models_basic_1.0.0_arm64.deb`命令安装，在运行时通过-p选项更换评测模型。如果用户需要评测自己的模型，将模型放在config文件夹下，同样将模型文件路径和模型名通过-p重新配置即可。例如，对fcos模型进行评测，通过配置参数-p model_file_name:=/app/model/basic/fcos_512x512_nv12.bin更改模型文件，-p model_name:=fcos_512x512_nv12更改模型名称，-p statistic_cycle:=50将处理周期图片个数更改为50个(即评测fcos_512x512_nv12.bin模型，每处理50张图片输出一次性能指标)
+ros2 run dnn_benchmark_example dnn_benchmark_example --ros-args --log-level warn -p model_file_name:=/app/model/basic/fcos_512x512_nv12.bin -p model_name:=fcos_512x512_nv12 -p statistic_cycle:=50
 ```
 
 ## X3 yocto系统上运行
@@ -122,8 +122,8 @@ cp -r install/lib/dnn_benchmark_example/config/ .
 ./install/lib/dnn_benchmark_example/dnn_benchmark_example --ros-args --log-level warn -p show_fps_log:=0 -p statistic_cycle:=1000
 
 # 更换评测模型
-dnn_benchmark_example在config/runtime下提供了一些测试模型，在运行时通过-p选项更换评测模型。如果用户需要评测自己的模型，将模型放在config文件夹下，同样将模型文件路径和模型名通过-p重新配置即可。例如，对fcos模型进行评测，通过配置参数-p model_file_name:=config/runtime/fcos/fcos_512x512_nv12.bin更改模型文件，-p model_name:=fcos_512x512_nv12更改模型名称，-p statistic_cycle:=50将处理周期图片个数更改为50个(即评测fcos_512x512_nv12.bin模型，每处理50张图片输出一次性能指标)
-./install/lib/dnn_benchmark_example/dnn_benchmark_example --ros-args --log-level warn -p model_file_name:=config/runtime/fcos/fcos_512x512_nv12.bin -p model_name:=fcos_512x512_nv12 -p statistic_cycle:=50
+dnn_benchmark_example的测试模型在X3派开发板的/app/model/basic路径下，通过`apt install hobot_models_basic_1.0.0_arm64.deb`命令安装，在运行时通过-p选项更换评测模型。如果用户需要评测自己的模型，将模型放在config文件夹下，同样将模型文件路径和模型名通过-p重新配置即可。例如，对fcos模型进行评测，通过配置参数-p model_file_name:=/app/model/basic/fcos_512x512_nv12.bin更改模型文件，-p model_name:=fcos_512x512_nv12更改模型名称，-p statistic_cycle:=50将处理周期图片个数更改为50个(即评测fcos_512x512_nv12.bin模型，每处理50张图片输出一次性能指标)
+./install/lib/dnn_benchmark_example/dnn_benchmark_example --ros-args --log-level warn -p model_file_name:=/app/model/basic/fcos_512x512_nv12.bin -p model_name:=fcos_512x512_nv12 -p statistic_cycle:=50
 ```
 
 ## 注意事项
