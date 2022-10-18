@@ -82,6 +82,11 @@ int DnnNodeImpl::ModelInit() {
                  "Load model: %s fail, ret: %d",
                  dnn_node_para_ptr_->model_file.c_str(),
                  ret);
+    if (hobot::easy_dnn::DNN_CAN_NOT_OPEN_FILE == ret) {
+      RCLCPP_ERROR(rclcpp::get_logger("dnn"),
+                  "Model file %s is not exist, please install models with apt install!",
+                  dnn_node_para_ptr_->model_file.c_str());
+    }
     return ret;
   }
 

@@ -112,7 +112,7 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 
 ## 运行
 
-- dnn_node_example使用到的模型，保存在dnn_benchmark_example/config/runtime/下，运行时需要将runtime文件夹拷贝到dnn_node_example/config中，或在配置文件中重新指定模型路径。
+- dnn_node_example使用到的模型在/app/model/basic下。
 - 编译成功后，将生成的install路径拷贝到地平线X3开发板上（如果是在X3上编译，忽略拷贝步骤），并执行如下命令运行。
 
 ## X3 Ubuntu系统上运行
@@ -123,8 +123,6 @@ source ./install/local_setup.bash
 # config中为example使用的模型，回灌使用的本地图片
 # 根据实际安装路径进行拷贝（docker中的安装路径为install/lib/dnn_node_example/config/，拷贝命令为cp -r install/lib/dnn_node_example/config/ .）。
 cp -r install/dnn_node_example/lib/dnn_node_example/config/ .
-# 将dnn_node_example使用到的模型文件拷贝到config下。
-cp -r PATH/lib/dnn_benchmark_example/config/runtime/ ./config (其中PATH为TogetherROS的安装路径)
 
 # 运行模式1：
 使用本地jpg格式图片通过同步模式进行回灌预测，并存储渲染后的图片
@@ -150,8 +148,6 @@ source ./install/setup.bash
 # config中为示例使用的模型，根据实际安装路径进行拷贝
 # 如果是板端编译（无--merge-install编译选项），拷贝命令为cp -r install/PKG_NAME/lib/PKG_NAME/config/ .，其中PKG_NAME为具体的package名。
 cp -r install/lib/dnn_node_example/config/ .
-# 将dnn_node_example使用到的模型文件拷贝到config下。
-cp -r install/lib/dnn_benchmark_example/config/runtime/ ./config
 
 # 启动launch文件，使用F37 sensor通过shared mem方式发布nv12格式图片
 # 默认运行fcos算法，启动命令中使用参数config_file切换算法，如使用unet算法config_file:="config/mobilenet_unet_workconfig.json"
@@ -166,9 +162,6 @@ export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:./install/lib/
 
 # config中为example使用的模型，回灌使用的本地图片
 cp -r install/lib/dnn_node_example/config/ .
-
-# 将dnn_node_example使用到的模型文件拷贝到config下。
-cp -r PATH/lib/dnn_benchmark_example/config/runtime/ ./config (其中PATH为TogetherROS的安装路径)
 
 # 运行模式1：使用本地jpg格式图片通过同步模式进行回灌预测，并存储渲染后的图片
 ./install/lib/dnn_node_example/example --ros-args -p  feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1
@@ -226,7 +219,7 @@ log：
  image_type: 0
  dump_render_img: 1
  is_shared_mem_sub: 0
- model_file_name: config/runtime/yolov3/yolov3_416x416_nv12.bin
+ model_file_name:  /app/model/basic/yolov3_416x416_nv12.bin
  model_name: yolov3_416x416_nv12
 [INFO] [1684542863.149125191] [dnn]: Node init.
 [INFO] [1684542863.149228733] [example]: Set node para.
