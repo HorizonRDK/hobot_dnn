@@ -430,6 +430,7 @@ int DnnExampleNode::PostProcess(
     RCLCPP_INFO(rclcpp::get_logger("PostProcessBase"), "%s", ss.str().c_str());
 
     ai_msgs::msg::Roi roi;
+    roi.set__type(rect.class_name);
     roi.rect.set__x_offset(rect.bbox.xmin);
     roi.rect.set__y_offset(rect.bbox.ymin);
     roi.rect.set__width(rect.bbox.xmax - rect.bbox.xmin);
