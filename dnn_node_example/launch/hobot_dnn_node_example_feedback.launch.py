@@ -25,7 +25,7 @@ from ament_index_python.packages import get_package_prefix
 
 def generate_launch_description():
     config_file_launch_arg = DeclareLaunchArgument(
-        "config_file", default_value=TextSubstitution(text="config/multitask_body_kps_960x544.json")
+        "config_file", default_value=TextSubstitution(text="config/fcosworkconfig.json")
     )
 
     img_file_launch_arg = DeclareLaunchArgument(
