@@ -66,7 +66,30 @@ struct SSDConfig {
      "diningtable", "dog",     "horse", "motorbike", "person",
      "pottedplant", "sheep",   "sofa",  "train",     "tvmonitor"]
  */
-extern SSDConfig default_ssd_config;
+SSDConfig default_ssd_config = {
+    {0.1, 0.1, 0.2, 0.2},
+    {0, 0, 0, 0},
+    {0.5, 0.5},
+    {15, 30, 60, 100, 150, 300},
+    {{60, -1}, {105, 150}, {150, 195}, {195, 240}, {240, 285}, {285, 300}},
+    {{2, 0.5, 0, 0},
+     {2, 0.5, 3, 1.0 / 3},
+     {2, 0.5, 3, 1.0 / 3},
+     {2, 0.5, 3, 1.0 / 3},
+     {2, 0.5, 3, 1.0 / 3},
+     {2, 0.5, 3, 1.0 / 3}},
+    20,
+    {"aeroplane",   "bicycle", "bird",  "boaupdate", "bottle",
+     "bus",         "car",     "cat",   "chair",     "cow",
+     "diningtable", "dog",     "horse", "motorbike", "person",
+     "pottedplant", "sheep",   "sofa",  "train",     "tvmonitor"}};
+
+SSDConfig ssd_config_ = default_ssd_config;
+std::vector<std::vector<Anchor>> anchors_table_;
+float score_threshold_ = 0.25;
+float nms_threshold_ = 0.45;
+bool is_performance_ = true;
+int nms_top_k_ = 200;
 
 /**
  * Post process
@@ -89,31 +112,6 @@ int GetBboxAndScores(std::shared_ptr<DNNTensor> c_tensor,
                      std::vector<Anchor> &anchors,
                      int class_num,
                      float cut_off_threshold);
-
-SSDConfig ssd_config_ = default_ssd_config;
-std::vector<std::vector<Anchor>> anchors_table_;
-float score_threshold_ = 0.25;
-float nms_threshold_ = 0.45;
-bool is_performance_ = true;
-int nms_top_k_ = 200;
-
-SSDConfig default_ssd_config = {
-    {0.1, 0.1, 0.2, 0.2},
-    {0, 0, 0, 0},
-    {0.5, 0.5},
-    {15, 30, 60, 100, 150, 300},
-    {{60, -1}, {105, 150}, {150, 195}, {195, 240}, {240, 285}, {285, 300}},
-    {{2, 0.5, 0, 0},
-     {2, 0.5, 3, 1.0 / 3},
-     {2, 0.5, 3, 1.0 / 3},
-     {2, 0.5, 3, 1.0 / 3},
-     {2, 0.5, 3, 1.0 / 3},
-     {2, 0.5, 3, 1.0 / 3}},
-    20,
-    {"aeroplane",   "bicycle", "bird",  "boaupdate", "bottle",
-     "bus",         "car",     "cat",   "chair",     "cow",
-     "diningtable", "dog",     "horse", "motorbike", "person",
-     "pottedplant", "sheep",   "sofa",  "train",     "tvmonitor"}};
 
 int32_t Parse(
     const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output,

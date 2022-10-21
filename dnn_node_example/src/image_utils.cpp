@@ -446,6 +446,8 @@ int ImageUtils::Render(
   }
 
   if (!hasRois) {
+    RCLCPP_WARN(rclcpp::get_logger("ImageUtils"),
+                "Frame has no roi, skip the rendering");
     return 0;
   }
   std::string saving_path = "render_" + ai_msg->header.frame_id + "_" +
