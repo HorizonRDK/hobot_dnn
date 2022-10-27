@@ -22,6 +22,19 @@
 #include "implementation/implementation.hpp"
 #include "interface/interface.hpp"
 
+#include "../include/dnn_node/dnn_node_impl.h"
+
+
+namespace hobot{
+namespace dnn_node{
+  TEST(DnnNodeRunTimeFpsStat,Update){
+    DnnNodeRunTimeFpsStat dnn_test;
+    EXPECT_EQ(false,dnn_test.Update());
+  }
+}
+}
+
+
 int main(int argc, char** argv) {
   rclcpp::init(argc, argv);
   testing::InitGoogleTest(&argc, argv);
