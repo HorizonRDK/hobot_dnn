@@ -106,7 +106,7 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 | image_width        | 本地回灌nv12格式图片的宽度            | nv12格式图片必须设置 | 0                   |                                                                         |
 | image_height       | 本地回灌nv12格式图片的高度            | nv12格式图片必须设置 | 0                   |                                                                         |
 | is_shared_mem_sub  | 使用shared mem通信方式订阅图片        | 否                   | 0                   |                                                                         |
-| config_file        | 配置文件路径                          | 否                   | ""                  | 更改配置文件配置不同模型调用不同后处理算法,默认启用fasterrcnn模型后处理 |
+| config_file        | 配置文件路径                          | 否                   | ""                  | 更改配置文件配置不同模型，默认使用FCOS模型 |
 | dump_render_img    | 是否进行渲染，0：否；1：是            | 否                   | 0                   |                                                                         |
 | msg_pub_topic_name | 发布智能结果的topicname,用于web端展示 | 否                   | hobot_dnn_detection |                                                                         |
 
