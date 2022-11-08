@@ -712,55 +712,28 @@ void DnnExampleNode::RosImgProcess(
   } else if ("nv12" == img_msg->encoding) {  // nv12格式使用hobotcv resize
     if (img_msg->height != static_cast<uint32_t>(model_input_height_) ||
         img_msg->width != static_cast<uint32_t>(model_input_width_)) {
-      cv::Mat src(img_msg->height * 3 / 2,
-                  img_msg->width,
-                  CV_8UC1,
-                  (void *)(img_msg->data.data()));
-      float ratio_w = static_cast<float>(img_msg->width) /
-                      static_cast<float>(model_input_width_);
-      float ratio_h = static_cast<float>(img_msg->height) /
-                      static_cast<float>(model_input_height_);
-      float dst_ratio = std::max(ratio_w, ratio_h);
-      int resized_width, resized_height;
-      //计算出等比例缩放后的宽高
-      if (dst_ratio == ratio_w) {
-        resized_width = model_input_width_;
-        resized_height = static_cast<float>(img_msg->height) / dst_ratio;
-      } else if (dst_ratio == ratio_h) {
-        resized_width = static_cast<float>(img_msg->width) / dst_ratio;
-        resized_height = model_input_height_;
-      }
-      // hobot_cv要求输出宽度为16的倍数
-      int remain = resized_width % 16;
-      if (remain != 0) {  //向下取16倍数，重新计算缩放系数
-        resized_width -= remain;
-        dst_ratio = static_cast<float>(img_msg->width) / resized_width;
-        resized_height = static_cast<float>(img_msg->height) / dst_ratio;
-      }
-      //高度向下取偶数
-      resized_height =
-          resized_height % 2 == 0 ? resized_height : resized_height - 1;
-      dnn_output->ratio = dst_ratio;
-      cv::Mat dst;
-      auto cv_ret = hobot_cv::hobotcv_resize(src,
-                                             img_msg->height,
-                                             img_msg->width,
-                                             dst,
-                                             resized_height,
-                                             resized_width);
-      if (cv_ret != 0) {
-        RCLCPP_ERROR(rclcpp::get_logger("example"), "hobot_cv resize failed!");
+      // 需要做resize处理
+      cv::Mat out_img;
+      if (ResizeNV12Img(reinterpret_cast<const char *>(img_msg->data.data()),
+                        img_msg->height,
+                        img_msg->width,
+                        model_input_height_,
+                        model_input_width_,
+                        out_img,
+                        dnn_output->ratio) < 0) {
+        RCLCPP_ERROR(rclcpp::get_logger("dnn_node_example"),
+                     "Resize nv12 img fail!");
         return;
       }
-      pyramid = ImageUtils::GetNV12PyramidFromNV12Mat(dst,
-                                                      model_input_height_,
-                                                      model_input_width_,
-                                                      dnn_output->padding_l,
-                                                      dnn_output->padding_t);
-      dnn_output->padding_r =
-          model_input_width_ - resized_width - dnn_output->padding_l;
-      dnn_output->padding_b =
-          model_input_height_ - resized_height - dnn_output->padding_t;
+
+      uint32_t out_img_width = out_img.cols;
+      uint32_t out_img_height = out_img.rows * 2 / 3;
+      pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromNV12Img(
+          reinterpret_cast<const char *>(out_img.data),
+          out_img_height,
+          out_img_width,
+          model_input_height_,
+          model_input_width_);
     } else {  //不需要进行resize
       pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromNV12Img(
           reinterpret_cast<const char *>(img_msg->data.data()),
@@ -854,22 +827,19 @@ void DnnExampleNode::SharedMemImgProcess(
                         model_input_width_,
                         out_img,
                         dnn_output->ratio) < 0) {
-        RCLCPP_ERROR(rclcpp::get_logger("dnn_node_sample"),
+        RCLCPP_ERROR(rclcpp::get_logger("dnn_node_example"),
                      "Resize nv12 img fail!");
         return;
       }
 
       uint32_t out_img_width = out_img.cols;
       uint32_t out_img_height = out_img.rows * 2 / 3;
-      pyramid = ImageUtils::GetNV12PyramidFromNV12Mat(out_img,
-                                                      model_input_height_,
-                                                      model_input_width_,
-                                                      dnn_output->padding_l,
-                                                      dnn_output->padding_t);
-      dnn_output->padding_r =
-          model_input_width_ - out_img_width - dnn_output->padding_l;
-      dnn_output->padding_b =
-          model_input_height_ - out_img_height - dnn_output->padding_t;
+      pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromNV12Img(
+          reinterpret_cast<const char *>(out_img.data),
+          out_img_height,
+          out_img_width,
+          model_input_height_,
+          model_input_width_);
     } else {
       //不需要进行resize
       pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromNV12Img(

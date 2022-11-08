@@ -62,11 +62,11 @@ enum class DnnParserType {
 // dnn node输出数据类型
 struct DnnExampleOutput : public DnnNodeOutput {
   // resize参数，用于算法检测结果的映射
-  float ratio = 1.0;       //缩放比例系数，无需缩放为1
-  uint32_t padding_l = 0;  //图片左边padding空相素个数
-  uint32_t padding_r = 0;  //图片右边padding空相素个数
-  uint32_t padding_t = 0;  //图片上边padding空相素个数
-  uint32_t padding_b = 0;  //图片下边padding空相素个数
+  float ratio = 1.0;  //缩放比例系数，无需缩放为1
+  int padding_l = 0;  //图片左边padding空相素个数
+  int padding_r = 0;  //图片右边padding空相素个数
+  int padding_t = 0;  //图片上边padding空相素个数
+  int padding_b = 0;  //图片下边padding空相素个数
 
   // 算法推理使用的图像数据，用于本地渲染使用
   std::shared_ptr<hobot::easy_dnn::NV12PyramidInput> pyramid = nullptr;
