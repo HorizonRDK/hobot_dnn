@@ -124,12 +124,12 @@ DnnExampleNode::DnnExampleNode(const std::string &node_name,
   {
     std::stringstream ss;
     ss << "Parameter:"
-      << "\n feed_type(0:local, 1:sub): " << feed_type_ << "\n image: " << image_
-      << "\n image_type: " << image_type_
-      << "\n dump_render_img: " << dump_render_img_
-      << "\n is_shared_mem_sub: " << is_shared_mem_sub_
-      << "\n config_file: " << config_file
-      << "\n msg_pub_topic_name_: " << msg_pub_topic_name_;
+       << "\n feed_type(0:local, 1:sub): " << feed_type_
+       << "\n image: " << image_ << "\n image_type: " << image_type_
+       << "\n dump_render_img: " << dump_render_img_
+       << "\n is_shared_mem_sub: " << is_shared_mem_sub_
+       << "\n config_file: " << config_file
+       << "\n msg_pub_topic_name_: " << msg_pub_topic_name_;
     RCLCPP_WARN(rclcpp::get_logger("example"), "%s", ss.str().c_str());
   }
   // 加载配置文件config_file
@@ -141,8 +141,8 @@ DnnExampleNode::DnnExampleNode(const std::string &node_name,
   {
     std::stringstream ss;
     ss << "Parameter:"
-      << "\n model_file_name: " << model_file_name_
-      << "\n model_name: " << model_name_;
+       << "\n model_file_name: " << model_file_name_
+       << "\n model_name: " << model_name_;
     RCLCPP_WARN(rclcpp::get_logger("example"), "%s", ss.str().c_str());
   }
 
@@ -247,7 +247,7 @@ int DnnExampleNode::LoadConfig() {
   if (document.HasMember("model_name")) {
     model_name_ = document["model_name"].GetString();
   }
-  
+
   int ret = 0;
   // 更新parser，后处理中根据parser类型选择解析方法
   if (document.HasMember("dnn_Parser")) {
@@ -296,8 +296,8 @@ int DnnExampleNode::LoadConfig() {
     }
     if (ret < 0) {
       RCLCPP_ERROR(rclcpp::get_logger("example"),
-                  "Load %s Parser config file fail",
-                  str_parser.data());
+                   "Load %s Parser config file fail",
+                   str_parser.data());
       return -1;
     }
   }
@@ -861,12 +861,15 @@ void DnnExampleNode::SharedMemImgProcess(
 
       uint32_t out_img_width = out_img.cols;
       uint32_t out_img_height = out_img.rows * 2 / 3;
-      pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromNV12Img(
-          reinterpret_cast<const char *>(out_img.data),
-          out_img_height,
-          out_img_width,
-          model_input_height_,
-          model_input_width_);
+      pyramid = ImageUtils::GetNV12PyramidFromNV12Mat(out_img,
+                                                      model_input_height_,
+                                                      model_input_width_,
+                                                      dnn_output->padding_l,
+                                                      dnn_output->padding_t);
+      dnn_output->padding_r =
+          model_input_width_ - out_img_width - dnn_output->padding_l;
+      dnn_output->padding_b =
+          model_input_height_ - out_img_height - dnn_output->padding_t;
     } else {
       //不需要进行resize
       pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromNV12Img(
