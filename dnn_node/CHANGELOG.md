@@ -1,5 +1,9 @@
 # Changelog for package dnn_node
 
+tros_1.1.3 (2022-11-09)
+------------------
+1. 修复GetNV12PyramidFromNV12Img接口申请内存未初始化导致的图片padding乱码问题。
+
 tros_1.1.2rc2 (2022-10-26)
 ------------------
 1. 修复内置的MobileNet_SSD目标检测算法输出解析方法使用参数错误的问题。

@@ -12,33 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <iostream>
+#include "util/image_proc.h"
+
+#include <algorithm>
+#include <cstring>
 #include <fstream>
+#include <iostream>
+#include <memory>
 #include <string>
 #include <vector>
-#include <algorithm>
-#include <memory>
-#include <cstring>
 
-#include "util/image_proc.h"
 #include "dnn/hb_sys.h"
 
 namespace hobot {
 namespace dnn_node {
 
 std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromNV12Img(
-    const char* in_img_data,
-    const int& in_img_height,
-    const int& in_img_width,
-    const int& scaled_img_height,
-    const int& scaled_img_width) {
+    const char *in_img_data,
+    const int &in_img_height,
+    const int &in_img_width,
+    const int &scaled_img_height,
+    const int &scaled_img_width) {
   auto *y = new hbSysMem;
   auto *uv = new hbSysMem;
   auto w_stride = ALIGN_16(scaled_img_width);
   hbSysAllocCachedMem(y, scaled_img_height * w_stride);
   hbSysAllocCachedMem(uv, scaled_img_height / 2 * w_stride);
+  //内存初始化
+  memset(y->virAddr, 0, scaled_img_height * w_stride);
+  memset(uv->virAddr, 0, scaled_img_height / 2 * w_stride);
 
-  const uint8_t *data = reinterpret_cast<const uint8_t*>(in_img_data);
+  const uint8_t *data = reinterpret_cast<const uint8_t *>(in_img_data);
   auto *hb_y_addr = reinterpret_cast<uint8_t *>(y->virAddr);
   auto *hb_uv_addr = reinterpret_cast<uint8_t *>(uv->virAddr);
   int copy_w = std::min(in_img_width, scaled_img_width);
@@ -70,27 +74,27 @@ std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromNV12Img(
   pyramid->uv_vir_addr = uv->virAddr;
   pyramid->uv_phy_addr = uv->phyAddr;
   pyramid->uv_stride = w_stride;
-  return std::shared_ptr<NV12PyramidInput>(
-      pyramid, [y, uv](NV12PyramidInput *pyramid) {
-        // Release memory after deletion
-        hbSysFreeMem(y);
-        hbSysFreeMem(uv);
-        delete y;
-        delete uv;
-        delete pyramid;
-      });
+  return std::shared_ptr<NV12PyramidInput>(pyramid,
+                                           [y, uv](NV12PyramidInput *pyramid) {
+                                             // Release memory after deletion
+                                             hbSysFreeMem(y);
+                                             hbSysFreeMem(uv);
+                                             delete y;
+                                             delete uv;
+                                             delete pyramid;
+                                           });
 }
 
 std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromNV12Img(
-    const char* in_img_data,
-    const int& in_img_height,
-    const int& in_img_width,
-    const int& scaled_img_height,
-    const int& scaled_img_width,
-    int& padding_l,
-    int& padding_t,
-    int& padding_r,
-    int& padding_b) {
+    const char *in_img_data,
+    const int &in_img_height,
+    const int &in_img_width,
+    const int &scaled_img_height,
+    const int &scaled_img_width,
+    int &padding_l,
+    int &padding_t,
+    int &padding_r,
+    int &padding_b) {
   // 1 要求输入图片分辨率小于模型输入分辨率
   if (in_img_width > scaled_img_width && in_img_height > scaled_img_height) {
     return nullptr;
@@ -125,7 +129,7 @@ std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromNV12Img(
   memset(uv->virAddr, 0, scaled_img_height / 2 * w_stride);
 
   // 4 拷贝数据并padding
-  const uint8_t *data = reinterpret_cast<const uint8_t*>(in_img_data);
+  const uint8_t *data = reinterpret_cast<const uint8_t *>(in_img_data);
   auto *hb_y_addr =
       reinterpret_cast<uint8_t *>(y->virAddr) + padding_t * w_stride;
   auto *hb_uv_addr =
