@@ -1,8 +1,8 @@
 # Changelog for package dnn_node
 
-tros_1.1.2rc3 (2022-11-09)
+tros_1.1.3 (2022-11-09)
 ------------------
-1. 修复生成NV12PyramidInput数据图片乱码问题
+1. 修复GetNV12PyramidFromNV12Img接口申请内存未初始化导致的图片padding乱码问题。
 
 tros_1.1.2rc2 (2022-10-26)
 ------------------

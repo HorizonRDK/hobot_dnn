@@ -1,8 +1,8 @@
 # Changelog for package dnn_node_example
 
-tros_1.1.2rc3 (2022-11-09)
+tros_1.1.3 (2022-11-09)
 ------------------
-1. 删除接口GetNV12PyramidFromNV12Mat，统一使用dnn_node内部接口获取NV12PyramidInput数据。
+1. 删除接口GetNV12PyramidFromNV12Mat，统一使用dnn_node内部GetNV12PyramidFromNV12Img接口获取NV12PyramidInput数据。
 2. 前处理中统一将图片padding到左上方。
 
 
