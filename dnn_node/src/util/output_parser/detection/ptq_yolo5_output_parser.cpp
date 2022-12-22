@@ -252,6 +252,8 @@ int LoadConfig(const rapidjson::Document &document) {
   if (document.HasMember("nms_top_k")) {
     nms_top_k_ = document["nms_top_k"].GetInt();
   }
+
+  return 0;
 }
 
 int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &output_tensors,
