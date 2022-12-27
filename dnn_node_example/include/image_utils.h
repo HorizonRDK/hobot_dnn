@@ -65,9 +65,6 @@ class ImageUtils {
 
   static int32_t BGRToNv12(cv::Mat &bgr_mat, cv::Mat &img_nv12);
 
-  static void GetNV12Tensor(std::string &image_file,
-                            std::shared_ptr<DNNTensor> &tensor);
-
   static int Render(
       const std::shared_ptr<hobot::dnn_node::NV12PyramidInput> &pyramid,
       const ai_msgs::msg::PerceptionTargets::UniquePtr &perception);

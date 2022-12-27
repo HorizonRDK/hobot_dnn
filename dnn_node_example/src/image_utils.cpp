@@ -245,58 +245,6 @@ int32_t ImageUtils::BGRToNv12(cv::Mat &bgr_mat, cv::Mat &img_nv12) {
   return 0;
 }
 
-void ImageUtils::GetNV12Tensor(std::string &image_file,
-                               std::shared_ptr<DNNTensor> &dnn_tensor) {
-  hbDNNTensorProperties properties = dnn_tensor->properties;
-  cv::Mat bgr_mat = cv::imread(image_file, cv::IMREAD_COLOR);
-  if (bgr_mat.empty()) {
-    std::cout << "image file not exist!" << std::endl;
-    return;
-  }
-
-  auto height = bgr_mat.rows;
-  auto width = bgr_mat.cols;
-
-  cv::Mat yuv_mat;
-  cv::cvtColor(bgr_mat, yuv_mat, cv::COLOR_BGR2YUV_I420);
-
-  auto *yuv = yuv_mat.ptr<uint8_t>();
-  cv::Mat img_nv12 = cv::Mat(height * 3 / 2, width, CV_8UC1);
-  auto *ynv12 = img_nv12.ptr<uint8_t>();
-
-  int uv_height = height / 2;
-  int uv_width = width / 2;
-
-  // copy y data
-  int y_size = height * width;
-  memcpy(ynv12, yuv, y_size);
-
-  // copy uv data
-  uint8_t *nv12 = ynv12 + y_size;
-  uint8_t *u_data = yuv + y_size;
-  uint8_t *v_data = u_data + uv_height * uv_width;
-
-  for (int i = 0; i < uv_width * uv_height; i++) {
-    *nv12++ = *u_data++;
-    *nv12++ = *v_data++;
-  }
-
-  uint8_t *data = img_nv12.data;
-  auto stride = properties.alignedShape.dimensionSize[3];
-  auto *y = reinterpret_cast<uint8_t *>(dnn_tensor->sysMem[0].virAddr);
-  for (int h = 0; h < height; ++h) {
-    auto *raw = y + h * stride;
-    for (int w = 0; w < width; ++w) {
-      *raw++ = *data++;
-    }
-  }
-  // Copy uv data to data1
-  auto *uv = reinterpret_cast<uint8_t *>(dnn_tensor->sysMem[1].virAddr);
-  memcpy(uv, img_nv12.data + height * width, height * width / 2);
-  hbSysFlushMem(&dnn_tensor->sysMem[0], HB_SYS_MEM_CACHE_CLEAN);
-  hbSysFlushMem(&dnn_tensor->sysMem[1], HB_SYS_MEM_CACHE_CLEAN);
-}
-
 int ImageUtils::Render(
     const std::shared_ptr<hobot::easy_dnn::NV12PyramidInput> &pyramid,
     const ai_msgs::msg::PerceptionTargets::UniquePtr &ai_msg) {
