@@ -1,5 +1,10 @@
 # Changelog for package dnn_node_example
 
+tros_1.1.4 (2022-12-27)
+------------------
+1. 删除未使用的GetNV12Tensor接口。
+
+
 tros_1.1.3 (2022-11-09)
 ------------------
 1. 删除接口GetNV12PyramidFromNV12Mat，统一使用dnn_node内部GetNV12PyramidFromNV12Img接口获取NV12PyramidInput数据。

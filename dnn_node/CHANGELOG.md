@@ -1,5 +1,9 @@
 # Changelog for package dnn_node
 
+tros_1.1.4 (2022-12-23)
+------------------
+1. 修复部分内置算法后处理中LoadConfig无返回值的问题。
+
 tros_1.1.3 (2022-11-09)
 ------------------
 1. 修复GetNV12PyramidFromNV12Img接口申请内存未初始化导致的图片padding乱码问题。

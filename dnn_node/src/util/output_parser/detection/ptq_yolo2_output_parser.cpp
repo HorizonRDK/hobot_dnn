@@ -205,6 +205,7 @@ int LoadConfig(const rapidjson::Document &document) {
   if (document.HasMember("nms_top_k")) {
     nms_top_k_ = document["nms_top_k"].GetInt();
   }
+  return 0;
 }
 
 int32_t Parse(
