@@ -17,6 +17,7 @@
 
 #include <iostream>
 #include <queue>
+#include <fstream>
 
 #include "dnn_node/util/output_parser/detection/nms.h"
 #include "dnn_node/util/output_parser/utils.h"

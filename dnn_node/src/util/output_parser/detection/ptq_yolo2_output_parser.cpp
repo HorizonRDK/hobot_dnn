@@ -15,6 +15,7 @@
 #include "dnn_node/util/output_parser/detection/ptq_yolo2_output_parser.h"
 
 #include <queue>
+#include <fstream>
 
 #include "dnn_node/util/output_parser/detection/nms.h"
 #include "dnn_node/util/output_parser/utils.h"

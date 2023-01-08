@@ -36,6 +36,29 @@ find_package(ament_cmake REQUIRED)
 # find_package(<dependency> REQUIRED)
 find_package(rclcpp REQUIRED)
 
+if(PLATFORM_X3)
+  message("build platform X3")
+  add_definitions(-DPLATFORM_X3)
+elseif(PLATFORM_J5)
+  message("build platform J5")
+  add_definitions(-DPLATFORM_J5)
+elseif(PLATFORM_X86)
+  message("build platform X86")
+  add_definitions(-DPLATFORM_X86)
+  
+  message("THIRD_PARTY is " ${THIRD_PARTY})
+  include_directories(
+    /usr/include/
+    ${THIRD_PARTY}/usr/include/
+  )
+  link_directories(
+    /lib/
+    ${THIRD_PARTY}/usr/lib/hbbpu/
+  )
+else()
+  message("invalid platform")
+endif()
+
 include_directories(include include/util/)
 include_directories(include
 ${PROJECT_SOURCE_DIR}
@@ -48,34 +71,61 @@ link_directories(
 )
 
 # Build dnn_node library
-add_library(${PROJECT_NAME} SHARED
-  src/dnn_node.cpp
-  src/dnn_node_impl.cpp
-  src/util/image_proc.cpp
-  src/util/output_parser/detection/nms.cpp
-  src/util/output_parser/utils.cpp
-  src/util/threads/threadpool.cpp
-  src/util/output_parser/detection/ptq_yolo3_darknet_output_parser.cpp
-  src/util/output_parser/detection/ptq_yolo2_output_parser.cpp
-  src/util/output_parser/detection/ptq_yolo5_output_parser.cpp
-  src/util/output_parser/detection/fasterrcnn_output_parser.cpp
-  src/util/output_parser/detection/ptq_efficientdet_output_parser.cpp
-  src/util/output_parser/detection/ptq_ssd_output_parser.cpp
-  src/util/output_parser/detection/fcos_output_parser.cpp
-  src/util/output_parser/classification/ptq_classification_output_parser.cpp
-  src/util/output_parser/segmentation/ptq_unet_output_parser.cpp
-)
+if(PLATFORM_X86)
+  add_library(${PROJECT_NAME} SHARED
+    src/dnn_node.cpp
+    src/dnn_node_impl.cpp
+    src/util/image_proc.cpp
+    src/util/output_parser/detection/nms.cpp
+    src/util/output_parser/utils.cpp
+    src/util/threads/threadpool.cpp
+    src/util/output_parser/detection/ptq_yolo3_darknet_output_parser.cpp
+    src/util/output_parser/detection/ptq_yolo2_output_parser.cpp
+    src/util/output_parser/detection/fasterrcnn_output_parser.cpp
+    src/util/output_parser/detection/ptq_ssd_output_parser.cpp
+    src/util/output_parser/detection/fcos_output_parser.cpp
+    src/util/output_parser/classification/ptq_classification_output_parser.cpp
+    src/util/output_parser/segmentation/ptq_unet_output_parser.cpp
+  )
 
-target_link_libraries(${PROJECT_NAME}
-  opencv_world
-  alog
-  hlog
-  easy_dnn
-  dnn
-  cnn_intf
-  ion
-  hbrt_bernoulli_aarch64
-)
+  target_link_libraries(${PROJECT_NAME}
+    # opencv_world
+    # hlog
+    easy_dnn
+    dnn
+    hbdk_sim_x86
+  )
+else()
+  add_library(${PROJECT_NAME} SHARED
+    src/dnn_node.cpp
+    src/dnn_node_impl.cpp
+    src/util/image_proc.cpp
+    src/util/output_parser/detection/nms.cpp
+    src/util/output_parser/utils.cpp
+    src/util/threads/threadpool.cpp
+    src/util/output_parser/detection/ptq_yolo3_darknet_output_parser.cpp
+    src/util/output_parser/detection/ptq_yolo2_output_parser.cpp
+    src/util/output_parser/detection/ptq_yolo5_output_parser.cpp
+    src/util/output_parser/detection/fasterrcnn_output_parser.cpp
+    src/util/output_parser/detection/ptq_efficientdet_output_parser.cpp
+    src/util/output_parser/detection/ptq_ssd_output_parser.cpp
+    src/util/output_parser/detection/fcos_output_parser.cpp
+    src/util/output_parser/classification/ptq_classification_output_parser.cpp
+    src/util/output_parser/segmentation/ptq_unet_output_parser.cpp
+  )
+
+  target_link_libraries(${PROJECT_NAME}
+    opencv_world
+    alog
+    hlog
+    easy_dnn
+    dnn
+    cnn_intf
+    ion
+    hbrt_bernoulli_aarch64
+  )
+endif()
+
 
 ament_target_dependencies(
   ${PROJECT_NAME}

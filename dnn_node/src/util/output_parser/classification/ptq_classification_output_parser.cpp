@@ -16,6 +16,7 @@
 
 #include <queue>
 #include <string>
+#include <fstream>
 
 #include "rclcpp/rclcpp.hpp"
 
