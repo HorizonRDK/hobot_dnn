@@ -21,7 +21,9 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
 #include "rclcpp/rclcpp.hpp"
+
 #include "input/input_data.h"
 
 class DataIterator {
@@ -78,8 +80,15 @@ class DataIterator {
         " %s ", config_string.c_str());
     return 0;
   }
+  
+  #ifdef PLATFORM_X3
   int model_input_width_ = 960;
   int model_input_height_ = 544;
+  #endif
+  #ifdef PLATFORM_X86
+  int model_input_width_ = 224;
+  int model_input_height_ = 224;
+  #endif
 
  private:
   int LoadConfigFile(std::string &config_file);

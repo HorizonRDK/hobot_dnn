@@ -1,5 +1,10 @@
 # Changelog for package dnn_benchmark_example
 
+tros_1.1.6 (2022-2-9)
+------------------
+1. 适配x86版本的dnn node，新增x86版本编译选项。
+
+
 tros_1.1.2rc1 (2022-10-17)
 ------------------
 1. 适配重构后的dnn node，删除显示指定算法输出解析方法。

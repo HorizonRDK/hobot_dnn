@@ -20,15 +20,17 @@
 #include <thread>
 #include <utility>
 #include <vector>
-#include "rclcpp/rclcpp.hpp"
-#include "include/input/input_data.h"
-#include "include/plugin/base_plugin.h"
-#include "include/utils/pc_queue.h"
-#include "include/utils/utils.h"
+
 #include "rapidjson/document.h"
 #include "rapidjson/istreamwrapper.h"
 #include "rapidjson/writer.h"
+#include "rclcpp/rclcpp.hpp"
+
+#include "include/input/input_data.h"
+#include "include/plugin/base_plugin.h"
 #include "include/utils/image_utils.h"
+#include "include/utils/pc_queue.h"
+#include "include/utils/utils.h"
 #define EMPTY ""
 
 using rclcpp::NodeOptions;
@@ -81,8 +83,14 @@ class Workflow : public DnnNode
   int is_sync_mode_ = 1;
 
   PCQueue<NV12PyramidInputPtr> pc_queue_;
+  #ifdef PLATFORM_X3
   std::string model_file_name_ = "config/multitask_body_kps_960x544.hbm";
   std::string model_name_ = "multitask_body_kps_960x544";
+  #endif
+  #ifdef PLATFORM_X86
+  std::string model_file_name_ = "config/mobilenetv1_224x224_nv12_pyramid.bin";
+  std::string model_name_ = "mobilenetv1_224x224_nv12_pyramid";
+  #endif
   ModelTaskType model_task_type_ = ModelTaskType::ModelInferType;
 
   int model_input_width_ = -1;

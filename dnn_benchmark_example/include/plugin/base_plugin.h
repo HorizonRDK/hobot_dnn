@@ -19,8 +19,9 @@
 #include <string>
 #include <utility>
 
-#include "input/input_data.h"
 #include "rclcpp/rclcpp.hpp"
+
+#include "input/input_data.h"
 
 class BasePlugin {
  public:
