@@ -81,7 +81,7 @@ int Run(std::vector<std::shared_ptr<DNNInput>> &inputs,
             const std::shared_ptr<std::vector<hbDNNRoi>> rois = nullptr,
             const bool is_sync_mode = true,
             const int alloctask_timeout_ms = -1,
-            const int infer_timeout_ms = 1000);
+            const int infer_timeout_ms = 20000);
 ```
 1. 使用DNNInput类型数据进行推理，一般除了DDR模型之外，都使用此方式推理。
 1. 执行推理流程，只做pipeline的串联，具体的每个推理步骤由用户（子类中）实现。
@@ -95,7 +95,7 @@ int Run(std::vector<std::shared_ptr<DNNInput>> &inputs,
     - [in] is_sync_mode 预测模式，true为同步模式，false为异步模式
     - [in] alloctask_timeout_ms 申请推理任务超时时间，单位毫秒
                                 默认一直等待直到申请成功
-    - [in] infer_timeout_ms 推理超时时间，单位毫秒，默认1000毫秒推理超时
+    - [in] infer_timeout_ms 推理超时时间，单位毫秒，默认20000毫秒推理超时
 
 - 返回值
     - 0成功，非0失败。
@@ -166,7 +166,7 @@ int Run(std::vector<std::shared_ptr<DNNInput>> &inputs,
         const std::shared_ptr<std::vector<hbDNNRoi>> rois = nullptr,
         const bool is_sync_mode = true,
         const int alloctask_timeout_ms = -1,
-        const int infer_timeout_ms = 1000);
+        const int infer_timeout_ms = 20000);
 ```
 1. 使用DNNInput类型数据并指定输出描述进行推理。
 2. 执行推理流程，只做pipeline的串联，具体的每个推理步骤由用户（子类中）实现。
@@ -181,7 +181,7 @@ int Run(std::vector<std::shared_ptr<DNNInput>> &inputs,
     - [in] is_sync_mode 预测模式，true为同步模式，false为异步模式
     - [in] alloctask_timeout_ms 申请推理任务超时时间，单位毫秒
                                 默认一直等待直到申请成功
-    - [in] infer_timeout_ms 推理超时时间，单位毫秒，默认1000毫秒推理超时
+    - [in] infer_timeout_ms 推理超时时间，单位毫秒，默认20000毫秒推理超时
 
 - 返回值
     - 0成功，非0失败。
@@ -194,7 +194,7 @@ int Run(std::vector<std::shared_ptr<DNNTensor>> &inputs,
         const std::shared_ptr<DnnNodeOutput> &output = nullptr,
         const bool is_sync_mode = true,
         const int alloctask_timeout_ms = -1,
-        const int infer_timeout_ms = 1000);
+        const int infer_timeout_ms = 20000);
 ```
 1. 使用DNNTensor类型数据并指定输出描述进行推理，一般DDR模型使用此方式推理
 2. 执行推理流程，只做pipeline的串联，具体的每个推理步骤由用户（子类中）实现。
@@ -208,7 +208,7 @@ int Run(std::vector<std::shared_ptr<DNNTensor>> &inputs,
     - [in] is_sync_mode 预测模式，true为同步模式，false为异步模式
     - [in] alloctask_timeout_ms 申请推理任务超时时间，单位毫秒
                                 默认一直等待直到申请成功
-    - [in] infer_timeout_ms 推理超时时间，单位毫秒，默认1000毫秒推理超时
+    - [in] infer_timeout_ms 推理超时时间，单位毫秒，默认20000毫秒推理超时
 
 - 返回值
     - 0成功，非0失败。

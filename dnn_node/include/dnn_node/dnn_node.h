@@ -53,13 +53,13 @@ class DnnNode : public rclcpp::Node {
   //   - [in] is_sync_mode 预测模式，true为同步模式，false为异步模式
   //   - [in] alloctask_timeout_ms 申请推理任务超时时间，单位毫秒
   //                               默认一直等待直到申请成功
-  //   - [in] infer_timeout_ms 推理超时时间，单位毫秒，默认1000毫秒推理超时
+  //   - [in] infer_timeout_ms 推理超时时间，单位毫秒，默认20000毫秒推理超时
   int Run(std::vector<std::shared_ptr<DNNInput>> &inputs,
           const std::shared_ptr<DnnNodeOutput> &output = nullptr,
           const std::shared_ptr<std::vector<hbDNNRoi>> rois = nullptr,
           const bool is_sync_mode = false,
           const int alloctask_timeout_ms = -1,
-          const int infer_timeout_ms = 1000);
+          const int infer_timeout_ms = 20000);
 
   // 使用DNNInput类型数据并指定输出描述进行推理
   // 执行推理流程，只做pipeline的串联，具体的每个推理步骤由用户（子类中）实现。
@@ -74,14 +74,14 @@ class DnnNode : public rclcpp::Node {
   //   - [in] is_sync_mode 预测模式，true为同步模式，false为异步模式
   //   - [in] alloctask_timeout_ms 申请推理任务超时时间，单位毫秒
   //                               默认一直等待直到申请成功
-  //   - [in] infer_timeout_ms 推理超时时间，单位毫秒，默认1000毫秒推理超时
+  //   - [in] infer_timeout_ms 推理超时时间，单位毫秒，默认20000毫秒推理超时
   int Run(std::vector<std::shared_ptr<DNNInput>> &inputs,
           std::vector<std::shared_ptr<OutputDescription>> &output_descs,
           const std::shared_ptr<DnnNodeOutput> &output = nullptr,
           const std::shared_ptr<std::vector<hbDNNRoi>> rois = nullptr,
           const bool is_sync_mode = false,
           const int alloctask_timeout_ms = -1,
-          const int infer_timeout_ms = 1000);
+          const int infer_timeout_ms = 20000);
 
   // 使用DNNTensor类型数据并指定输出描述进行推理，一般DDR模型使用此方式推理
   // - 参数
@@ -91,13 +91,13 @@ class DnnNode : public rclcpp::Node {
   //   - [in] is_sync_mode 预测模式，true为同步模式，false为异步模式
   //   - [in] alloctask_timeout_ms 申请推理任务超时时间，单位毫秒
   //                               默认一直等待直到申请成功
-  //   - [in] infer_timeout_ms 推理超时时间，单位毫秒，默认1000毫秒推理超时
+  //   - [in] infer_timeout_ms 推理超时时间，单位毫秒，默认20000毫秒推理超时
   int Run(std::vector<std::shared_ptr<DNNTensor>> &inputs,
           std::vector<std::shared_ptr<OutputDescription>> &output_descs,
           const std::shared_ptr<DnnNodeOutput> &output = nullptr,
           const bool is_sync_mode = false,
           const int alloctask_timeout_ms = -1,
-          const int infer_timeout_ms = 1000);
+          const int infer_timeout_ms = 20000);
 
  protected:
   // 设置DnnNodePara类型的dnn_node_para_ptr_
