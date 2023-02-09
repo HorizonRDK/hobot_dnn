@@ -24,7 +24,37 @@ find_package(hbm_img_msgs REQUIRED)
 find_package(dnn_node REQUIRED)
 find_package(hobot_cv REQUIRED)
 
+# x3|j5|x86
+set(PREFIX_PATH x3)
 set(SYS_ROOT ${CMAKE_SYSROOT})
+
+if(PLATFORM_X3)
+  message("build platform X3")
+  add_definitions(-DPLATFORM_X3)
+  set(PREFIX_PATH x3)
+elseif(PLATFORM_J5)
+  message("build platform J5")
+  add_definitions(-DPLATFORM_J5)
+  set(PREFIX_PATH j5)
+elseif(PLATFORM_X86)
+  message("build platform x86")
+  add_definitions(-DPLATFORM_X86)
+  set(PREFIX_PATH x86)
+  set(SYS_ROOT ${THIRD_PARTY})
+else()
+  if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64")
+    message("invalid platform, build platform X3 default")
+    add_definitions(-DPLATFORM_X3)
+    set(PREFIX_PATH x3)
+  elseif (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64")
+    message("build platform X86")
+    add_definitions(-DPLATFORM_X86)
+    set(PREFIX_PATH x86)
+    set(SYS_ROOT ${THIRD_PARTY})
+  endif()
+endif()
+
+message("PREFIX_PATH is " ${PREFIX_PATH})
 message("SYS_ROOT is " ${SYS_ROOT})
 
 # 设置一个默认hobotcv库的安装路径
@@ -42,12 +72,16 @@ endif()
 message("HOBOTCV_LIB_INSTALL_PATH is " ${HOBOTCV_LIB_INSTALL_PATH})
 
 link_directories(
+  ${SYS_ROOT}/usr/lib/
   ${SYS_ROOT}/usr/lib/hbbpu/
   ${SYS_ROOT}/usr/lib/hbmedia/
   ${HOBOTCV_LIB_INSTALL_PATH}
 )
 
-include_directories(include)
+include_directories(
+  include
+  ${SYS_ROOT}/usr/include
+)
 
 add_executable(${PROJECT_NAME}
   src/sample.cpp

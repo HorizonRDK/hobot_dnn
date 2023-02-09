@@ -120,7 +120,7 @@ int DNNNodeSample::SetNodePara() {
   if (!dnn_node_para_ptr_) return -1;
   // 指定算法推理使用的模型文件路径和模型名
   dnn_node_para_ptr_->model_file =
-      "/opt/tros/lib/dnn_node_sample/config/yolov5_672x672_nv12.bin";
+      "./config/yolov5_672x672_nv12.bin";
   // 指定算法推理任务类型
   // 本示例使用的人体检测算法输入为单张图片，对应的算法推理任务类型为ModelInferType
   // 只有当算法输入为图片和roi（Region of
