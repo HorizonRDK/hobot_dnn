@@ -147,6 +147,9 @@ source ./install/local_setup.bash
 # 根据实际安装路径进行拷贝（docker中的安装路径为install/lib/dnn_node_example/config/，拷贝命令为cp -r install/lib/dnn_node_example/config/ .）。
 cp -r install/dnn_node_example/lib/dnn_node_example/config/ .
 
+# 软连接测试模型路径
+ln -s /app/model/basic models
+
 # 运行模式1：
 使用本地jpg格式图片通过同步模式进行回灌预测，并存储渲染后的图片
 ros2 run dnn_node_example example --ros-args -p feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1
@@ -172,6 +175,9 @@ source ./install/setup.bash
 # 如果是板端编译（无--merge-install编译选项），拷贝命令为cp -r install/PKG_NAME/lib/PKG_NAME/config/ .，其中PKG_NAME为具体的package名。
 cp -r install/lib/dnn_node_example/config/ .
 
+# 软连接测试模型路径
+ln -s /app/model/basic models
+
 # 启动launch文件，使用F37 sensor通过shared mem方式发布nv12格式图片
 # 默认运行fcos算法，启动命令中使用参数config_file切换算法，如使用unet算法config_file:="config/mobilenet_unet_workconfig.json"
 ros2 launch dnn_node_example hobot_dnn_node_example.launch.py
@@ -185,6 +191,9 @@ export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:./install/lib/
 
 # config中为example使用的模型，回灌使用的本地图片
 cp -r install/lib/dnn_node_example/config/ .
+
+# 软连接测试模型路径
+ln -s /app/model/basic models
 
 # 运行模式1：使用本地jpg格式图片通过同步模式进行回灌预测，并存储渲染后的图片
 ./install/lib/dnn_node_example/example --ros-args -p  feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1
@@ -204,6 +213,10 @@ export COLCON_CURRENT_PREFIX=./install
 source ./install/setup.bash
 # config中为示例使用的模型，根据实际安装路径进行拷贝
 cp -r ./install/lib/dnn_node_example/config/ .
+
+# 软连接测试模型路径
+git clone https://c-gitlab.horizon.ai/HHP/box/hobot_model.git -b feature-x86
+ln -s hobot_model models
 
 # 设置运行环境变量
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:`pwd`/../sysroot_docker/usr/lib
