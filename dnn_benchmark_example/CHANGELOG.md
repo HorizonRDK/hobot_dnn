@@ -1,6 +1,6 @@
 # Changelog for package dnn_benchmark_example
 
-tros_1.1.6 (2022-2-9)
+tros_1.1.6 (2022-2-20)
 ------------------
 1. 适配x86版本的dnn node，新增x86版本编译选项。
 

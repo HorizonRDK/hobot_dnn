@@ -6,7 +6,18 @@ Getting Started with Dnn Node Example
 
 Dnn Node example package是Dnn Node package的使用示例，通过继承DnnNode虚基类，使用模型和图像数据利用BPU处理器进行模型推理。图像数据来源于本地图片回灌和订阅到的image msg。可通过配置文件使用dnn_node中内置的后处理算法，在dnn node example的后处理中发布智能结果，可通过web查看效果。
 
+# 开发环境
+
+- 编程语言: C/C++
+- 开发平台: X3/X86
+- 系统版本：Ubuntu 20.0.4
+- 编译工具链:Linux GCC 9.3.0/Linaro GCC 9.3.0
+
 # 编译
+
+- X3版本：支持在X3 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
+- X86版本：支持在X86 Ubuntu系统上编译一种方式。
+同时支持通过编译选项控制编译pkg的依赖和pkg的功能。
 
 ## 依赖库
 
@@ -23,18 +34,8 @@ ros package：
 
 hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图片传输，hbm_img_msgs pkg定义在hobot_msgs中，因此如果使用shared mem进行图片传输，需要依赖此pkg。
 
-## 开发环境
 
-- 编程语言: C/C++
-- 开发平台: X3/X86
-- 系统版本：Ubuntu 20.0.4
-- 编译工具链:Linux GCC 9.3.0/Linaro GCC 9.3.0
-
-## 编译
-
-支持在X3 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式，并支持通过编译选项控制编译pkg的依赖和pkg的功能。
-
-### 编译选项
+## 编译选项
 
 1、SHARED_MEM
 
@@ -43,7 +44,7 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 - 如果关闭，编译和运行不依赖hbm_img_msgs pkg，支持使用原生ros和tros进行编译。
 - 对于shared mem通信方式，当前只支持订阅nv12格式图片。
 
-### X3 Ubuntu系统上编译
+## X3 Ubuntu系统上编译 X3版本
 
 1、编译环境确认
 
@@ -56,7 +57,7 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 
 - 编译命令：`colcon build --packages-select dnn_node_example`
 
-### docker交叉编译
+## docker交叉编译 X3版本
 
 1、编译环境确认
 
@@ -82,6 +83,27 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
   ```
 
 - 编译选项中默认打开了shared mem通信方式。
+
+
+## X86 Ubuntu系统上编译 X86版本
+
+1、编译环境确认
+
+  x86 ubuntu版本: ubuntu20.04
+  
+2、编译
+
+- 编译命令：
+
+  ```shell
+  colcon build --packages-select dnn_node_example \
+     --merge-install \
+     --cmake-force-configure \
+     --cmake-args \
+     --no-warn-unused-cli \
+     -DPLATFORM_X86=ON \
+     -DTHIRD_PARTY=`pwd`/../sysroot_docker
+  ```
 
 ## 注意事项
 
@@ -117,7 +139,8 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 
 ## X3 Ubuntu系统上运行
 
-```
+运行方式1，使用可执行文件启动：
+```shell
 export COLCON_CURRENT_PREFIX=./install
 source ./install/local_setup.bash
 # config中为example使用的模型，回灌使用的本地图片
@@ -142,7 +165,7 @@ ros2 run dnn_node_example example --ros-args -p feed_type:=1 -p is_shared_mem_su
 ```
 
 运行方式2，使用launch文件启动：
-```
+```shell
 export COLCON_CURRENT_PREFIX=./install
 source ./install/setup.bash
 # config中为示例使用的模型，根据实际安装路径进行拷贝
@@ -156,7 +179,7 @@ ros2 launch dnn_node_example hobot_dnn_node_example.launch.py
 
 ## X3 yocto系统上运行
 
-```
+```shell
 export ROS_LOG_DIR=/userdata/
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:./install/lib/
 
@@ -172,6 +195,22 @@ cp -r install/lib/dnn_node_example/config/ .
 # 运行模式3：使用shared mem通信方式(topic为/hbmem_img)通过异步模式进行预测，并设置log级别为warn
 ./install/lib/dnn_node_example/example --ros-args -p feed_type:=1 -p is_shared_mem_sub:=1 --ros-args --log-level warn
 
+```
+
+## X86 Ubuntu系统上运行
+
+```shell
+export COLCON_CURRENT_PREFIX=./install
+source ./install/setup.bash
+# config中为示例使用的模型，根据实际安装路径进行拷贝
+cp -r ./install/lib/dnn_node_example/config/ .
+
+# 设置运行环境变量
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:`pwd`/../sysroot_docker/usr/lib
+
+# 启动launch文件，使用F37 sensor通过shared mem方式发布nv12格式图片
+# 默认运行fcos算法，启动命令中使用参数config_file切换算法，如使用unet算法config_file:="config/mobilenet_unet_workconfig.json"
+ros2 launch dnn_node_example hobot_dnn_node_example.launch.py
 ```
 
 ## 注意事项
