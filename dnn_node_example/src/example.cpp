@@ -15,8 +15,9 @@
 #include <memory>
 #include <string>
 
-#include "include/dnn_example_node.h"
 #include "rclcpp/rclcpp.hpp"
+
+#include "include/dnn_example_node.h"
 
 int main(int argc, char** argv) {
   rclcpp::init(argc, argv);

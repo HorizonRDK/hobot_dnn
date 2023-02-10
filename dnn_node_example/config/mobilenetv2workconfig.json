@@ -1,5 +1,5 @@
 {
-	"model_file": "/app/model/basic/mobilenetv2_224x224_nv12.bin",
+	"model_file": "./models/mobilenetv2_224x224_nv12.bin",
 	"model_name": "mobilenetv2_224x224_nv12",
 	"dnn_Parser": "classification",
 	"model_output_count": 1,

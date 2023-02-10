@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "include/image_utils.h"
-
 #include <algorithm>
 #include <fstream>
 #include <iostream>
@@ -22,6 +20,8 @@
 #include <vector>
 
 #include "dnn/hb_sys.h"
+
+#include "include/image_utils.h"
 
 std::shared_ptr<NV12PyramidInput> ImageUtils::GetNV12Pyramid(
     const std::string &image_file,

@@ -12,10 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "include/dnn_example_node.h"
 
-#include <cv_bridge/cv_bridge.h>
-#include <unistd.h>
+
 
 #include <fstream>
 #include <memory>
@@ -32,12 +30,16 @@
 #include "dnn_node/util/output_parser/detection/ptq_yolo5_output_parser.h"
 #include "dnn_node/util/output_parser/segmentation/ptq_unet_output_parser.h"
 #include "hobot_cv/hobotcv_imgproc.h"
-#include "include/image_utils.h"
-#include "include/post_process/post_process_unet.h"
 #include "rapidjson/document.h"
 #include "rapidjson/istreamwrapper.h"
 #include "rapidjson/writer.h"
 #include "rclcpp/rclcpp.hpp"
+#include <cv_bridge/cv_bridge.h>
+#include <unistd.h>
+
+#include "include/dnn_example_node.h"
+#include "include/image_utils.h"
+#include "include/post_process/post_process_unet.h"
 
 // 时间格式转换
 builtin_interfaces::msg::Time ConvertToRosTime(
@@ -258,14 +260,10 @@ int DnnExampleNode::LoadConfig() {
     } else if ("yolov3" == str_parser) {
       parser = DnnParserType::YOLOV3_PARSER;
       ret = hobot::dnn_node::parser_yolov3::LoadConfig(document);
+    #ifdef PLATFORM_X3
     } else if ("yolov5" == str_parser) {
       parser = DnnParserType::YOLOV5_PARSER;
       ret = hobot::dnn_node::parser_yolov5::LoadConfig(document);
-    } else if ("classification" == str_parser) {
-      parser = DnnParserType::CLASSIFICATION_PARSER;
-      ret = hobot::dnn_node::parser_mobilenetv2::LoadConfig(document);
-    } else if ("ssd" == str_parser) {
-      parser = DnnParserType::SSD_PARSER;
     } else if ("efficient_det" == str_parser) {
       parser = DnnParserType::EFFICIENTDET_PARSER;
       if (document.HasMember("dequanti_file")) {
@@ -281,6 +279,13 @@ int DnnExampleNode::LoadConfig() {
         RCLCPP_WARN(rclcpp::get_logger("example"),
                     "classification file is not set");
       }
+    #endif
+    } else if ("classification" == str_parser) {
+      parser = DnnParserType::CLASSIFICATION_PARSER;
+      ret = hobot::dnn_node::parser_mobilenetv2::LoadConfig(document);
+    } else if ("ssd" == str_parser) {
+      parser = DnnParserType::SSD_PARSER;
+
     } else if ("fcos" == str_parser) {
       parser = DnnParserType::FCOS_PARSER;
       ret = hobot::dnn_node::parser_fcos::LoadConfig(document);
@@ -288,7 +293,7 @@ int DnnExampleNode::LoadConfig() {
       parser = DnnParserType::UNET_PARSER;
     } else {
       std::stringstream ss;
-      ss << "Error!Invalid parser: " << str_parser
+      ss << "Error! Invalid parser: " << str_parser
          << " . Only yolov2, yolov3, yolov5, ssd, fcos"
          << " efficient_det, classification, unet are supported";
       RCLCPP_ERROR(rclcpp::get_logger("example"), "%s", ss.str().c_str());
@@ -369,20 +374,22 @@ int DnnExampleNode::PostProcess(
       parse_ret =
           hobot::dnn_node::parser_yolov3::Parse(node_output, det_result);
       break;
+    #ifdef PLATFORM_X3
     case DnnParserType::YOLOV5_PARSER:
       parse_ret =
           hobot::dnn_node::parser_yolov5::Parse(node_output, det_result);
       break;
+    case DnnParserType::EFFICIENTDET_PARSER:
+      parse_ret =
+          hobot::dnn_node::parser_efficientdet::Parse(node_output, det_result);
+      break;
+    #endif
     case DnnParserType::CLASSIFICATION_PARSER:
       parse_ret =
           hobot::dnn_node::parser_mobilenetv2::Parse(node_output, det_result);
       break;
     case DnnParserType::SSD_PARSER:
       parse_ret = hobot::dnn_node::parser_ssd::Parse(node_output, det_result);
-      break;
-    case DnnParserType::EFFICIENTDET_PARSER:
-      parse_ret =
-          hobot::dnn_node::parser_efficientdet::Parse(node_output, det_result);
       break;
     case DnnParserType::FCOS_PARSER:
       parse_ret = hobot::dnn_node::parser_fcos::Parse(node_output, det_result);
