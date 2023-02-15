@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "include/post_process/post_process_unet.h"
+
 #include <unistd.h>
 
 #include <chrono>
@@ -24,7 +26,6 @@
 
 #include "include/dnn_example_node.h"
 #include "include/image_utils.h"
-#include "include/post_process/post_process_unet.h"
 
 namespace hobot {
 namespace dnn_node {
