@@ -14,7 +14,7 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
 
 - 编程语言: C/C++
 - 开发平台: X3/X86
-- 系统版本：Ubuntu 20.0.4
+- 系统版本：Ubuntu 20.04
 - 编译工具链:Linux GCC 9.3.0/Linaro GCC 9.3.0
 
 # 编译
