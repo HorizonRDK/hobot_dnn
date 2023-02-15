@@ -17,9 +17,11 @@ Dnn Node sample package是Dnn Node package的使用示例，通过继承DnnNode�
 
 # 编译
 
-支持在X3 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
+- X3版本：支持在X3 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
+- X86版本：支持在X86 Ubuntu系统上编译一种方式。
+同时支持通过编译选项控制编译pkg的依赖和pkg的功能。
 
-## X3 Ubuntu系统上编译
+## X3 Ubuntu系统上编译 X3版本
 
 1、编译环境确认
 
@@ -35,7 +37,7 @@ Dnn Node sample package是Dnn Node package的使用示例，通过继承DnnNode�
 
 - 编译命令：`colcon build --packages-select dnn_node_sample`
 
-## docker交叉编译
+## docker交叉编译 X3版本
 
 1、编译环境确认
 
@@ -56,6 +58,28 @@ Dnn Node sample package是Dnn Node package的使用示例，通过继承DnnNode�
      --cmake-args \
      --no-warn-unused-cli \
      -DCMAKE_TOOLCHAIN_FILE=`pwd`/robot_dev_config/aarch64_toolchainfile.cmake
+  ```
+
+## X86 Ubuntu系统上编译 X86版本
+
+支持在X86 Ubuntu系统上编译。
+
+1、编译环境确认
+
+  x86 ubuntu版本: ubuntu20.04
+  
+2、编译
+
+- 编译命令：
+
+  ```shell
+  colcon build --packages-select dnn_node_sample \
+     --merge-install \
+     --cmake-force-configure \
+     --cmake-args \
+     --no-warn-unused-cli \
+     -DPLATFORM_X86=ON \
+     -DTHIRD_PARTY=`pwd`/../sysroot_docker
   ```
 
 # 使用介绍
@@ -129,6 +153,28 @@ chmod +x ./sbin/nginx && ./sbin/nginx -p .
 ```
 
 启动完成后，在PC端的浏览器输入`http://IP` 即可查看图像和算法渲染效果（IP为旭日X3派的IP地址）。
+
+## X86 Ubuntu系统上运行
+
+包括图像消息发布和WEB展示。
+
+**使用本地图片回灌**
+
+```shell
+# 配置TogetherROS环境
+source ./install/setup.bash
+
+# 复制模型和回灌图片到运行目录
+cp ./install/lib/dnn_node_sample/config .
+
+# 设置运行环境变量
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:`pwd`/../sysroot_docker/usr/lib
+
+# 配置本地图片回灌
+export CAM_TYPE=fb
+
+ros2 launch dnn_node_sample hobot_dnn_node_sample.launch.py 
+```
 
 ## 注意事项
 

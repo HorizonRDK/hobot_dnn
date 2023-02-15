@@ -15,10 +15,12 @@
 #ifndef _INPUT_INPUT_DATA_H_
 #define _INPUT_INPUT_DATA_H_
 
+#include <memory>
 #include <ostream>
 #include <string>
-#include <memory>
+
 #include "rclcpp/rclcpp.hpp"
+
 #include "dnn_node/dnn_node.h"
 
 using hobot::dnn_node::NV12PyramidInput;

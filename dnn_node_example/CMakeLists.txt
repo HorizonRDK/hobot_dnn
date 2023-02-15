@@ -46,19 +46,49 @@ option(SHARED_MEM "using shared mem" ON)
 if (${SHARED_MEM})
   message("using shared mem")
   # rclcpp definition
-  add_definitions(-DUSING_HBMEM)
   find_package(hbm_img_msgs REQUIRED)
   add_definitions(-DSHARED_MEM_ENABLED)
 endif ()
 
-include_directories(include
-${PROJECT_SOURCE_DIR}
-)
-
+# x3|j5|x86
+set(PREFIX_PATH x3)
 set(SYS_ROOT ${CMAKE_SYSROOT})
+
+if(PLATFORM_X3)
+  message("build platform X3")
+  add_definitions(-DPLATFORM_X3)
+  set(PREFIX_PATH x3)
+elseif(PLATFORM_J5)
+  message("build platform J5")
+  add_definitions(-DPLATFORM_J5)
+  set(PREFIX_PATH j5)
+elseif(PLATFORM_X86)
+  message("build platform x86")
+  add_definitions(-DPLATFORM_X86)
+  set(PREFIX_PATH x86)
+  set(SYS_ROOT ${THIRD_PARTY})
+else()
+  if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64")
+    message("invalid platform, build platform X3 default")
+    add_definitions(-DPLATFORM_X3)
+    set(PREFIX_PATH x3)
+  elseif (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64")
+    message("build platform X86")
+    add_definitions(-DPLATFORM_X86)
+    set(PREFIX_PATH x86)
+    set(SYS_ROOT ${THIRD_PARTY})
+  endif()
+endif()
+
+message("PREFIX_PATH is " ${PREFIX_PATH})
 message("SYS_ROOT is " ${SYS_ROOT})
+
+include_directories(include
+  ${PROJECT_SOURCE_DIR}
+)
 include_directories(
   ${SYS_ROOT}/usr/include/opencv/
+  ${SYS_ROOT}/usr/include/
 )
 
 # 设置一个默认hobotcv库的安装路径
@@ -78,14 +108,15 @@ message("HOBOTCV_LIB_INSTALL_PATH is " ${HOBOTCV_LIB_INSTALL_PATH})
 link_directories(
   ${SYS_ROOT}/usr/lib/hbbpu/
   ${SYS_ROOT}/usr/lib/hbmedia/
+  ${SYS_ROOT}/usr/lib/
   ${HOBOTCV_LIB_INSTALL_PATH}
 )
 
 add_executable(example
-src/example.cpp
-src/dnn_example_node.cpp
-src/image_utils.cpp
-src/post_process/post_process_unet.cpp
+  src/example.cpp
+  src/dnn_example_node.cpp
+  src/image_utils.cpp
+  src/post_process/post_process_unet.cpp
 )
 
 ament_target_dependencies(
@@ -99,9 +130,6 @@ ament_target_dependencies(
 )
 
 if (${SHARED_MEM})
-  target_link_libraries(example
-    hbmem
-  )
   ament_target_dependencies(
     example
     hbm_img_msgs

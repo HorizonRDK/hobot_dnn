@@ -49,7 +49,7 @@ def generate_launch_description():
         executable='hobot_image_pub',
         output='screen',
         parameters=[
-            {"image_source": "/opt/tros/lib/dnn_node_sample/config/target.jpg"},
+            {"image_source": "./config/target.jpg"},
             {"image_format": "jpg"},
             {"msg_pub_topic_name": "/hbmem_img"},
             # 不指定发布图片的分辨率

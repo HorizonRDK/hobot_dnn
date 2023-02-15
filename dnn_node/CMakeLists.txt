@@ -36,46 +36,137 @@ find_package(ament_cmake REQUIRED)
 # find_package(<dependency> REQUIRED)
 find_package(rclcpp REQUIRED)
 
+# x3|j5|x86
+set(PREFIX_PATH x3)
+set(SYS_ROOT ${CMAKE_SYSROOT})
+
+if(PLATFORM_X3)
+  message("build platform X3")
+  add_definitions(-DPLATFORM_X3)
+  set(PREFIX_PATH x3)
+elseif(PLATFORM_J5)
+  message("build platform J5")
+  add_definitions(-DPLATFORM_J5)
+  set(PREFIX_PATH j5)
+elseif(PLATFORM_X86)
+  message("build platform x86")
+  add_definitions(-DPLATFORM_X86)
+  set(PREFIX_PATH x86)
+  set(SYS_ROOT ${THIRD_PARTY})
+else()
+  if (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64")
+    message("invalid platform, build platform X3 default")
+    add_definitions(-DPLATFORM_X3)
+    set(PREFIX_PATH x3)
+  elseif (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "x86_64")
+    message("build platform X86")
+    add_definitions(-DPLATFORM_X86)
+    set(PREFIX_PATH x86)
+    set(SYS_ROOT ${THIRD_PARTY})
+  endif()
+endif()
+
+message("PREFIX_PATH is " ${PREFIX_PATH})
+message("SYS_ROOT is " ${SYS_ROOT})
+
 include_directories(include include/util/)
 include_directories(include
-${PROJECT_SOURCE_DIR}
+  ${PROJECT_SOURCE_DIR}
 )
+include_directories(${SYS_ROOT}/usr/include)
 
-set(SYS_ROOT ${CMAKE_SYSROOT})
-message("SYS_ROOT is " ${SYS_ROOT})
 link_directories(
   ${SYS_ROOT}/usr/lib/hbbpu/
+  ${SYS_ROOT}/usr/lib/
 )
+ 
+if(PLATFORM_X3)
+    # Build dnn_node library
+  add_library(${PROJECT_NAME} SHARED
+    src/dnn_node.cpp
+    src/dnn_node_impl.cpp
+    src/util/image_proc.cpp
+    src/util/output_parser/detection/nms.cpp
+    src/util/output_parser/utils.cpp
+    src/util/threads/threadpool.cpp
+    src/util/output_parser/detection/ptq_yolo3_darknet_output_parser.cpp
+    src/util/output_parser/detection/ptq_yolo2_output_parser.cpp
+    src/util/output_parser/detection/ptq_yolo5_output_parser.cpp
+    src/util/output_parser/detection/fasterrcnn_output_parser.cpp
+    src/util/output_parser/detection/ptq_efficientdet_output_parser.cpp
+    src/util/output_parser/detection/ptq_ssd_output_parser.cpp
+    src/util/output_parser/detection/fcos_output_parser.cpp
+    src/util/output_parser/classification/ptq_classification_output_parser.cpp
+    src/util/output_parser/segmentation/ptq_unet_output_parser.cpp
+  )
 
-# Build dnn_node library
-add_library(${PROJECT_NAME} SHARED
-  src/dnn_node.cpp
-  src/dnn_node_impl.cpp
-  src/util/image_proc.cpp
-  src/util/output_parser/detection/nms.cpp
-  src/util/output_parser/utils.cpp
-  src/util/threads/threadpool.cpp
-  src/util/output_parser/detection/ptq_yolo3_darknet_output_parser.cpp
-  src/util/output_parser/detection/ptq_yolo2_output_parser.cpp
-  src/util/output_parser/detection/ptq_yolo5_output_parser.cpp
-  src/util/output_parser/detection/fasterrcnn_output_parser.cpp
-  src/util/output_parser/detection/ptq_efficientdet_output_parser.cpp
-  src/util/output_parser/detection/ptq_ssd_output_parser.cpp
-  src/util/output_parser/detection/fcos_output_parser.cpp
-  src/util/output_parser/classification/ptq_classification_output_parser.cpp
-  src/util/output_parser/segmentation/ptq_unet_output_parser.cpp
-)
+  target_link_libraries(${PROJECT_NAME}
+    opencv_world
+    alog
+    hlog
+    easy_dnn
+    dnn
+    cnn_intf
+    ion
+    hbrt_bernoulli_aarch64
+  )
+elseif(PLATFORM_J5)
+  add_library(${PROJECT_NAME} SHARED
+    src/dnn_node.cpp
+    src/dnn_node_impl.cpp
+    src/util/image_proc.cpp
+    src/util/output_parser/detection/nms.cpp
+    src/util/output_parser/utils.cpp
+    src/util/threads/threadpool.cpp
+    src/util/output_parser/detection/ptq_yolo3_darknet_output_parser.cpp
+    src/util/output_parser/detection/ptq_yolo2_output_parser.cpp
+    src/util/output_parser/detection/ptq_yolo5_output_parser.cpp
+    src/util/output_parser/detection/fasterrcnn_output_parser.cpp
+    src/util/output_parser/detection/ptq_efficientdet_output_parser.cpp
+    src/util/output_parser/detection/ptq_ssd_output_parser.cpp
+    src/util/output_parser/detection/fcos_output_parser.cpp
+    src/util/output_parser/classification/ptq_classification_output_parser.cpp
+    src/util/output_parser/segmentation/ptq_unet_output_parser.cpp
+  )
 
-target_link_libraries(${PROJECT_NAME}
-  opencv_world
-  alog
-  hlog
-  easy_dnn
-  dnn
-  cnn_intf
-  ion
-  hbrt_bernoulli_aarch64
-)
+  target_link_libraries(${PROJECT_NAME}
+    opencv_world
+    alog
+    hlog
+    easy_dnn
+    dnn
+    cnn_intf
+    ion
+    hbrt_bernoulli_aarch64
+  )
+elseif(PLATFORM_X86)
+  add_library(${PROJECT_NAME} SHARED
+    src/dnn_node.cpp
+    src/dnn_node_impl.cpp
+    src/util/image_proc.cpp
+    src/util/output_parser/detection/nms.cpp
+    src/util/output_parser/utils.cpp
+    src/util/threads/threadpool.cpp
+    src/util/output_parser/detection/ptq_yolo3_darknet_output_parser.cpp
+    src/util/output_parser/detection/ptq_yolo2_output_parser.cpp
+    # src/util/output_parser/detection/ptq_yolo5_output_parser.cpp
+    src/util/output_parser/detection/fasterrcnn_output_parser.cpp
+    # src/util/output_parser/detection/ptq_efficientdet_output_parser.cpp
+    src/util/output_parser/detection/ptq_ssd_output_parser.cpp
+    src/util/output_parser/detection/fcos_output_parser.cpp
+    src/util/output_parser/classification/ptq_classification_output_parser.cpp
+    src/util/output_parser/segmentation/ptq_unet_output_parser.cpp
+  )
+
+  target_link_libraries(${PROJECT_NAME}
+    opencv_world
+    hlog
+    easy_dnn
+    dnn
+    hbdk_sim_x86
+  )
+endif()
+
 
 ament_target_dependencies(
   ${PROJECT_NAME}

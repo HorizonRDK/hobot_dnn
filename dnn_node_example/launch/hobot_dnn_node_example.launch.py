@@ -93,6 +93,20 @@ def generate_launch_description():
         arguments=['--ros-args', '--log-level', 'error']
     )
 
+    # 本地图片发布
+    fb_node = Node(
+        package='hobot_image_publisher',
+        executable='hobot_image_pub',
+        output='screen',
+        parameters=[
+            {"image_source": "./config/target.jpg"},
+            {"image_format": "jpg"},
+            {"msg_pub_topic_name": "/hbmem_img"},
+            {"fps": 5}
+        ],
+        arguments=['--ros-args', '--log-level', 'error']
+    )
+
     # jpeg图片编码&发布pkg
     jpeg_codec_node = Node(
         package='hobot_codec',
@@ -167,8 +181,12 @@ def generate_launch_description():
         print("using mipi cam")
         cam_node = mipi_node
         camera_type_mipi = True
+    elif camera_type == "fb":
+        print("using feedback")
+        cam_node = fb_node
+        camera_type_mipi = True
     else:
-        print("invalid camera_type ", camera_type, ", which is set with export CAM_TYPE=usb/mipi, using default mipi cam")
+        print("invalid camera_type ", camera_type, ", which is set with export CAM_TYPE=usb/mipi/fb, using default mipi cam")
         cam_node = mipi_node
         camera_type_mipi = True
 
