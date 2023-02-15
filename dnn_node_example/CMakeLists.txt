@@ -130,11 +130,6 @@ ament_target_dependencies(
 )
 
 if (${SHARED_MEM})
-  if (PLATFORM_X3)
-  target_link_libraries(example
-    hbmem
-  )
-  endif ()
   ament_target_dependencies(
     example
     hbm_img_msgs
