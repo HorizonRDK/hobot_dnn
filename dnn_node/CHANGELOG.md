@@ -1,6 +1,6 @@
 # Changelog for package dnn_node
 
-tros_1.1.6 (2022-2-20)
+tros_1.1.6a (2023-2-16)
 ------------------
 1. 适配x86版本的dnn node，新增x86版本编译选项。
 
