@@ -218,12 +218,10 @@ cp -r ./install/lib/dnn_node_example/config/ .
 git clone https://c-gitlab.horizon.ai/HHP/box/hobot_model.git -b feature-x86
 ln -s hobot_model models
 
-# 设置运行环境变量
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:`pwd`/../sysroot_docker/usr/lib
 
-# 启动launch文件，使用F37 sensor通过shared mem方式发布nv12格式图片
+# 启动launch文件，使用feedback方式
 # 默认运行fcos算法，启动命令中使用参数config_file切换算法，如使用unet算法config_file:="config/mobilenet_unet_workconfig.json"
-ros2 launch dnn_node_example hobot_dnn_node_example.launch.py
+ros2 launch dnn_node_example hobot_dnn_node_example_feedback.launch.py
 ```
 
 ## 注意事项

@@ -167,8 +167,6 @@ source ./install/setup.bash
 # 复制模型和回灌图片到运行目录
 cp ./install/lib/dnn_node_sample/config .
 
-# 设置运行环境变量
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:`pwd`/../sysroot_docker/usr/lib
 
 # 配置本地图片回灌
 export CAM_TYPE=fb

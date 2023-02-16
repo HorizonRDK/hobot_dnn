@@ -157,8 +157,6 @@ source ./install/local_setup.bash
 # 根据实际安装路径进行拷贝（docker中的安装路径为install/lib/dnn_benchmark_example/config/，拷贝命令为cp -r install/lib/dnn_benchmark_example/config/ .）。
 cp -r install/lib/dnn_benchmark_example/config/ .
 
-# 设置运行环境变量
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:`pwd`/../sysroot_docker/usr/lib
 
 # 运行：使用本地jpg格式图片通过同步模式进行回灌预测，通过日志输出性能指标fps和latency，并设置log级别为warn
 ros2 run dnn_benchmark_example dnn_benchmark_example --ros-args --log-level warn
