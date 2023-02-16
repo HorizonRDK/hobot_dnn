@@ -1,9 +1,9 @@
 # Changelog for package dnn_node_example
 
-tros_1.1.6 (2022-2-20)
+tros_1.1.6 (2023-2-16)
 ------------------
 1. 适配x86版本的dnn node，新增x86版本编译选项。
-1. 新增launch文件使用fb回灌模式选项。
+2. 新增launch文件使用fb回灌模式选项。
 
 
 tros_1.1.4 (2022-12-27)
