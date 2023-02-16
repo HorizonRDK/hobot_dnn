@@ -181,6 +181,16 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 install(TARGETS dnn_node
   DESTINATION lib/)
 
+if(PLATFORM_X86)
+  install(FILES
+    ${SYS_ROOT}/usr/lib/libdnn.so
+    ${SYS_ROOT}/usr/lib/libeasy_dnn.so
+    ${SYS_ROOT}/usr/lib/libhbdk_sim_x86.so
+    ${SYS_ROOT}/usr/lib/libhlog.so
+    DESTINATION lib/
+  )
+endif()
+
 # Install include files
 install(
   FILES include/dnn_node/dnn_node.h include/dnn_node/dnn_node_data.h
