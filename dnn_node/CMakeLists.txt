@@ -186,7 +186,7 @@ if(PLATFORM_X86)
     ${SYS_ROOT}/usr/lib/libdnn.so
     ${SYS_ROOT}/usr/lib/libeasy_dnn.so
     ${SYS_ROOT}/usr/lib/libhbdk_sim_x86.so
-    ${SYS_ROOT}/usr/lib/libhlog.so
+    ${SYS_ROOT}/usr/lib/libhlog.so.1
     DESTINATION lib/
   )
 endif()
