@@ -177,7 +177,7 @@ chmod +x ./sbin/nginx && ./sbin/nginx -p .
 source ./install/setup.bash
 
 # 复制模型和回灌图片到运行目录
-cp ./install/lib/dnn_node_sample/config .
+cp -r ./install/lib/dnn_node_sample/config .
 
 # 配置本地图片回灌
 export CAM_TYPE=fb

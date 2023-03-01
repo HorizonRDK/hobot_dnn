@@ -151,8 +151,6 @@ cp -r install/dnn_node_example/lib/dnn_node_example/config/ .
 ln -s /app/model/basic models
 
 # 运行模式1：
-使用本地jpg格式图片通过同步模式进行回灌预测，并存储渲染后的图片
-ros2 run dnn_node_example example --ros-args -p feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1
 配置使用yolov3模型和dnn_node中内置的yolov3后处理算法，使用本地jpg格式图片通过同步模式进行回灌预测，并存储渲染后的图片
 ros2 run dnn_node_example example --ros-args -p feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1 -p config_file:=config/yolov3workconfig.json
 
@@ -177,6 +175,9 @@ cp -r install/lib/dnn_node_example/config/ .
 
 # 软连接测试模型路径
 ln -s /app/model/basic models
+
+# 配置MIPI摄像头
+export CAM_TYPE=mipi
 
 # 启动launch文件，使用F37 sensor通过shared mem方式发布nv12格式图片
 # 默认运行fcos算法，启动命令中使用参数config_file切换算法，如使用unet算法config_file:="config/mobilenet_unet_workconfig.json"
@@ -235,17 +236,17 @@ ros2 launch dnn_node_example hobot_dnn_node_example_feedback.launch.py
   }
   "model_file"为模型文件的路径。
   目前example支持的模型:
-  | 模型名称                               | 模型类型 | 模型输出说明                             | 渲染效果                              |
-  | -------------------------------------- | -------- | ---------------------------------------- | ------------------------------------- |
-  | yolov2_608x608_nv12                    | 检测模型 | 输出检测到的物体和检测框                 | ![image](./render/yolov2.jpeg)        |
-  | yolov3_416x416_nv12                    | 检测模型 | 输出检测到的物体和检测框                 | ![image](./render/yolov3.jpeg)        |
-  | yolov5_672x672_nv12                    | 检测模型 | 输出检测到的物体和检测框                 | ![image](./render/yolov5.jpeg)        |
-  | mobilenet_ssd_300x300_nv12             | 检测模型 | 输出检测到的物体和检测框                 | ![image](./render/mobilenet_ssd.jpeg) |
-  | fcos_512x512_nv12                      | 检测模型 | 输出检测到的物体和检测框                 | ![image](./render/fcos.jpeg)          |
-  | efficient_det_no_dequanti_512x512_nv12 | 检测模型 | 输出检测到的物体和检测框                 | ![image](./render/efficient_det.jpeg) |
-  | multitask_body_kps_960x544.hbm         | 检测模型 | 输出检测到body检测框和人体kps指标点      | ![image](./render/body_kps.jpeg)      |
-  | mobilenetv2_224x224_nv12.bin           | 分类模型 | 输出置信度最大的分类结果                 | ![image](./render/mobilenetv2.jpeg)   |
-  | mobilenet_unet_1024x2048_nv12.bin      | 分割模型 | 语义分割，输出每个像素点对应其种类的图像 | ![image](./render/unet.jpeg)          |
+  | 模型名称                               | 模型类型 | 平台支持情况 | 模型输出说明                             | 渲染效果                              |
+  | -------------------------------------- | -------- | -------- | ---------------------------------------- | ------------------------------------- |
+  | yolov2_608x608_nv12                    | 检测模型 | x3/x86 | 输出检测到的物体和检测框                 | ![image](./render/yolov2.jpeg)        |
+  | yolov3_416x416_nv12                    | 检测模型 | x3/x86 | 输出检测到的物体和检测框                 | ![image](./render/yolov3.jpeg)        |
+  | yolov5_672x672_nv12                    | 检测模型 | x3 | 输出检测到的物体和检测框                 | ![image](./render/yolov5.jpeg)        |
+  | mobilenet_ssd_300x300_nv12             | 检测模型 | x3/x86 | 输出检测到的物体和检测框                 | ![image](./render/mobilenet_ssd.jpeg) |
+  | fcos_512x512_nv12                      | 检测模型 | x3/x86 | 输出检测到的物体和检测框                 | ![image](./render/fcos.jpeg)          |
+  | efficient_det_no_dequanti_512x512_nv12 | 检测模型 | x3 | 输出检测到的物体和检测框                 | ![image](./render/efficient_det.jpeg) |
+  | multitask_body_kps_960x544.hbm         | 检测模型 | x3/x86 | 输出检测到body检测框和人体kps指标点      | ![image](./render/body_kps.jpeg)      |
+  | mobilenetv2_224x224_nv12.bin           | 分类模型 | x3/x86 | 输出置信度最大的分类结果                 | ![image](./render/mobilenetv2.jpeg)   |
+  | mobilenet_unet_1024x2048_nv12.bin      | 分割模型 | x3/x86 | 语义分割，输出每个像素点对应其种类的图像 | ![image](./render/unet.jpeg)          |
 
   "model_name"为模型名称
   "dnn_Parser"设置选择内置的后处理算法，目前支持的配置有"yolov2","yolov3","yolov5","kps_parser","classification","ssd","efficient_det","fcos","unet"。
