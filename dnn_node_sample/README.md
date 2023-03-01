@@ -94,6 +94,9 @@ Dnn Node sample package是Dnn Node package的使用示例，通过继承DnnNode�
 # 配置TogetherROS环境
 source /opt/tros/setup.bash
 
+# 复制模型和回灌图片到运行目录
+cp -r /opt/tros/lib/dnn_node_sample/config/ .
+
 # 配置MIPI摄像头
 export CAM_TYPE=mipi
 
@@ -106,7 +109,10 @@ ros2 launch dnn_node_sample hobot_dnn_node_sample.launch.py
 # 配置TogetherROS环境
 source /opt/tros/setup.bash
 
-# 配置MIPI摄像头
+# 复制模型和回灌图片到运行目录
+cp -r /opt/tros/lib/dnn_node_sample/config/ .
+
+# 配置USB摄像头
 export CAM_TYPE=usb
 
 ros2 launch dnn_node_sample hobot_dnn_node_sample.launch.py 
@@ -117,6 +123,9 @@ ros2 launch dnn_node_sample hobot_dnn_node_sample.launch.py
 ```shell
 # 配置TogetherROS环境
 source /opt/tros/setup.bash
+
+# 复制模型和回灌图片到运行目录
+cp -r /opt/tros/lib/dnn_node_sample/config/ .
 
 # 配置本地图片回灌
 export CAM_TYPE=fb
@@ -130,6 +139,9 @@ ros2 launch dnn_node_sample hobot_dnn_node_sample.launch.py
 ```shell
 export ROS_LOG_DIR=/userdata/
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/tros/lib/
+
+# 复制模型和回灌图片到运行目录
+cp -r /opt/tros/lib/dnn_node_sample/config/ .
 
 # 启动使用F37 MIPI摄像头发布图片
 /opt/tros/lib/mipi_cam/mipi_cam --ros-args -p out_format:=nv12 -p image_width:=960 -p image_height:=544 -p io_method:=shared_mem --log-level error &
@@ -166,7 +178,6 @@ source ./install/setup.bash
 
 # 复制模型和回灌图片到运行目录
 cp ./install/lib/dnn_node_sample/config .
-
 
 # 配置本地图片回灌
 export CAM_TYPE=fb
