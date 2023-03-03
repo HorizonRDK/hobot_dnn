@@ -1,5 +1,9 @@
 # Changelog for package dnn_node
 
+tros_1.1.6b (2023-3-03)
+------------------
+1. 修复dnn_node动态库安装时libhlog.so.1名错误问题。
+
 tros_1.1.6a (2023-2-16)
 ------------------
 1. 适配x86版本的dnn node，新增x86版本编译选项。

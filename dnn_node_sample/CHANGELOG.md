@@ -1,5 +1,10 @@
 # Changelog for package dnn_benchmark_example
 
+tros_1.1.6b (2023-3-03)
+------------------
+1. 修复readme文档错误导致使用错误问题。
+
+
 tros_1.1.6a (2023-2-16)
 ------------------
 1. 支持x86版本部署，适配x86版本的dnn node，新增x86版本编译选项。
