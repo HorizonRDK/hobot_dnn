@@ -1,6 +1,6 @@
 # Changelog for package dnn_node_example
 
-tros_1.1.6c (2023-3-15)
+tros_1.1.6 (2023-3-15)
 ------------------
 1. 更新示例使用的路径，统一个平台使用/opt路径下的模型路径。
 2. 修复dnn_node_example没有默认配置的问题。
