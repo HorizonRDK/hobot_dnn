@@ -128,13 +128,13 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 | image_width        | 本地回灌nv12格式图片的宽度            | nv12格式图片必须设置 | 0                   |                                                                         |
 | image_height       | 本地回灌nv12格式图片的高度            | nv12格式图片必须设置 | 0                   |                                                                         |
 | is_shared_mem_sub  | 使用shared mem通信方式订阅图片        | 否                   | 0                   |                                                                         |
-| config_file        | 配置文件路径                          | 否                   | ""                  | 更改配置文件配置不同模型，默认使用FCOS模型 |
+| config_file        | 配置文件路径                          | 否                   | "config/fcosworkconfig.json"                  | 更改配置文件配置不同模型，默认使用FCOS模型 |
 | dump_render_img    | 是否进行渲染，0：否；1：是            | 否                   | 0                   |                                                                         |
 | msg_pub_topic_name | 发布智能结果的topicname,用于web端展示 | 否                   | hobot_dnn_detection |                                                                         |
 
 ## 运行
 
-- dnn_node_example使用到的模型在/app/model/basic下。
+- dnn_node_example使用到的模型在/opt/hobot/model/x3/basic下。
 - 编译成功后，将生成的install路径拷贝到地平线X3开发板上（如果是在X3上编译，忽略拷贝步骤），并执行如下命令运行。
 
 ## X3 Ubuntu系统上运行
@@ -147,16 +147,11 @@ source ./install/local_setup.bash
 # 根据实际安装路径进行拷贝（docker中的安装路径为install/lib/dnn_node_example/config/，拷贝命令为cp -r install/lib/dnn_node_example/config/ .）。
 cp -r install/dnn_node_example/lib/dnn_node_example/config/ .
 
-# 软连接测试模型路径
-ln -s /app/model/basic models
-
 # 运行模式1：
 配置使用yolov3模型和dnn_node中内置的yolov3后处理算法，使用本地jpg格式图片通过同步模式进行回灌预测，并存储渲染后的图片
 ros2 run dnn_node_example example --ros-args -p feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1 -p config_file:=config/yolov3workconfig.json
 
 # 运行模式2：
-使用订阅到的image msg(topic为/image_raw)通过异步模式进行预测，并设置log级别为warn
-ros2 run dnn_node_example example --ros-args -p feed_type:=1 --ros-args --log-level warn
 配置使用yolov2模型和dnn_node中内置的yolov2后处理算法，使用订阅到的image msg(topic为/image_raw)通过异步模式进行预测，并设置log级别为warn
 ros2 run dnn_node_example example --ros-args -p feed_type:=1 --ros-args --log-level warn -p config_file:=config/yolov2workconfig.json
 
@@ -172,9 +167,6 @@ source ./install/setup.bash
 # config中为示例使用的模型，根据实际安装路径进行拷贝
 # 如果是板端编译（无--merge-install编译选项），拷贝命令为cp -r install/PKG_NAME/lib/PKG_NAME/config/ .，其中PKG_NAME为具体的package名。
 cp -r install/lib/dnn_node_example/config/ .
-
-# 软连接测试模型路径
-ln -s /app/model/basic models
 
 # 配置MIPI摄像头
 export CAM_TYPE=mipi
@@ -192,9 +184,6 @@ export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:./install/lib/
 
 # config中为example使用的模型，回灌使用的本地图片
 cp -r install/lib/dnn_node_example/config/ .
-
-# 软连接测试模型路径
-ln -s /app/model/basic models
 
 # 运行模式1：使用本地jpg格式图片通过同步模式进行回灌预测，并存储渲染后的图片
 ./install/lib/dnn_node_example/example --ros-args -p  feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1
@@ -215,11 +204,6 @@ source ./install/setup.bash
 # config中为示例使用的模型，根据实际安装路径进行拷贝
 cp -r ./install/lib/dnn_node_example/config/ .
 
-# 软连接测试模型路径
-git clone https://c-gitlab.horizon.ai/HHP/box/hobot_model.git -b feature-x86
-ln -s hobot_model models
-
-
 # 启动launch文件，使用feedback方式
 # 默认运行fcos算法，启动命令中使用参数config_file切换算法，如使用unet算法config_file:="config/mobilenet_unet_workconfig.json"
 ros2 launch dnn_node_example hobot_dnn_node_example_feedback.launch.py
@@ -229,10 +213,17 @@ ros2 launch dnn_node_example hobot_dnn_node_example_feedback.launch.py
 
 - config_file配置文件格式为json格式，以yolov5模型配置为例，具体配置如下：
   {
-    "model_file": "config/yolov5_672x672_nv12.bin",
+    "model_file": "/opt/hobot/model/x3/basic/yolov5_672x672_nv12.bin",
     "model_name": "yolov5_672x672_nv12",
     "dnn_Parser": "yolov5",
-    "model_output_count": 3
+    "model_output_count": 3,
+    "class_num": 80,
+    "cls_names_list": "config/coco.list",
+    "strides": [8, 16, 32],
+    "anchors_table": [[[10, 13], [16, 30], [33, 23]], [[30, 61], [62, 45], [59, 119]], [[116, 90], [156, 198], [373, 326]]],
+    "score_threshold": 0.4,
+    "nms_threshold": 0.5,
+    "nms_top_k": 5000
   }
   "model_file"为模型文件的路径。
   目前example支持的模型:
