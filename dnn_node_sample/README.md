@@ -164,7 +164,7 @@ cd /opt/tros/lib/websocket/webservice/
 chmod +x ./sbin/nginx && ./sbin/nginx -p .
 ```
 
-启动完成后，在PC端的浏览器输入`http://IP` 即可查看图像和算法渲染效果（IP为旭日X3派的IP地址）。
+启动完成后，在PC端的浏览器输入`http://IP:8000` 即可查看图像和算法渲染效果（IP为旭日X3派的IP地址）。
 
 ## X86 Ubuntu系统上运行
 
