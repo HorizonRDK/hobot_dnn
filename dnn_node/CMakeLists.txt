@@ -137,7 +137,7 @@ elseif(PLATFORM_J5)
     dnn
     cnn_intf
     ion
-    hbrt_bernoulli_aarch64
+    hbrt_bayes_aarch64
   )
 elseif(PLATFORM_X86)
   add_library(${PROJECT_NAME} SHARED

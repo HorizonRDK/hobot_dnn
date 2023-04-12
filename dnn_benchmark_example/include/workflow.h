@@ -84,11 +84,15 @@ class Workflow : public DnnNode
 
   PCQueue<NV12PyramidInputPtr> pc_queue_;
   #ifdef PLATFORM_X3
-  std::string model_file_name_ = "config/multitask_body_kps_960x544.hbm";
+  std::string model_file_name_ = "config/X3/multitask_body_kps_960x544.hbm";
   std::string model_name_ = "multitask_body_kps_960x544";
   #endif
+  #ifdef PLATFORM_J5
+  std::string model_file_name_ = "config/J5/mobilenetv1_224x224_nv12_pyramid.bin";
+  std::string model_name_ = "mobilenetv1_224x224_nv12";
+  #endif
   #ifdef PLATFORM_X86
-  std::string model_file_name_ = "config/mobilenetv1_224x224_nv12_pyramid.bin";
+  std::string model_file_name_ = "config/X3/mobilenetv1_224x224_nv12_pyramid.bin";
   std::string model_name_ = "mobilenetv1_224x224_nv12_pyramid";
   #endif
   ModelTaskType model_task_type_ = ModelTaskType::ModelInferType;
