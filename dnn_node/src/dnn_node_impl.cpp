@@ -325,11 +325,12 @@ int DnnNodeImpl::PreProcess(
 int DnnNodeImpl::RunInferTask(std::shared_ptr<DnnNodeOutput> &node_output,
                               const TaskId &task_id,
                               PostProcessCbType post_process,
+                              InputType input_type,
                               const int timeout_ms) {
   if (!dnn_rt_para_ || !node_output) {
     return -1;
   }
-  int ret = RunInfer(node_output, GetTask(task_id), timeout_ms);
+  int ret = RunInfer(node_output, GetTask(task_id), input_type, timeout_ms);
   if (ret != 0) {
     RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Run infer fail\n");
   } else {
@@ -349,6 +350,7 @@ int DnnNodeImpl::RunInferTask(std::shared_ptr<DnnNodeOutput> &node_output,
 
 int DnnNodeImpl::RunInfer(std::shared_ptr<DnnNodeOutput> node_output,
                           const std::shared_ptr<Task> &node_task,
+                          InputType input_type,
                           const int timeout_ms) {
   if (!dnn_node_para_ptr_ || !node_output || !node_task) {
     RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid node task\n");
@@ -361,11 +363,14 @@ int DnnNodeImpl::RunInfer(std::shared_ptr<DnnNodeOutput> node_output,
 
   auto &task = node_task;
   uint32_t ret = 0;
-  ret = task->ProcessInput();
-  if (ret != 0) {
-    RCLCPP_ERROR(
-        rclcpp::get_logger("dnn"), "Failed to process input, ret[%d]", ret);
-    return ret;
+  // Use ProcessInput api to process inputs only when the input type is DNN_INPUT
+  if (input_type == InputType::DNN_INPUT) {
+    ret = task->ProcessInput();
+    if (ret != 0) {
+      RCLCPP_ERROR(
+          rclcpp::get_logger("dnn"), "Failed to process input, ret[%d]", ret);
+      return ret;
+    }
   }
 
   ret = task->RunInfer();
@@ -798,7 +803,7 @@ int DnnNodeImpl::RunImpl(
   dnn_output->rt_stat->input_fps = input_stat_.Get();
 
   // 4 执行模型推理
-  if (RunInferTask(dnn_output, task_id, post_process, infer_timeout_ms) != 0) {
+  if (RunInferTask(dnn_output, task_id, post_process, input_type, infer_timeout_ms) != 0) {
     RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Run RunInferTask failed!");
     ReleaseTask(task_id);
     return -1;

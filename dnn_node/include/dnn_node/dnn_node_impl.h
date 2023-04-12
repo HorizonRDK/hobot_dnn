@@ -188,6 +188,7 @@ class DnnNodeImpl {
   int RunInferTask(std::shared_ptr<DnnNodeOutput> &node_output,
                    const TaskId &task_id,
                    PostProcessCbType post_process,
+                   InputType input_type,
                    const int timeout_ms = 1000);
 
   // 使用通过SetInputs输入给模型的数据进行推理
@@ -198,6 +199,7 @@ class DnnNodeImpl {
   // outputs为模型输出，timeout_ms为推理超时时间
   int RunInfer(std::shared_ptr<DnnNodeOutput> node_output,
                const std::shared_ptr<Task> &task,
+               InputType input_type,
                const int timeout_ms);
 
   // 获取dnn node管理和推理使用的模型。

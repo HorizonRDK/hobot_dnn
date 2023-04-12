@@ -1,5 +1,9 @@
 # Changelog for package dnn_node
 
+tros_1.1.7 (2023-4-12)
+------------------
+1. 修复X86平台上DDR模型推理失败问题。
+
 tros_1.1.6b (2023-3-03)
 ------------------
 1. 修复dnn_node动态库安装时libhlog.so.1名错误问题。
