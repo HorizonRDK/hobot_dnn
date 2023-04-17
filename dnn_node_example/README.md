@@ -209,6 +209,18 @@ cp -r ./install/lib/dnn_node_example/config/ .
 ros2 launch dnn_node_example hobot_dnn_node_example_feedback.launch.py
 ```
 
+## J5 Ubuntu系统上运行
+
+```shell
+export COLCON_CURRENT_PREFIX=install
+source install/setup.sh
+
+# 启动launch文件，使用feedback方式
+# 默认运行mobilenetv2算法，启动命令中使用参数config_file切换算法
+ros2 launch dnn_node_example hobot_dnn_node_example_j5_feedback.launch.py image:=config/j5/target_class.jpg
+
+```
+
 ## 注意事项
 
 - config_file配置文件格式为json格式，以yolov5模型配置为例，具体配置如下：

@@ -1,0 +1,7 @@
+{
+	"model_file": "./config/j5/mobilenetv2_224x224_nv12.bin",
+	"model_name": "mobilenetv2_224x224_nv12",
+	"dnn_Parser": "classification",
+	"model_output_count": 1,
+	"cls_names_list": "config/j5/imagenet.list"
+}

@@ -610,6 +610,8 @@ int DnnExampleNode::FeedFromLocal() {
       return -1;
     }
 
+  } else if (static_cast<int>(ImageType::BIN) == image_type_) {
+    // 读取bin文件送模型推理
   } else {
     RCLCPP_ERROR(
         rclcpp::get_logger("example"), "Invalid image type: %d", image_type_);
