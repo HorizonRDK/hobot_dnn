@@ -118,7 +118,7 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(
             os.path.join(
                 get_package_share_directory('websocket'),
-                'launch/hobot_websocket.launch.py')),
+                'launch/websocket.launch.py')),
         launch_arguments={
             'websocket_image_topic': '/image',
             'websocket_smart_topic': '/dnn_node_sample'
