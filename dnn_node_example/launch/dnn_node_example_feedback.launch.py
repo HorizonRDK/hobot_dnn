@@ -23,13 +23,14 @@ from launch.substitutions import TextSubstitution
 from launch.substitutions import LaunchConfiguration
 from ament_index_python.packages import get_package_prefix
 
+
 def generate_launch_description():
     config_file_launch_arg = DeclareLaunchArgument(
-        "config_file", default_value=TextSubstitution(text="config/fcosworkconfig.json")
+        "dnn_example_config_file", default_value=TextSubstitution(text="config/fcosworkconfig.json")
     )
 
     img_file_launch_arg = DeclareLaunchArgument(
-        "image", default_value=TextSubstitution(text="config/test.jpg")
+        "dnn_example_image", default_value=TextSubstitution(text="config/test.jpg")
     )
 
     # 拷贝config中文件
@@ -51,8 +52,9 @@ def generate_launch_description():
             output='screen',
             parameters=[
                 {"feed_type": 0},
-                {"config_file": LaunchConfiguration('config_file')},
-                {"image": LaunchConfiguration('image')},
+                {"config_file": LaunchConfiguration(
+                    'dnn_example_config_file')},
+                {"image": LaunchConfiguration('dnn_example_image')},
                 {"image_type": 0},
                 {"dump_render_img": 1}
             ],
