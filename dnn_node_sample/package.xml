@@ -2,8 +2,8 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>dnn_node_sample</name>
-  <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <version>1.1.6</version>
+  <description>TogetheROS dnn node sample</description>
   <maintainer email="kao.zhu@horizon.ai">zhukao</maintainer>
   <license>TODO: License declaration</license>
 
@@ -15,6 +15,12 @@
   <depend>ai_msgs</depend>
   <depend>dnn_node</depend>
   <depend>hobot_cv</depend>
+
+  <exec_depend>mipi_cam</exec_depend>
+  <exec_depend>hobot_usb_cam</exec_depend>
+  <exec_depend>hobot_image_publisher</exec_depend>
+  <exec_depend>hobot_codec</exec_depend>
+  <exec_depend>websocket</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

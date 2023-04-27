@@ -78,7 +78,7 @@ cp -r /opt/tros/lib/dnn_node_sample/config/ .
 # 配置MIPI摄像头
 export CAM_TYPE=mipi
 
-ros2 launch dnn_node_sample hobot_dnn_node_sample.launch.py 
+ros2 launch dnn_node_sample dnn_node_sample.launch.py 
 ```
 
 **使用USB摄像头发布图片**
@@ -93,7 +93,7 @@ cp -r /opt/tros/lib/dnn_node_sample/config/ .
 # 配置USB摄像头
 export CAM_TYPE=usb
 
-ros2 launch dnn_node_sample hobot_dnn_node_sample.launch.py 
+ros2 launch dnn_node_sample dnn_node_sample.launch.py 
 ```
 
 **使用本地图片回灌**
@@ -109,7 +109,7 @@ cp -r /opt/tros/lib/dnn_node_sample/config/ .
 export CAM_TYPE=fb
 
 # 使用的本地图片为/opt/tros/lib/dnn_node_sample/config/target.jpg
-ros2 launch dnn_node_sample hobot_dnn_node_sample.launch.py 
+ros2 launch dnn_node_sample dnn_node_sample.launch.py 
 ```
 
 ## X3 yocto系统上运行
@@ -163,15 +163,15 @@ chmod +x ./sbin/nginx && ./sbin/nginx -p .
 
 运行命令：
 
-```
+```bash
 root@ubuntu:~# source /opt/tros/setup.bash
 root@ubuntu:~# export CAM_TYPE=fb
-root@ubuntu:~# ros2 launch dnn_node_sample hobot_dnn_node_sample.launch.py
+root@ubuntu:~# ros2 launch dnn_node_sample dnn_node_sample.launch.py
 ```
 
 log输出：
 
-```
+```text
 [INFO] [launch]: All log files can be found below /root/.ros/log/2022-09-20-12-47-57-043477-ubuntu-4390
 [INFO] [launch]: Default logging verbosity is set to INFO
 camera_type is  fb
