@@ -84,12 +84,13 @@ SSDConfig default_ssd_config = {
      "diningtable", "dog",     "horse", "motorbike", "person",
      "pottedplant", "sheep",   "sofa",  "train",     "tvmonitor"}};
 
-SSDConfig ssd_config_ = default_ssd_config;
-std::vector<std::vector<Anchor>> anchors_table_;
-float score_threshold_ = 0.25;
-float nms_threshold_ = 0.45;
-bool is_performance_ = true;
-int nms_top_k_ = 200;
+static SSDConfig ssd_config_ = default_ssd_config;
+static std::vector<std::vector<Anchor>> anchors_table_;
+static std::mutex anchors_table_mutex_;
+static float score_threshold_ = 0.25;
+static float nms_threshold_ = 0.45;
+static bool is_performance_ = true;
+static int nms_top_k_ = 200;
 
 /**
  * Post process
@@ -125,22 +126,26 @@ int32_t Parse(
   ss << "PTQSSDPostProcessMethod DoProcess finished, predict result: "
      << result->perception;
   RCLCPP_DEBUG(rclcpp::get_logger("SSDOutputParser"), "%s", ss.str().c_str());
-  return 0;
+  return ret;
 }
 
 int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &tensors,
                 Perception &perception) {
   perception.type = Perception::DET;
   int layer_num = ssd_config_.step.size();
-  if (anchors_table_.empty()) {
-    // Note: note thread safe
-    anchors_table_.resize(layer_num);
-    for (int i = 0; i < layer_num; i++) {
-      int height, width;
-      std::vector<Anchor> &anchors = anchors_table_[i];
-      hobot::dnn_node::output_parser::get_tensor_hw(
-          tensors[i * 2], &height, &width);
-      SsdAnchors(anchors_table_[i], i, height, width);
+
+  {
+    std::lock_guard<std::mutex> lock(anchors_table_mutex_);
+    if (anchors_table_.empty()) {
+      // Note: note thread safe
+      anchors_table_.resize(layer_num);
+      for (int i = 0; i < layer_num; i++) {
+        int height, width;
+        std::vector<Anchor> &anchors = anchors_table_[i];
+        hobot::dnn_node::output_parser::get_tensor_hw(
+            tensors[i * 2], &height, &width);
+        SsdAnchors(anchors, i, height, width);
+      }
     }
   }
 
@@ -204,7 +209,7 @@ int GetBboxAndScores(std::shared_ptr<DNNTensor> c_tensor,
   int32_t c_hnum = shape[h_idx];
   int32_t c_wnum = shape[w_idx];
   int32_t c_cnum = shape[c_idx];
-  uint32_t anchor_num_per_pixel = c_cnum / class_num;
+  int32_t anchor_num_per_pixel = c_cnum / class_num;
 
   shape = bbox_tensor->properties.validShape.dimensionSize;
   int32_t b_batch_size = shape[0];
