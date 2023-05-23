@@ -1,5 +1,9 @@
 # Changelog for package dnn_node
 
+tros_2.0.0rc1 (2023-05-23)
+------------------
+1. 修复MobileNet_SSD可能出现崩溃问题
+
 tros_2.0.0 (2023-05-11)
 ------------------
 1. 更新package.xml，支持应用独立打包
