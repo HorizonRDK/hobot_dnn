@@ -42,9 +42,7 @@ def generate_launch_description():
         launch_arguments={
             'publish_image_source': './config/target.jpg',
             'publish_image_format': 'jpg',
-            'publish_topic_name': '/hbmem_img',
-            'publish_is_shared_mem': 'True',
-            'publish_is_loop': 'True',
+            'publish_message_topic_name': '/hbmem_img',
             'publish_fps': '10'
         }.items()
     )
