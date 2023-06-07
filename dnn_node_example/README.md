@@ -212,9 +212,10 @@ ros2 launch dnn_node_example dnn_node_example_feedback.launch.py
 ## 注意事项
 
 - config_file配置文件格式为json格式，以yolov5模型配置为例，具体配置如下：
+
+```json
   {
     "model_file": "/opt/hobot/model/x3/basic/yolov5_672x672_nv12.bin",
-    "model_name": "yolov5_672x672_nv12",
     "dnn_Parser": "yolov5",
     "model_output_count": 3,
     "class_num": 80,
@@ -225,6 +226,8 @@ ros2 launch dnn_node_example dnn_node_example_feedback.launch.py
     "nms_threshold": 0.5,
     "nms_top_k": 5000
   }
+```
+
   "model_file"为模型文件的路径。
   目前example支持的模型:
   | 模型名称                               | 模型类型 | 平台支持情况 | 模型输出说明                             | 渲染效果                              |
@@ -239,8 +242,7 @@ ros2 launch dnn_node_example dnn_node_example_feedback.launch.py
   | mobilenetv2_224x224_nv12.bin           | 分类模型 | x3/x86 | 输出置信度最大的分类结果                 | ![image](./render/mobilenetv2.jpeg)   |
   | mobilenet_unet_1024x2048_nv12.bin      | 分割模型 | x3/x86 | 语义分割，输出每个像素点对应其种类的图像 | ![image](./render/unet.jpeg)          |
 
-  "model_name"为模型名称
-  "dnn_Parser"设置选择内置的后处理算法，目前支持的配置有"yolov2","yolov3","yolov5","kps_parser","classification","ssd","efficient_det","fcos","unet"。
+  "dnn_Parser"设置选择内置的后处理算法，目前支持的配置有`"yolov2","yolov3","yolov5","kps_parser","classification","ssd","efficient_det","fcos","unet"`。
   "model_output_count"为模型输出branch个数。
 
 - 分割模型算法暂时只支持本地图片回灌，无web效果展示
@@ -252,7 +254,8 @@ ros2 launch dnn_node_example dnn_node_example_feedback.launch.py
 
 log：
 
-运行命令：ros2 run dnn_node_example example --ros-args -p config_file:=config/yolov3workconfig.json -p dump_render_img:=1
+运行命令：`ros2 run dnn_node_example example --ros-args -p config_file:=config/yolov3workconfig.json -p dump_render_img:=1`
+
 ```
 [WARN] [1684542863.055571066] [example]: This is dnn node example!
 [WARN] [1684542863.133229900] [example]: Parameter:
@@ -339,18 +342,18 @@ log：
 
 ## web效果展示
 本web效果采用的是yolov2的模型检测结果，启动流程如下：
-```
 
-1.启动图片发布节点：
+```shell
+# 1 启动图片发布节点：
 ros2 run mipi_cam mipi_cam --ros-args -p out_format:=nv12 -p image_width:=608 -p image_height:=608 -p io_method:=shared_mem --log-level error &
 
-2 启动jpeg图片编码&发布pkg
+# 2 启动jpeg图片编码&发布pkg
 ros2 run hobot_codec hobot_codec_republish --ros-args -p channel:=1 -p in_mode:=shared_mem -p in_format:=nv12 -p out_mode:=ros -p out_format:=jpeg -p sub_topic:=/hbmem_img -p pub_topic:=/image_jpeg --ros-args --log-level error &
 
-3 启动web展示pkg
+# 3 启动web展示pkg
 ros2 run websocket websocket --ros-args -p image_topic:=/image_jpeg -p image_type:=mjpeg -p smart_topic:=/hobot_dnn_detection --log-level error &
 
-5.使用订阅图片异步加载方式启动dnn_node_example
+# 4 使用订阅图片异步加载方式启动dnn_node_example
 ros2 run dnn_node_example example --ros-args -p feed_type:=1 -p is_shared_mem_sub:=1 -p msg_pub_topic_name:=hobot_dnn_detection -p config_file:=config/yolov2workconfig.json
 ```
 

@@ -1,6 +1,5 @@
 {
 	"model_file": "/opt/hobot/model/x3/basic/fcos_512x512_nv12.bin",
-	"model_name": "fcos_512x512_nv12",
 	"dnn_Parser": "fcos",
 	"model_output_count": 15,
 	"class_num": 80,
