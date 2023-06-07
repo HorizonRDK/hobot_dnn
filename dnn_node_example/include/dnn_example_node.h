@@ -96,7 +96,7 @@ class DnnExampleNode : public DnnNode {
   std::string config_file = "config/fcosworkconfig.json";
   DnnParserType parser = DnnParserType::INVALID_PARSER;
   std::string model_file_name_ = "/opt/hobot/model/x3/basic/fcos_512x512_nv12.bin";
-  std::string model_name_ = "fcos_512x512_nv12";
+  std::string model_name_ = "";
 
   // 加载模型后，查询出模型输入分辨率
   int model_input_width_ = -1;

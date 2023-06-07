@@ -118,7 +118,7 @@ DNNNodeSample::DNNNodeSample(const std::string& node_name,
 
 int DNNNodeSample::SetNodePara() {
   if (!dnn_node_para_ptr_) return -1;
-  // 指定算法推理使用的模型文件路径和模型名
+  // 指定算法推理使用的模型文件路径
   dnn_node_para_ptr_->model_file =
       "./config/yolov5_672x672_nv12.bin";
   // 指定算法推理任务类型
