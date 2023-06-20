@@ -1,5 +1,9 @@
 # Changelog for package dnn_node
 
+tros_2.0.1 (2023-06-07)
+------------------
+1. README.md中更新依赖的easydnn版本说明为1.6.1，dnn版本为1.18.4。
+
 tros_2.0.0rc1 (2023-05-23)
 ------------------
 1. 修复MobileNet_SSD可能出现崩溃问题
