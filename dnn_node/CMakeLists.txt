@@ -94,6 +94,7 @@ if(PLATFORM_X3)
     src/util/output_parser/detection/ptq_yolo3_darknet_output_parser.cpp
     src/util/output_parser/detection/ptq_yolo2_output_parser.cpp
     src/util/output_parser/detection/ptq_yolo5_output_parser.cpp
+    src/util/output_parser/detection/ptq_yolov5x_output_parser.cpp
     src/util/output_parser/detection/fasterrcnn_output_parser.cpp
     src/util/output_parser/detection/ptq_efficientdet_output_parser.cpp
     src/util/output_parser/detection/ptq_ssd_output_parser.cpp
@@ -123,6 +124,7 @@ elseif(PLATFORM_J5)
     src/util/output_parser/detection/ptq_yolo3_darknet_output_parser.cpp
     src/util/output_parser/detection/ptq_yolo2_output_parser.cpp
     src/util/output_parser/detection/ptq_yolo5_output_parser.cpp
+    src/util/output_parser/detection/ptq_yolov5x_output_parser.cpp
     src/util/output_parser/detection/fasterrcnn_output_parser.cpp
     src/util/output_parser/detection/ptq_efficientdet_output_parser.cpp
     src/util/output_parser/detection/ptq_ssd_output_parser.cpp
@@ -152,6 +154,7 @@ elseif(PLATFORM_X86)
     src/util/output_parser/detection/ptq_yolo3_darknet_output_parser.cpp
     src/util/output_parser/detection/ptq_yolo2_output_parser.cpp
     # src/util/output_parser/detection/ptq_yolo5_output_parser.cpp
+    src/util/output_parser/detection/ptq_yolov5x_output_parser.cpp
     src/util/output_parser/detection/fasterrcnn_output_parser.cpp
     # src/util/output_parser/detection/ptq_efficientdet_output_parser.cpp
     src/util/output_parser/detection/ptq_ssd_output_parser.cpp

@@ -1,0 +1,5 @@
+{
+	"model_file": "/opt/hobot/model/x3/basic/mobilenet_ssd_300x300_nv12.bin",
+	"dnn_Parser": "ssd",
+	"model_output_count": 12
+}

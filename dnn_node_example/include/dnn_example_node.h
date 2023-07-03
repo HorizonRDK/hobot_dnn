@@ -51,6 +51,7 @@ enum class DnnParserType {
   YOLOV2_PARSER = 1,      // 对应dnn_node中yolov2的output_parser算法
   YOLOV3_PARSER,          // 对应dnn_node中yolov3的output_parser算法
   YOLOV5_PARSER,          // 对应dnn_node中yolov5的output_parser算法
+  YOLOV5X_PARSER,         // 对应dnn_node中yolov5x的output_Parser算法
   CLASSIFICATION_PARSER,  // 对应dnn_node中classification的output_parser算法
   SSD_PARSER,
   EFFICIENTDET_PARSER,

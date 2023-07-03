@@ -1,0 +1,6 @@
+{
+	"model_file": "/opt/hobot/model/x3/basic/efficient_det_no_dequanti_512x512_nv12.bin",
+	"dnn_Parser": "efficient_det",
+	"model_output_count": 10,
+	"dequanti_file": "config/efficient_det/deleted_nodes_info.txt"
+}

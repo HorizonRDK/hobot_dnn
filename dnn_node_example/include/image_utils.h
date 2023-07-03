@@ -42,7 +42,7 @@ static std::vector<cv::Scalar> colors{
     cv::Scalar(0, 0, 255),    // blue
 };
 
-enum class ImageType { BGR = 0, NV12 = 1 };
+enum class ImageType { BGR = 0, NV12 = 1, BIN = 2 };
 
 class ImageUtils {
  public:

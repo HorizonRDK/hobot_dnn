@@ -28,6 +28,7 @@
 #include "dnn_node/util/output_parser/detection/ptq_yolo2_output_parser.h"
 #include "dnn_node/util/output_parser/detection/ptq_yolo3_darknet_output_parser.h"
 #include "dnn_node/util/output_parser/detection/ptq_yolo5_output_parser.h"
+#include "dnn_node/util/output_parser/detection/ptq_yolov5x_output_parser.h"
 #include "dnn_node/util/output_parser/segmentation/ptq_unet_output_parser.h"
 #include "hobot_cv/hobotcv_imgproc.h"
 #include "rapidjson/document.h"
@@ -270,7 +271,7 @@ int DnnExampleNode::LoadConfig() {
     } else if ("yolov3" == str_parser) {
       parser = DnnParserType::YOLOV3_PARSER;
       ret = hobot::dnn_node::parser_yolov3::LoadConfig(document);
-    #ifdef PLATFORM_X3
+#ifdef PLATFORM_X3
     } else if ("yolov5" == str_parser) {
       parser = DnnParserType::YOLOV5_PARSER;
       ret = hobot::dnn_node::parser_yolov5::LoadConfig(document);
@@ -289,7 +290,12 @@ int DnnExampleNode::LoadConfig() {
         RCLCPP_WARN(rclcpp::get_logger("example"),
                     "classification file is not set");
       }
-    #endif
+#endif
+#ifdef PLATFORM_J5
+    } else if ("yolov5x" == str_parser) {
+      parser = DnnParserType::YOLOV5X_PARSER;
+      ret = hobot::dnn_node::parser_yolov5x::LoadConfig(document);
+#endif
     } else if ("classification" == str_parser) {
       parser = DnnParserType::CLASSIFICATION_PARSER;
       ret = hobot::dnn_node::parser_mobilenetv2::LoadConfig(document);
@@ -304,7 +310,7 @@ int DnnExampleNode::LoadConfig() {
     } else {
       std::stringstream ss;
       ss << "Error! Invalid parser: " << str_parser
-         << " . Only yolov2, yolov3, yolov5, ssd, fcos"
+         << " . Only yolov2, yolov3, yolov5, yolov5x, ssd, fcos"
          << " efficient_det, classification, unet are supported";
       RCLCPP_ERROR(rclcpp::get_logger("example"), "%s", ss.str().c_str());
       return -3;
@@ -384,7 +390,7 @@ int DnnExampleNode::PostProcess(
       parse_ret =
           hobot::dnn_node::parser_yolov3::Parse(node_output, det_result);
       break;
-    #ifdef PLATFORM_X3
+#ifdef PLATFORM_X3
     case DnnParserType::YOLOV5_PARSER:
       parse_ret =
           hobot::dnn_node::parser_yolov5::Parse(node_output, det_result);
@@ -393,7 +399,13 @@ int DnnExampleNode::PostProcess(
       parse_ret =
           hobot::dnn_node::parser_efficientdet::Parse(node_output, det_result);
       break;
-    #endif
+#endif
+#ifdef PLATFORM_J5
+    case DnnParserType::YOLOV5X_PARSER:
+      parse_ret =
+          hobot::dnn_node::parser_yolov5x::Parse(node_output, det_result);
+      break;
+#endif
     case DnnParserType::CLASSIFICATION_PARSER:
       parse_ret =
           hobot::dnn_node::parser_mobilenetv2::Parse(node_output, det_result);
@@ -638,6 +650,8 @@ int DnnExampleNode::FeedFromLocal() {
       return -1;
     }
 
+  } else if (static_cast<int>(ImageType::BIN) == image_type_) {
+    // 读取bin文件送模型推理
   } else {
     RCLCPP_ERROR(
         rclcpp::get_logger("example"), "Invalid image type: %d", image_type_);

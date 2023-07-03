@@ -111,7 +111,7 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 # 使用介绍
 
 ## package说明
-  源码包含**dnn_node_example package**，可通过配置文件配置使用dnn_node中内置的后处理算法，dnn_node中目前支持"yolov2","yolov3","yolov5","FasterRcnn","mobilenetv2","mobilenet_ssd","efficient_det","fcos","mobilenet_unet"等后处理算法。
+  源码包含**dnn_node_example package**，可通过配置文件配置使用dnn_node中内置的后处理算法，dnn_node中目前支持"yolov2","yolov3","yolov5","yolov5x","FasterRcnn","mobilenetv2","mobilenet_ssd","efficient_det","fcos","mobilenet_unet"等后处理算法。
 
 ## 依赖
 
@@ -209,6 +209,18 @@ cp -r ./install/lib/dnn_node_example/config/ .
 ros2 launch dnn_node_example dnn_node_example_feedback.launch.py
 ```
 
+## J5 Ubuntu系统上运行
+
+```shell
+export COLCON_CURRENT_PREFIX=install
+source install/setup.sh
+
+# 启动launch文件，使用feedback方式
+# 默认运行mobilenetv2算法，启动命令中使用参数config_file切换算法
+ros2 launch dnn_node_example hobot_dnn_node_example_j5_feedback.launch.py image:=config/j5/target_class.jpg
+
+```
+
 ## 注意事项
 
 - config_file配置文件格式为json格式，以yolov5模型配置为例，具体配置如下：
@@ -235,6 +247,7 @@ ros2 launch dnn_node_example dnn_node_example_feedback.launch.py
   | yolov2_608x608_nv12                    | 检测模型 | x3/x86 | 输出检测到的物体和检测框                 | ![image](./render/yolov2.jpeg)        |
   | yolov3_416x416_nv12                    | 检测模型 | x3/x86 | 输出检测到的物体和检测框                 | ![image](./render/yolov3.jpeg)        |
   | yolov5_672x672_nv12                    | 检测模型 | x3 | 输出检测到的物体和检测框                 | ![image](./render/yolov5.jpeg)        |
+  | yolov5x_672x672_nv12                   | 检测模型 | J5 | 输出检测到的物体和检测框                 | ![image](./render/yolov5x.jpeg)        |
   | mobilenet_ssd_300x300_nv12             | 检测模型 | x3/x86 | 输出检测到的物体和检测框                 | ![image](./render/mobilenet_ssd.jpeg) |
   | fcos_512x512_nv12                      | 检测模型 | x3/x86 | 输出检测到的物体和检测框                 | ![image](./render/fcos.jpeg)          |
   | efficient_det_no_dequanti_512x512_nv12 | 检测模型 | x3 | 输出检测到的物体和检测框                 | ![image](./render/efficient_det.jpeg) |
@@ -242,7 +255,7 @@ ros2 launch dnn_node_example dnn_node_example_feedback.launch.py
   | mobilenetv2_224x224_nv12.bin           | 分类模型 | x3/x86 | 输出置信度最大的分类结果                 | ![image](./render/mobilenetv2.jpeg)   |
   | mobilenet_unet_1024x2048_nv12.bin      | 分割模型 | x3/x86 | 语义分割，输出每个像素点对应其种类的图像 | ![image](./render/unet.jpeg)          |
 
-  "dnn_Parser"设置选择内置的后处理算法，目前支持的配置有`"yolov2","yolov3","yolov5","kps_parser","classification","ssd","efficient_det","fcos","unet"`。
+  "dnn_Parser"设置选择内置的后处理算法，目前支持的配置有`"yolov2","yolov3","yolov5","yolov5x","kps_parser","classification","ssd","efficient_det","fcos","unet"`。
   "model_output_count"为模型输出branch个数。
 
 - 分割模型算法暂时只支持本地图片回灌，无web效果展示
@@ -265,7 +278,6 @@ log：
  dump_render_img: 1
  is_shared_mem_sub: 0
  model_file_name:  /app/model/basic/yolov3_416x416_nv12.bin
- model_name: yolov3_416x416_nv12
 [INFO] [1684542863.149125191] [dnn]: Node init.
 [INFO] [1684542863.149228733] [example]: Set node para.
 [INFO] [1684542863.149285441] [dnn]: Model init.

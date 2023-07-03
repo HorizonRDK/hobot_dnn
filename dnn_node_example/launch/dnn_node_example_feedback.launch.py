@@ -45,7 +45,6 @@ def generate_launch_description():
     return LaunchDescription([
         config_file_launch_arg,
         img_file_launch_arg,
-        # 启动单目rgb人体、人头、人脸、人手框和人体关键点检测pkg
         Node(
             package='dnn_node_example',
             executable='example',
