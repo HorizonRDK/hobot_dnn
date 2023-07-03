@@ -58,29 +58,7 @@ Dnn Node sample package是Dnn Node package的使用示例，通过继承DnnNode�
      --cmake-args \
      --no-warn-unused-cli \
      -DCMAKE_TOOLCHAIN_FILE=`pwd`/robot_dev_config/aarch64_toolchainfile.cmake
-  ```
-
-## X86 Ubuntu系统上编译 X86版本
-
-支持在X86 Ubuntu系统上编译。
-
-1、编译环境确认
-
-  x86 ubuntu版本: ubuntu20.04
-  
-2、编译
-
-- 编译命令：
-
-  ```shell
-  colcon build --packages-select dnn_node_sample \
-     --merge-install \
-     --cmake-force-configure \
-     --cmake-args \
-     --no-warn-unused-cli \
-     -DPLATFORM_X86=ON \
-     -DTHIRD_PARTY=`pwd`/../sysroot_docker
-  ```
+  ````
 
 # 使用介绍
 
@@ -100,7 +78,7 @@ cp -r /opt/tros/lib/dnn_node_sample/config/ .
 # 配置MIPI摄像头
 export CAM_TYPE=mipi
 
-ros2 launch dnn_node_sample hobot_dnn_node_sample.launch.py 
+ros2 launch dnn_node_sample dnn_node_sample.launch.py 
 ```
 
 **使用USB摄像头发布图片**
@@ -115,7 +93,7 @@ cp -r /opt/tros/lib/dnn_node_sample/config/ .
 # 配置USB摄像头
 export CAM_TYPE=usb
 
-ros2 launch dnn_node_sample hobot_dnn_node_sample.launch.py 
+ros2 launch dnn_node_sample dnn_node_sample.launch.py 
 ```
 
 **使用本地图片回灌**
@@ -131,7 +109,7 @@ cp -r /opt/tros/lib/dnn_node_sample/config/ .
 export CAM_TYPE=fb
 
 # 使用的本地图片为/opt/tros/lib/dnn_node_sample/config/target.jpg
-ros2 launch dnn_node_sample hobot_dnn_node_sample.launch.py 
+ros2 launch dnn_node_sample dnn_node_sample.launch.py 
 ```
 
 ## X3 yocto系统上运行
@@ -166,24 +144,6 @@ chmod +x ./sbin/nginx && ./sbin/nginx -p .
 
 启动完成后，在PC端的浏览器输入`http://IP:8000` 即可查看图像和算法渲染效果（IP为旭日X3派的IP地址）。
 
-## X86 Ubuntu系统上运行
-
-包括图像消息发布和WEB展示。
-
-**使用本地图片回灌**
-
-```shell
-# 配置TogetherROS环境
-source ./install/setup.bash
-
-# 复制模型和回灌图片到运行目录
-cp -r ./install/lib/dnn_node_sample/config .
-
-# 配置本地图片回灌
-export CAM_TYPE=fb
-
-ros2 launch dnn_node_sample hobot_dnn_node_sample.launch.py 
-```
 
 ## 注意事项
 
@@ -203,15 +163,15 @@ ros2 launch dnn_node_sample hobot_dnn_node_sample.launch.py
 
 运行命令：
 
-```
+```bash
 root@ubuntu:~# source /opt/tros/setup.bash
 root@ubuntu:~# export CAM_TYPE=fb
-root@ubuntu:~# ros2 launch dnn_node_sample hobot_dnn_node_sample.launch.py
+root@ubuntu:~# ros2 launch dnn_node_sample dnn_node_sample.launch.py
 ```
 
 log输出：
 
-```
+```text
 [INFO] [launch]: All log files can be found below /root/.ros/log/2022-09-20-12-47-57-043477-ubuntu-4390
 [INFO] [launch]: Default logging verbosity is set to INFO
 camera_type is  fb

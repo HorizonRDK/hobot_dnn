@@ -25,14 +25,14 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
 
 ## 依赖库
 
-### x3 依赖
+### X3 依赖
 
-- dnn:1.9.6c
-- easydnn:0.4.11
+- dnn:1.18.4
+- easydnn:1.6.1
 - opencv:3.4.5
-- hlog:0.4.7
+- hlog:1.6.1
 
-### x86 依赖
+### X86 依赖
 
 - dnn:1.12.3
 - easydnn:1.1.8

@@ -156,6 +156,16 @@ DnnExampleNode::DnnExampleNode(const std::string &node_name,
     return;
   }
 
+  // 未指定模型名，从加载的模型中查询出模型名
+  if (model_name_.empty()) {
+    if (!GetModel()) {
+      RCLCPP_ERROR(rclcpp::get_logger("example"), "Get model fail.");
+    } else {
+      model_name_ = GetModel()->GetName();
+      RCLCPP_WARN(rclcpp::get_logger("example"), "Get model name: %s from load model.", model_name_.c_str());
+    }
+  }
+
   // 加载模型后查询模型输入分辨率
   if (GetModelInputSize(0, model_input_width_, model_input_height_) < 0) {
     RCLCPP_ERROR(rclcpp::get_logger("example"), "Get model input size fail!");
@@ -558,6 +568,24 @@ int DnnExampleNode::PostProcess(
     perf_pipeline.set__time_ms_duration(
         CalTimeMsDuration(perf_pipeline.stamp_start, perf_pipeline.stamp_end));
     pub_data->perfs.push_back(perf_pipeline);
+
+    if (parser_output) {
+      // Output time delay info
+      RCLCPP_DEBUG_STREAM(rclcpp::get_logger("example"),
+        "frame_id: " << parser_output->msg_header->frame_id
+        << ", stamp: " << parser_output->msg_header->stamp.sec << "."
+        << parser_output->msg_header->stamp.nanosec
+        << ", recv delay: " << CalTimeMsDuration(parser_output->msg_header->stamp, ConvertToRosTime(parser_output->preprocess_timespec_start))
+        << ", preprocess time ms: " << static_cast<int>(perf_preprocess.time_ms_duration)
+        << ", infer time ms: " << node_output->rt_stat->infer_time_ms
+        << ", post process time ms: " << static_cast<int>(perf_postprocess.time_ms_duration)
+        << ", pipeline time ms: " << static_cast<int>(perf_pipeline.time_ms_duration)
+        << ", infer_timespec_start: " << std::to_string(node_output->rt_stat->infer_timespec_start.tv_sec) << "." << std::to_string(node_output->rt_stat->infer_timespec_start.tv_nsec)
+        << ", infer_timespec_end: " << std::to_string(node_output->rt_stat->infer_timespec_end.tv_sec) << "." << std::to_string(node_output->rt_stat->infer_timespec_end.tv_nsec)
+        << ", parse_timespec_start: " << std::to_string(node_output->rt_stat->parse_timespec_start.tv_sec) << "." << std::to_string(node_output->rt_stat->parse_timespec_start.tv_nsec)
+        << ", parse_timespec_end: " << std::to_string(node_output->rt_stat->parse_timespec_end.tv_sec) << "." << std::to_string(node_output->rt_stat->parse_timespec_end.tv_nsec)
+      );
+    }
 
     // 推理输出帧率统计
     pub_data->set__fps(round(node_output->rt_stat->output_fps));

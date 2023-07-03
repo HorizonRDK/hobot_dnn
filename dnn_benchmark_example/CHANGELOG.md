@@ -1,5 +1,14 @@
 # Changelog for package dnn_benchmark_example
 
+tros_2.1.0 (2023-06-20)
+------------------
+1. 删除针对于多模型的model_name配置项，从模型文件中自动获取model_name。
+
+
+tros_2.0.0 (2023-05-11)
+------------------
+1. 更新package.xml，支持应用独立打包
+
 tros_1.1.6b (2023-3-03)
 ------------------
 1. 修复readme文档错误导致使用错误问题。
