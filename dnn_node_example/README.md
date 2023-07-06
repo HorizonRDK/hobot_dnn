@@ -9,13 +9,16 @@ Dnn Node example package是Dnn Node package的使用示例，通过继承DnnNode
 # 开发环境
 
 - 编程语言: C/C++
-- 开发平台: X3/X86
+- 开发平台: X3/J5/X86
 - 系统版本：Ubuntu 20.04
 - 编译工具链:Linux GCC 9.3.0/Linaro GCC 9.3.0
 
 # 编译
 
 - X3版本：支持在X3 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
+
+- J5版本：支持在J5 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
+
 - X86版本：支持在X86 Ubuntu系统上编译一种方式。
 同时支持通过编译选项控制编译pkg的依赖和pkg的功能。
 
@@ -44,7 +47,7 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 - 如果关闭，编译和运行不依赖hbm_img_msgs pkg，支持使用原生ros和tros进行编译。
 - 对于shared mem通信方式，当前只支持订阅nv12格式图片。
 
-## X3 Ubuntu系统上编译 X3版本
+## X3/J5 Ubuntu系统上编译
 
 1、编译环境确认
 
@@ -57,7 +60,7 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 
 - 编译命令：`colcon build --packages-select dnn_node_example`
 
-## docker交叉编译 X3版本
+## docker交叉编译 X3/J5版本
 
 1、编译环境确认
 
@@ -69,17 +72,12 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 
 - 编译命令：
 
-  ```
-  export TARGET_ARCH=aarch64
-  export TARGET_TRIPLE=aarch64-linux-gnu
-  export CROSS_COMPILE=/usr/bin/$TARGET_TRIPLE-
+  ```shell
+  # RDK X3
+  bash robot_dev_config/build.sh -p X3 -s dnn_node_example
 
-  colcon build --packages-select dnn_node_example \
-     --merge-install \
-     --cmake-force-configure \
-     --cmake-args \
-     --no-warn-unused-cli \
-     -DCMAKE_TOOLCHAIN_FILE=`pwd`/robot_dev_config/aarch64_toolchainfile.cmake
+  # RDK J5
+  bash robot_dev_config/build.sh -p J5 -s dnn_node_example
   ```
 
 - 编译选项中默认打开了shared mem通信方式。
@@ -134,8 +132,9 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 
 ## 运行
 
-- dnn_node_example使用到的模型在/opt/hobot/model/x3/basic下。
-- 编译成功后，将生成的install路径拷贝到地平线X3开发板上（如果是在X3上编译，忽略拷贝步骤），并执行如下命令运行。
+- dnn_node_example使用到的模型在安装tros.b的时候已经安装，RDK X3安装在`/opt/hobot/model/x3/basic`路径下，RDK J5安装在`/opt/hobot/model/j5/basic/`路径下。
+
+- 编译成功后，将生成的install路径拷贝到地平线RDK上（如果是在RDK上编译，忽略拷贝步骤），并执行如下命令运行。
 
 ## X3 Ubuntu系统上运行
 
@@ -213,11 +212,14 @@ ros2 launch dnn_node_example dnn_node_example_feedback.launch.py
 
 ```shell
 export COLCON_CURRENT_PREFIX=install
-source install/setup.sh
+source install/setup.bash
 
-# 启动launch文件，使用feedback方式
-# 默认运行mobilenetv2算法，启动命令中使用参数config_file切换算法
-ros2 launch dnn_node_example hobot_dnn_node_example_j5_feedback.launch.py image:=config/j5/target_class.jpg
+# 使用feedback方式，启动命令中使用参数config_file切换算法
+ros2 launch dnn_node_example dnn_node_example_feedback.launch.py dnn_example_config_file:=config/mobilenetv2workconfig.json dnn_example_image:=config/target_class.jpg 
+
+# 使用MIPI摄像头作为图像数据输入，启动命令中使用参数config_file切换算法
+export CAM_TYPE=usb
+ros2 launch dnn_node_example dnn_node_example.launch.py dnn_example_config_file:=config/mobilenetv2workconfig.json
 
 ```
 

@@ -146,30 +146,30 @@ install(
   RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 
+install(DIRECTORY
+  ${PROJECT_SOURCE_DIR}/launch/
+  DESTINATION share/${PROJECT_NAME}/launch)
+
+# install(DIRECTORY
+#   ${PROJECT_SOURCE_DIR}/config/
+#   DESTINATION lib/${PROJECT_NAME}/config/
+# )
+
 if(PLATFORM_X3)
   install(DIRECTORY
-    ${PROJECT_SOURCE_DIR}/config/x3
+    ${PROJECT_SOURCE_DIR}/config/x3/
     DESTINATION lib/${PROJECT_NAME}/config/
   )
-  install(DIRECTORY
-    ${PROJECT_SOURCE_DIR}/launch/x3
-    DESTINATION share/${PROJECT_NAME}/launch)
 elseif(PLATFORM_J5)
   install(DIRECTORY
-    ${PROJECT_SOURCE_DIR}/config/j5
+    ${PROJECT_SOURCE_DIR}/config/j5/
     DESTINATION lib/${PROJECT_NAME}/config/
   )
-  install(DIRECTORY
-    ${PROJECT_SOURCE_DIR}/launch/j5
-    DESTINATION share/${PROJECT_NAME}/launch)
 elseif(PLATFORM_X86)
   install(DIRECTORY
-    ${PROJECT_SOURCE_DIR}/config/
+    ${PROJECT_SOURCE_DIR}/config/x86/
     DESTINATION lib/${PROJECT_NAME}/config/
   )
-  install(DIRECTORY
-    ${PROJECT_SOURCE_DIR}/launch/x3
-    DESTINATION share/${PROJECT_NAME}/launch)
 endif()
 
 ament_package()

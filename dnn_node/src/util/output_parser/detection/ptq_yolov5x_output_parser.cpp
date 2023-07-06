@@ -285,7 +285,7 @@ void ParseTensor(std::shared_ptr<DNNTensor> tensor,
 
   int anchor_num = anchors.size();
   auto quanti_type = tensor->properties.quantiType;
-  RCLCPP_WARN(rclcpp::get_logger("Yolo5_detection_parser"),
+  RCLCPP_DEBUG(rclcpp::get_logger("Yolo5_detection_parser"),
                  "quanti_type: %d", quanti_type);
   if (quanti_type == hbDNNQuantiType::NONE) {
     auto *data = reinterpret_cast<float *>(tensor->sysMem[0].virAddr);
