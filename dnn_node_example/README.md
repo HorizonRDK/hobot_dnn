@@ -20,6 +20,7 @@ Dnn Node example package是Dnn Node package的使用示例，通过继承DnnNode
 - J5版本：支持在J5 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
 
 - X86版本：支持在X86 Ubuntu系统上编译一种方式。
+
 同时支持通过编译选项控制编译pkg的依赖和pkg的功能。
 
 ## 依赖库

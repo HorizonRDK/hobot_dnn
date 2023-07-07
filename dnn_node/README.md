@@ -13,14 +13,18 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
 # 开发环境
 
 - 编程语言: C/C++
-- 开发平台: X3/X86
+- 开发平台: X3/J5/X86
 - 系统版本：Ubuntu 20.04
 - 编译工具链:Linux GCC 9.3.0/Linaro GCC 9.3.0
 
 # 编译
 
 - X3版本：支持在X3 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
+
+- J5版本：支持在J5 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
+
 - X86版本：支持在X86 Ubuntu系统上编译一种方式。
+
 同时支持通过编译选项控制编译pkg的依赖和pkg的功能。
 
 ## 依赖库
@@ -39,7 +43,14 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
 - opencv:3.4.5
 - hlog:1.1.3
 
-## X3 Ubuntu系统上编译 X3版本
+### J5 依赖
+
+- dnn:1.12.3
+- easydnn:1.1.8
+- opencv:3.4.5
+- hlog:1.1.3
+
+## X3/J5 Ubuntu系统上编译
 
 1、编译环境确认
 
@@ -53,7 +64,7 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
 
 - 编译dnn_node package：`colcon build --packages-select dnn_node`
 
-## docker交叉编译 X3版本
+## docker交叉编译 X3/J5版本
 
 1、编译环境确认
 
@@ -64,16 +75,12 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
 - 编译dnn_node package： 
 
   ```shell
-  export TARGET_ARCH=aarch64
-  export TARGET_TRIPLE=aarch64-linux-gnu
-  export CROSS_COMPILE=/usr/bin/$TARGET_TRIPLE-
   
-  colcon build --packages-select dnn_node \
-     --merge-install \
-     --cmake-force-configure \
-     --cmake-args \
-     --no-warn-unused-cli \
-     -DCMAKE_TOOLCHAIN_FILE=`pwd`/robot_dev_config/aarch64_toolchainfile.cmake
+  # RDK X3
+  bash robot_dev_config/build.sh -p X3 -s dnn_node
+
+  # RDK J5
+  bash robot_dev_config/build.sh -p J5 -s dnn_node
   ```
 
 ## X86 Ubuntu系统上编译 X86版本
