@@ -1,5 +1,9 @@
 # Changelog for package dnn_node_example
 
+tros_2.2.0 (2023-07-07)
+------------------
+1. 适配RDK J5平台。
+
 tros_2.1.0 (2023-06-20)
 ------------------
 1. 删除针对于多模型的model_name配置项，从模型文件中自动获取model_name。
