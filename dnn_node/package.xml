@@ -13,6 +13,7 @@
   <depend>ament_cmake_gtest</depend>
 
   <depend condition="$PLATFORM == X3">hobot-dnn</depend>
+  <depend condition="$PLATFORM == J5">hobot-dnn</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
