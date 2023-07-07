@@ -45,10 +45,10 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
 
 ### J5 依赖
 
-- dnn:1.12.3
-- easydnn:1.1.8
+- dnn:1.19.3
+- easydnn:1.6.1
 - opencv:3.4.5
-- hlog:1.1.3
+- hlog:1.6.1
 
 ## X3/J5 Ubuntu系统上编译
 

@@ -1,5 +1,9 @@
 # Changelog for package dnn_node
 
+tros_2.1.0 (2023-07-07)
+------------------
+1. 适配RDK J5平台，其中easydnn版本号1.6.1，dnn版本号1.19.3（和v1.1.57_release版本OE对齐），hlog版本号1.6.1。
+
 tros_2.0.1 (2023-06-07)
 ------------------
 1. README.md中更新依赖的easydnn版本说明为1.6.1，dnn版本为1.18.4。
