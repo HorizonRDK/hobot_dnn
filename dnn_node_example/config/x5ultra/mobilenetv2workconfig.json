@@ -1,5 +1,5 @@
 {
-	"model_file": "/opt/hobot/model/j5/basic/mobilenetv2_224x224_nv12.bin",
+	"model_file": "/opt/hobot/model/x5ultra/basic/mobilenetv2_224x224_nv12.bin",
 	"model_name": "mobilenetv2_224x224_nv12",
 	"dnn_Parser": "classification",
 	"model_output_count": 1,

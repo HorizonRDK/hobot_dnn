@@ -1,5 +1,9 @@
 # Changelog for package dnn_benchmark_example
 
+tros_2.0.1 (2023-07-14)
+------------------
+1. 规范X5ultra产品名。
+
 tros_2.0.0rc1 (2023-05-23)
 ------------------
 1. 修复图片回灌出错问题

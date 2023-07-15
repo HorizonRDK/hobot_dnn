@@ -1,8 +1,12 @@
 # Changelog for package dnn_node
 
+tros_2.1.1 (2023-07-14)
+------------------
+1. 规范X5ultra产品名。
+
 tros_2.1.0 (2023-07-07)
 ------------------
-1. 适配RDK J5平台，其中easydnn版本号1.6.1，dnn版本号1.19.3（和v1.1.57_release版本OE对齐），hlog版本号1.6.1。
+1. 适配RDK X5ultra平台，其中easydnn版本号1.6.1，dnn版本号1.19.3（和v1.1.57_release版本OE对齐），hlog版本号1.6.1。
 
 tros_2.0.1 (2023-06-07)
 ------------------
