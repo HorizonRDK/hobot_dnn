@@ -13,7 +13,7 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
 # 开发环境
 
 - 编程语言: C/C++
-- 开发平台: X3/J5/X86
+- 开发平台: X3/X5ultra/X86
 - 系统版本：Ubuntu 20.04
 - 编译工具链:Linux GCC 9.3.0/Linaro GCC 9.3.0
 
@@ -21,7 +21,7 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
 
 - X3版本：支持在X3 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
 
-- J5版本：支持在J5 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
+- X5ultra版本：支持在X5ultra Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
 
 - X86版本：支持在X86 Ubuntu系统上编译一种方式。
 
@@ -43,14 +43,14 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
 - opencv:3.4.5
 - hlog:1.1.3
 
-### J5 依赖
+### X5ultra 依赖
 
 - dnn:1.19.3
 - easydnn:1.6.1
 - opencv:3.4.5
 - hlog:1.6.1
 
-## X3/J5 Ubuntu系统上编译
+## X3/X5ultra Ubuntu系统上编译
 
 1、编译环境确认
 
@@ -64,7 +64,7 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
 
 - 编译dnn_node package：`colcon build --packages-select dnn_node`
 
-## docker交叉编译 X3/J5版本
+## docker交叉编译 X3/X5ultra版本
 
 1、编译环境确认
 
@@ -79,8 +79,8 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
   # RDK X3
   bash robot_dev_config/build.sh -p X3 -s dnn_node
 
-  # RDK J5
-  bash robot_dev_config/build.sh -p J5 -s dnn_node
+  # RDK X5ultra
+  bash robot_dev_config/build.sh -p X5ultra -s dnn_node
   ```
 
 ## X86 Ubuntu系统上编译 X86版本

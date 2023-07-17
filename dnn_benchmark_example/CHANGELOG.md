@@ -1,5 +1,9 @@
 # Changelog for package dnn_benchmark_example
 
+tros_2.1.1 (2023-07-14)
+------------------
+1. 规范X5ultra产品名。
+
 tros_2.1.0 (2023-06-20)
 ------------------
 1. 删除针对于多模型的model_name配置项，从模型文件中自动获取model_name。
