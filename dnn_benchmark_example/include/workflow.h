@@ -87,8 +87,8 @@ class Workflow : public DnnNode
   std::string model_file_name_ = "config/X3/multitask_body_kps_960x544.hbm";
   std::string model_name_ = "";
   #endif
-  #ifdef PLATFORM_X5ultra
-  std::string model_file_name_ = "config/X5ultra/mobilenetv1_224x224_nv12_pyramid.bin";
+  #ifdef PLATFORM_Rdkultra
+  std::string model_file_name_ = "config/Rdkultra/mobilenetv1_224x224_nv12_pyramid.bin";
   std::string model_name_ = "";
   #endif
   #ifdef PLATFORM_X86
