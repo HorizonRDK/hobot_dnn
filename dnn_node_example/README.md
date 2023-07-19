@@ -9,7 +9,7 @@ Dnn Node example package是Dnn Node package的使用示例，通过继承DnnNode
 # 开发环境
 
 - 编程语言: C/C++
-- 开发平台: X3/X5ultra/X86
+- 开发平台: X3/Rdkultra/X86
 - 系统版本：Ubuntu 20.04
 - 编译工具链:Linux GCC 9.3.0/Linaro GCC 9.3.0
 
@@ -17,7 +17,7 @@ Dnn Node example package是Dnn Node package的使用示例，通过继承DnnNode
 
 - X3版本：支持在X3 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
 
-- X5ultra版本：支持在X5ultra Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
+- Rdkultra版本：支持在Rdkultra Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
 
 - X86版本：支持在X86 Ubuntu系统上编译一种方式。
 
@@ -48,7 +48,7 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 - 如果关闭，编译和运行不依赖hbm_img_msgs pkg，支持使用原生ros和tros进行编译。
 - 对于shared mem通信方式，当前只支持订阅nv12格式图片。
 
-## X3/X5ultra Ubuntu系统上编译
+## X3/Rdkultra Ubuntu系统上编译
 
 1、编译环境确认
 
@@ -61,7 +61,7 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 
 - 编译命令：`colcon build --packages-select dnn_node_example`
 
-## docker交叉编译 X3/X5ultra版本
+## docker交叉编译 X3/Rdkultra版本
 
 1、编译环境确认
 
@@ -77,8 +77,8 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
   # RDK X3
   bash robot_dev_config/build.sh -p X3 -s dnn_node_example
 
-  # RDK X5ultra
-  bash robot_dev_config/build.sh -p X5ultra -s dnn_node_example
+  # RDK Ultra
+  bash robot_dev_config/build.sh -p Rdkultra -s dnn_node_example
   ```
 
 - 编译选项中默认打开了shared mem通信方式。
@@ -133,7 +133,7 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
 
 ## 运行
 
-- dnn_node_example使用到的模型在安装tros.b的时候已经安装，RDK X3安装在`/opt/hobot/model/x3/basic`路径下，RDK X5ultra安装在`/opt/hobot/model/x5ultra/basic/`路径下。
+- dnn_node_example使用到的模型在安装tros.b的时候已经安装，RDK X3安装在`/opt/hobot/model/x3/basic`路径下，RDK Ultra安装在`/opt/hobot/model/rdkultra/basic/`路径下。
 
 - 编译成功后，将生成的install路径拷贝到地平线RDK上（如果是在RDK上编译，忽略拷贝步骤），并执行如下命令运行。
 
@@ -209,7 +209,7 @@ cp -r ./install/lib/dnn_node_example/config/ .
 ros2 launch dnn_node_example dnn_node_example_feedback.launch.py
 ```
 
-## X5ultra Ubuntu系统上运行
+## Rdkultra Ubuntu系统上运行
 
 ```shell
 export COLCON_CURRENT_PREFIX=install
@@ -250,7 +250,7 @@ ros2 launch dnn_node_example dnn_node_example.launch.py dnn_example_config_file:
   | yolov2_608x608_nv12                    | 检测模型 | x3/x86 | 输出检测到的物体和检测框                 | ![image](./render/yolov2.jpeg)        |
   | yolov3_416x416_nv12                    | 检测模型 | x3/x86 | 输出检测到的物体和检测框                 | ![image](./render/yolov3.jpeg)        |
   | yolov5_672x672_nv12                    | 检测模型 | x3 | 输出检测到的物体和检测框                 | ![image](./render/yolov5.jpeg)        |
-  | yolov5x_672x672_nv12                   | 检测模型 | X5ultra | 输出检测到的物体和检测框                 | ![image](./render/yolov5x.jpeg)        |
+  | yolov5x_672x672_nv12                   | 检测模型 | Rdkultra | 输出检测到的物体和检测框                 | ![image](./render/yolov5x.jpeg)        |
   | mobilenet_ssd_300x300_nv12             | 检测模型 | x3/x86 | 输出检测到的物体和检测框                 | ![image](./render/mobilenet_ssd.jpeg) |
   | fcos_512x512_nv12                      | 检测模型 | x3/x86 | 输出检测到的物体和检测框                 | ![image](./render/fcos.jpeg)          |
   | efficient_det_no_dequanti_512x512_nv12 | 检测模型 | x3 | 输出检测到的物体和检测框                 | ![image](./render/efficient_det.jpeg) |

@@ -291,7 +291,7 @@ int DnnExampleNode::LoadConfig() {
                     "classification file is not set");
       }
 #endif
-#ifdef PLATFORM_X5ultra
+#ifdef PLATFORM_Rdkultra
     } else if ("yolov5x" == str_parser) {
       parser = DnnParserType::YOLOV5X_PARSER;
       ret = hobot::dnn_node::parser_yolov5x::LoadConfig(document);
@@ -400,7 +400,7 @@ int DnnExampleNode::PostProcess(
           hobot::dnn_node::parser_efficientdet::Parse(node_output, det_result);
       break;
 #endif
-#ifdef PLATFORM_X5ultra
+#ifdef PLATFORM_Rdkultra
     case DnnParserType::YOLOV5X_PARSER:
       parse_ret =
           hobot::dnn_node::parser_yolov5x::Parse(node_output, det_result);
