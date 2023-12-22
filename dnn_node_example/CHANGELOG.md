@@ -1,5 +1,9 @@
 # Changelog for package dnn_node_example
 
+tros_2.2.2 (2023-12-22)
+------------------
+1. 更新CMakeLists.txt，解决arm平台打包失败问题。
+
 tros_2.2.1 (2023-07-14)
 ------------------
 1. 规范Rdkultra产品名。
