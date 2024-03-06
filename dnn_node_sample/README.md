@@ -73,7 +73,7 @@ Dnn Node sample package是Dnn Node package的使用示例，通过继承DnnNode�
 source /opt/tros/setup.bash
 
 # 复制模型和回灌图片到运行目录
-cp -r /opt/tros/lib/dnn_node_sample/config/ .
+cp -r /opt/tros/${TROS_DISTRO}/lib/dnn_node_sample/config/ .
 
 # 配置MIPI摄像头
 export CAM_TYPE=mipi
@@ -88,7 +88,7 @@ ros2 launch dnn_node_sample dnn_node_sample.launch.py
 source /opt/tros/setup.bash
 
 # 复制模型和回灌图片到运行目录
-cp -r /opt/tros/lib/dnn_node_sample/config/ .
+cp -r /opt/tros/${TROS_DISTRO}/lib/dnn_node_sample/config/ .
 
 # 配置USB摄像头
 export CAM_TYPE=usb
@@ -103,47 +103,14 @@ ros2 launch dnn_node_sample dnn_node_sample.launch.py
 source /opt/tros/setup.bash
 
 # 复制模型和回灌图片到运行目录
-cp -r /opt/tros/lib/dnn_node_sample/config/ .
+cp -r /opt/tros/${TROS_DISTRO}/lib/dnn_node_sample/config/ .
 
 # 配置本地图片回灌
 export CAM_TYPE=fb
 
-# 使用的本地图片为/opt/tros/lib/dnn_node_sample/config/target.jpg
+# 使用的本地图片为/opt/tros/${TROS_DISTRO}/lib/dnn_node_sample/config/target.jpg
 ros2 launch dnn_node_sample dnn_node_sample.launch.py 
 ```
-
-## X3 yocto系统上运行
-
-```shell
-export ROS_LOG_DIR=/userdata/
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/opt/tros/lib/
-
-# 复制模型和回灌图片到运行目录
-cp -r /opt/tros/lib/dnn_node_sample/config/ .
-
-# 启动使用F37 MIPI摄像头发布图片
-/opt/tros/lib/mipi_cam/mipi_cam --ros-args -p out_format:=nv12 -p image_width:=960 -p image_height:=544 -p io_method:=shared_mem --log-level error &
-# 启动jpeg图片编码&发布
-/opt/tros/lib/hobot_codec/hobot_codec_republish --ros-args -p channel:=1 -p in_mode:=shared_mem -p in_format:=nv12 -p out_mode:=ros -p out_format:=jpeg -p sub_topic:=/hbmem_img -p pub_topic:=/image_jpeg --ros-args --log-level error &
-# 启动web展示
-/opt/tros/lib/websocket/websocket --ros-args -p image_topic:=/image_jpeg -p image_type:=mjpeg -p smart_topic:=/hobot_mono2d_body_detection --log-level error &
-
-# 启动dnn_node_sample算法推理
-/opt/tros/lib/dnn_node_sample/dnn_node_sample
-```
-
-yocto系统上第一次运行web展示需要启动webserver服务，运行方法为:
-
-```shell
-# cd 到websocket的部署路径下
-cd /opt/tros/lib/websocket/webservice/
-
-# 启动nginx
-chmod +x ./sbin/nginx && ./sbin/nginx -p .
-```
-
-启动完成后，在PC端的浏览器输入`http://IP:8000` 即可查看图像和算法渲染效果（IP为旭日X3派的IP地址）。
-
 
 ## 注意事项
 
@@ -153,7 +120,7 @@ chmod +x ./sbin/nginx && ./sbin/nginx -p .
 
 2. 修改回灌图片
 
-默认使用的回灌图片为`/opt/tros/lib/dnn_node_sample/config/target.jpg`，可以修改launch启动脚本中`fb_node`中的`image_source`配置项修改回灌的图片。
+默认使用的回灌图片为`/opt/tros/${TROS_DISTRO}/lib/dnn_node_sample/config/target.jpg`，可以修改launch启动脚本中`fb_node`中的`image_source`配置项修改回灌的图片。
 
 # 结果分析
 
