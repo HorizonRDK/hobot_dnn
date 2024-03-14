@@ -92,25 +92,10 @@ include_directories(
   ${SYS_ROOT}/usr/include/
 )
 
-# 设置一个默认hobotcv库的安装路径
-set(HOBOTCV_LIB_INSTALL_PATH ${CMAKE_INSTALL_PREFIX}/lib)
-# 如果find_package成功，使用查找到的路径更新HOBOTCV_LIB_INSTALL_PATH
-if(hobot_cv_LIBRARIES)
-  message("hobot_cv_LIBRARIES is ${hobot_cv_LIBRARIES}")
-  # 查找库路径的最后一个/符号
-  string(FIND ${hobot_cv_LIBRARIES} "/" index REVERSE)
-  # 获取库路径
-  string(SUBSTRING ${hobot_cv_LIBRARIES} 0 ${index} HOBOTCV_LIB_INSTALL_PATH)
-  message("update HOBOTCV_LIB_INSTALL_PATH as " ${HOBOTCV_LIB_INSTALL_PATH})
-endif()
-
-message("HOBOTCV_LIB_INSTALL_PATH is " ${HOBOTCV_LIB_INSTALL_PATH})
-
 link_directories(
   ${SYS_ROOT}/usr/lib/hbbpu/
   ${SYS_ROOT}/usr/lib/hbmedia/
   ${SYS_ROOT}/usr/lib/
-  ${HOBOTCV_LIB_INSTALL_PATH}
 )
 
 add_executable(example

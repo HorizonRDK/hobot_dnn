@@ -136,7 +136,7 @@ class DnnExampleNode : public DnnNode {
   // 订阅图片消息的topic和订阅者
   // 共享内存模式
 #ifdef SHARED_MEM_ENABLED
-  rclcpp::SubscriptionHbmem<hbm_img_msgs::msg::HbmMsg1080P>::ConstSharedPtr
+  rclcpp::Subscription<hbm_img_msgs::msg::HbmMsg1080P>::ConstSharedPtr
       sharedmem_img_subscription_ = nullptr;
   std::string sharedmem_img_topic_name_ = "/hbmem_img";
   void SharedMemImgProcess(

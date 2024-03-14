@@ -85,7 +85,7 @@ class DNNNodeSample : public hobot::dnn_node::DnnNode {
   int model_input_height_ = -1;
 
   // 图片消息订阅者
-  rclcpp::SubscriptionHbmem<hbm_img_msgs::msg::HbmMsg1080P>::ConstSharedPtr
+  rclcpp::Subscription<hbm_img_msgs::msg::HbmMsg1080P>::ConstSharedPtr
       ros_img_subscription_ = nullptr;
   // 算法推理结果消息发布者
   rclcpp::Publisher<ai_msgs::msg::PerceptionTargets>::SharedPtr msg_publisher_ =
@@ -107,7 +107,7 @@ DNNNodeSample::DNNNodeSample(const std::string& node_name,
 
   // 创建消息订阅者，从摄像头节点订阅图像消息
   ros_img_subscription_ =
-      this->create_subscription_hbmem<hbm_img_msgs::msg::HbmMsg1080P>(
+      this->create_subscription<hbm_img_msgs::msg::HbmMsg1080P>(
           "/hbmem_img",
           10,
           std::bind(&DNNNodeSample::FeedImg, this, std::placeholders::_1));

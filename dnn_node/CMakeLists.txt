@@ -35,6 +35,7 @@ find_package(ament_cmake REQUIRED)
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(std_msgs REQUIRED)
 
 # x3|rdkultra|x86
 set(PREFIX_PATH x3)
@@ -176,6 +177,7 @@ endif()
 ament_target_dependencies(
   ${PROJECT_NAME}
   rclcpp
+  std_msgs
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC
