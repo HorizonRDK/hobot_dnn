@@ -1,33 +1,35 @@
+English| [简体中文](./README_cn.md)
+
 Getting Started with Dnn Node Example
 =======
 
 
-# 功能介绍
+# Feature Introduction
 
-Dnn Node example package是Dnn Node package的使用示例，通过继承DnnNode虚基类，使用模型和图像数据利用BPU处理器进行模型推理。图像数据来源于本地图片回灌和订阅到的image msg。可通过配置文件使用dnn_node中内置的后处理算法，在dnn node example的后处理中发布智能结果，可通过web查看效果。
+Dnn Node example package is a usage example of Dnn Node package. By inheriting the DnnNode virtual base class, it utilizes the BPU processor for model inference with model and image data. Image data can come from local image injection and subscribed image msg. By configuring the built-in post-processing algorithms in dnn_node, intelligent results are published in the post-processing of dnn node example, and the effects can be viewed through a web interface.
 
-# 开发环境
+# Development Environment
 
-- 编程语言: C/C++
-- 开发平台: X3/Rdkultra/X86
-- 系统版本：Ubuntu 20.04
-- 编译工具链:Linux GCC 9.3.0/Linaro GCC 9.3.0
+- Programming Language: C/C++
+- Development Platform: X3/Rdkultra/X86
+- System Version: Ubuntu 20.04
+- Compilation Toolchain: Linux GCC 9.3.0/Linaro GCC 9.3.0
 
-# 编译
+# Compilation
 
-- X3版本：支持在X3 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
+- X3 Version: Supports compilation on the X3 Ubuntu system and cross-compilation using Docker on a PC.
 
-- Rdkultra版本：支持在Rdkultra Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
+- Rdkultra Version: Supports compilation on the Rdkultra Ubuntu system and cross-compilation using Docker on a PC.
 
-- X86版本：支持在X86 Ubuntu系统上编译一种方式。
+- X86 Version: Supports compilation on the X86 Ubuntu system.
 
-同时支持通过编译选项控制编译pkg的依赖和pkg的功能。
+It also supports controlling the dependencies and functionality of the compiled pkg through compilation options.
 
-## 依赖库
+## Dependency Libraries
 
-- opencv:3.4.5
+- OpenCV: 3.4.5
 
-ros package：
+ROS Packages:
 
 - dnn node
 - cv_bridge
@@ -36,42 +38,39 @@ ros package：
 - ai_msgs
 - hobot_cv
 
-hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图片传输，hbm_img_msgs pkg定义在hobot_msgs中，因此如果使用shared mem进行图片传输，需要依赖此pkg。
+hbm_img_msgs is a custom image message format used for image transmission in shared memory scenarios. The hbm_img_msgs pkg is defined in hobot_msgs; therefore, if shared memory is used for image transmission, this pkg is required.
 
+## Compilation Options
 
-## 编译选项
+1. SHARED_MEM
 
-1、SHARED_MEM
+- Shared memory transmission switch, enabled by default (ON), can be turned off during compilation using the -DSHARED_MEM=OFF command.
+- When enabled, compilation and execution depend on the hbm_img_msgs pkg and require the use of tros for compilation.
+- When disabled, compilation and execution do not depend on the hbm_img_msgs pkg, supporting compilation using native ROS and tros.
+- For shared memory communication, only subscription to nv12 format images is currently supported.## Compile on X3/Rdkultra Ubuntu System
 
-- shared mem（共享内存传输）使能开关，默认打开（ON），编译时使用-DSHARED_MEM=OFF命令关闭。
-- 如果打开，编译和运行会依赖hbm_img_msgs pkg，并且需要使用tros进行编译。
-- 如果关闭，编译和运行不依赖hbm_img_msgs pkg，支持使用原生ros和tros进行编译。
-- 对于shared mem通信方式，当前只支持订阅nv12格式图片。
+1. Compilation Environment Verification
 
-## X3/Rdkultra Ubuntu系统上编译
+- The X3 Ubuntu system is installed on the board.
+- The current compilation terminal has set up the TogetherROS environment variable: `source PATH/setup.bash`. Where PATH is the installation path of TogetherROS.
+- The ROS2 compilation tool colcon is installed. If the installed ROS does not include the compilation tool colcon, it needs to be installed manually. Installation command for colcon: `pip install -U colcon-common-extensions`.
+- The dnn node package has been compiled.
 
-1、编译环境确认
+2. Compilation
 
-- 板端已安装X3 Ubuntu系统。
-- 当前编译终端已设置TogetherROS环境变量：`source PATH/setup.bash`。其中PATH为TogetherROS的安装路径。
-- 已安装ROS2编译工具colcon。安装的ROS不包含编译工具colcon，需要手动安装colcon。colcon安装命令：`pip install -U colcon-common-extensions`
-- 已编译dnn node package
+- Compilation command: `colcon build --packages-select dnn_node_example`
 
-2、编译
+## Docker Cross-Compilation for X3/Rdkultra Version
 
-- 编译命令：`colcon build --packages-select dnn_node_example`
+1. Compilation Environment Verification
 
-## docker交叉编译 X3/Rdkultra版本
+- Compilation within docker, and TogetherROS has been installed in the docker environment. For instructions on docker installation, cross-compilation, TogetherROS compilation, and deployment, please refer to the README.md in the robot development platform's robot_dev_config repo.
+- The dnn node package has been compiled.
+- The hbm_img_msgs package has been compiled (see Dependency section for compilation methods).
 
-1、编译环境确认
+2. Compilation
 
-- 在docker中编译，并且docker中已经安装好TogetherROS。docker安装、交叉编译说明、TogetherROS编译和部署说明详见机器人开发平台robot_dev_config repo中的README.md。
-- 已编译dnn node package
-- 已编译hbm_img_msgs package（编译方法见Dependency部分）
-
-2、编译
-
-- 编译命令：
+- Compilation command:
 
   ```shell
   # RDK X3
@@ -81,196 +80,201 @@ hbm_img_msgs为自定义的图片消息格式，用于shared mem场景下的图�
   bash robot_dev_config/build.sh -p Rdkultra -s dnn_node_example
   ```
 
-- 编译选项中默认打开了shared mem通信方式。
+- Shared memory communication method is enabled by default in the compilation options.
 
+## Compile X86 Version on X86 Ubuntu System
 
-## X86 Ubuntu系统上编译 X86版本
+1. Compilation Environment Verification
 
-1、编译环境确认
+X86 Ubuntu version: ubuntu20.04
 
-  x86 ubuntu版本: ubuntu20.04
-  
-2、编译
+2. Compilation
 
-- 编译命令：
+- Compilation command:
 
   ```shell
   colcon build --packages-select dnn_node_example \
      --merge-install \
      --cmake-force-configure \
-     --cmake-args \
+  ``````shell
+--cmake-args \
      --no-warn-unused-cli \
      -DPLATFORM_X86=ON \
      -DTHIRD_PARTY=`pwd`/../sysroot_docker
   ```
 
-## 注意事项
+## Notes
 
 
-# 使用介绍
+# Instructions
 
-## package说明
-  源码包含**dnn_node_example package**，可通过配置文件配置使用dnn_node中内置的后处理算法，dnn_node中目前支持"yolov2","yolov3","yolov5","yolov5x","FasterRcnn","mobilenetv2","mobilenet_ssd","efficient_det","fcos","mobilenet_unet"等后处理算法。
+## Package Description
+The source code contains the **dnn_node_example package**, which can be configured to use the post-processing algorithms built into the dnn_node. Currently, the dnn_node supports post-processing algorithms such as "yolov2," "yolov3," "yolov5," "yolov5x," "FasterRcnn," "mobilenetv2," "mobilenet_ssd," "efficient_det," "fcos," and "mobilenet_unet."
 
-## 依赖
+## Dependencies
 
-- mipi_cam package：发布图片msg
-- websocket package：渲染图片和ai感知msg
+- mipi_cam package: Publishes image messages
+- websocket package: Renders images and AI perception messages
 
-## 参数
+## Parameters
 
-| 参数名             | 解释                                  | 是否必须             | 默认值              | 备注                                                                    |
-| ------------------ | ------------------------------------- | -------------------- | ------------------- | ----------------------------------------------------------------------- |
-| feed_type          | 图片来源，0：本地；1：订阅            | 否                   | 0                   |                                                                         |
-| image              | 本地图片地址                          | 否                   | config/test.jpg     |                                                                         |
-| image_type         | 图片格式，0：bgr，1：nv12             | 否                   | 0                   |                                                                         |
-| image_width        | 本地回灌nv12格式图片的宽度            | nv12格式图片必须设置 | 0                   |                                                                         |
-| image_height       | 本地回灌nv12格式图片的高度            | nv12格式图片必须设置 | 0                   |                                                                         |
-| is_shared_mem_sub  | 使用shared mem通信方式订阅图片        | 否                   | 0                   |                                                                         |
-| config_file        | 配置文件路径                          | 否                   | "config/fcosworkconfig.json"                  | 更改配置文件配置不同模型，默认使用FCOS模型 |
-| dump_render_img    | 是否进行渲染，0：否；1：是            | 否                   | 0                   |                                                                         |
-| msg_pub_topic_name | 发布智能结果的topicname,用于web端展示 | 否                   | hobot_dnn_detection |                                                                         |
+| Parameter Name      | Explanation                            | Mandatory            | Default Value       | Remarks                                                                 |
+| ------------------- | -------------------------------------- | -------------------- | ------------------- | ----------------------------------------------------------------------- |
+| feed_type           | Image source, 0: local; 1: subscribe   | No                   | 0                   |                                                                         |
+| image               | Local image path                       | No                   | config/test.jpg     |                                                                         |
+| image_type          | Image format, 0: bgr; 1: nv12          | No                   | 0                   |                                                                         |
+| image_width         | Width of locally filled nv12 format image  | Must be set for nv12 format image | 0               |                                                                         |
+| image_height        | Height of locally filled nv12 format image | Must be set for nv12 format image | 0               |                                                                         |
+| is_shared_mem_sub   | Subscribe to images using shared memory communication method | No  | 0                   |                                                                         |
+| config_file         | Path to the configuration file         | No                   | "config/fcosworkconfig.json" | Change the configuration file to use different models, default uses FCOS model |
+| dump_render_img     | Whether to render, 0: no; 1: yes       | No                   | 0                   |                                                                         |
+| msg_pub_topic_name  | Topic name for publishing intelligent results for web display | No | hobot_dnn_detection |                                                                      |
 
-## 运行
+## Running
 
-- dnn_node_example使用到的模型在安装tros.b的时候已经安装，RDK X3安装在`/opt/hobot/model/x3/basic`路径下，RDK Ultra安装在`/opt/hobot/model/rdkultra/basic/`路径下。
+- The models used by dnn_node_example are already installed during tros.b installation. The RDK X3 is installed in `/opt/hobot/model/x3/basic`, and the RDK Ultra is installed in `/opt/hobot/model/rdkultra/basic/` after a successful build. 
 
-- 编译成功后，将生成的install路径拷贝到地平线RDK上（如果是在RDK上编译，忽略拷贝步骤），并执行如下命令运行。
+- After compilation, copy the generated install path to the Horizon RDK (if compiling on the RDK, skip the copying step) and run the following command.
 
-## X3 Ubuntu系统上运行
+## Running on X3 Ubuntu System
 
-运行方式1，使用可执行文件启动：
+Running method 1, use the executable file to start:
 ```shell
 export COLCON_CURRENT_PREFIX=./install
 source ./install/local_setup.bash
-# config中为example使用的模型，回灌使用的本地图片
-# 根据实际安装路径进行拷贝（docker中的安装路径为install/lib/dnn_node_example/config/，拷贝命令为cp -r install/lib/dnn_node_example/config/ .）。
+# The config includes models used by the example and local images for filling
+# Copy based on the actual installation path (the installation path in the docker is install/lib/dnn_node_example/config/, the copy command is cp -r install/lib/dnn_node_example/config/ .).
 cp -r install/dnn_node_example/lib/dnn_node_example/config/ .
 
-# 运行模式1：
-配置使用yolov3模型和dnn_node中内置的yolov3后处理算法，使用本地jpg格式图片通过同步模式进行回灌预测，并存储渲染后的图片
+# Run mode 1:
+```To use the yolov3 model and the yolov3 post-processing algorithm built into dnn_node, configure to perform inference in synchronous mode using a local jpg format image and store the rendered image:
+
+```shell
 ros2 run dnn_node_example example --ros-args -p feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1 -p config_file:=config/yolov3workconfig.json
-
-# 运行模式2：
-配置使用yolov2模型和dnn_node中内置的yolov2后处理算法，使用订阅到的image msg(topic为/image_raw)通过异步模式进行预测，并设置log级别为warn
-ros2 run dnn_node_example example --ros-args -p feed_type:=1 --ros-args --log-level warn -p config_file:=config/yolov2workconfig.json
-
-# 运行模式3：使用shared mem通信方式(topic为/hbmem_img)通过异步模式进行预测，并设置log级别为warn
-ros2 run dnn_node_example example --ros-args -p feed_type:=1 -p is_shared_mem_sub:=1 --ros-args --log-level warn
-
 ```
 
-运行方式2，使用launch文件启动：
+# Run mode 2:
+Configure to use the yolov2 model and the yolov2 post-processing algorithm built into dnn_node, perform inference in asynchronous mode using the subscribed image message (topic is /image_raw), and set the log level to warn:
+
+```shell
+ros2 run dnn_node_example example --ros-args -p feed_type:=1 --ros-args --log-level warn -p config_file:=config/yolov2workconfig.json
+```
+
+# Run mode 3: Use shared memory communication method (topic is /hbmem_img) to perform inference in asynchronous mode and set the log level to warn:
+
+```shell
+ros2 run dnn_node_example example --ros-args -p feed_type:=1 -p is_shared_mem_sub:=1 --ros-args --log-level warn
+```
+
+To run in mode 2 using a launch file:
+
 ```shell
 export COLCON_CURRENT_PREFIX=./install
 source ./install/setup.bash
-# config中为示例使用的模型，根据实际安装路径进行拷贝
-# 如果是板端编译（无--merge-install编译选项），拷贝命令为cp -r install/PKG_NAME/lib/PKG_NAME/config/ .，其中PKG_NAME为具体的package名。
+# Copy the configuration based on the actual installation path
 cp -r install/lib/dnn_node_example/config/ .
 
-# 配置MIPI摄像头
+# Configure MIPI camera
 export CAM_TYPE=mipi
 
-# 启动launch文件，使用F37 sensor通过shared mem方式发布nv12格式图片
-# 默认运行fcos算法，启动命令中使用参数config_file切换算法，如使用unet算法config_file:="config/mobilenet_unet_workconfig.json"
+# Start the launch file, publish nv12 format images using shared memory with F37 sensor
+# By default, it runs the fcos algorithm, switch algorithms using the config_file parameter in the launch command, e.g., to use unet algorithm: config_file:="config/mobilenet_unet_workconfig.json"
 ros2 launch dnn_node_example dnn_node_example.launch.py
 ```
 
-## X3 yocto系统上运行
+## Run on X3 Yocto system:
 
 ```shell
 export ROS_LOG_DIR=/userdata/
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:./install/lib/
 
-# config中为example使用的模型，回灌使用的本地图片
+# Copy the configuration used by the example and the local image used for inference
 cp -r install/lib/dnn_node_example/config/ .
 
-# 运行模式1：使用本地jpg格式图片通过同步模式进行回灌预测，并存储渲染后的图片
+# Run mode 1: Perform inference in synchronous mode using a local jpg format image and store the rendered image
 ./install/lib/dnn_node_example/example --ros-args -p  feed_type:=0 -p image:=config/test.jpg -p image_type:=0 -p dump_render_img:=1
 
-# 运行模式2：使用订阅到的image msg(topic为/image_raw)通过异步模式进行预测，并设置log级别为warn
+# Run mode 2: Perform inference in asynchronous mode using the subscribed image message (topic is /image_raw) and set log level to warn
 ./install/lib/dnn_node_example/example --ros-args -p feed_type:=1 --log-level warn
 
-# 运行模式3：使用shared mem通信方式(topic为/hbmem_img)通过异步模式进行预测，并设置log级别为warn
+# Run mode 3: Perform inference in asynchronous mode using shared memory communication (topic is /hbmem_img) and set log level to warn
 ./install/lib/dnn_node_example/example --ros-args -p feed_type:=1 -p is_shared_mem_sub:=1 --ros-args --log-level warn
-
 ```
 
-## X86 Ubuntu系统上运行
-
-```shell
+## Run on X86 Ubuntu system:```shell
 export COLCON_CURRENT_PREFIX=./install
 source ./install/setup.bash
-# config中为示例使用的模型，根据实际安装路径进行拷贝
+# Copy the model used in the config as an example, adjust based on the actual installation path
 cp -r ./install/lib/dnn_node_example/config/ .
 
-# 启动launch文件，使用feedback方式
-# 默认运行fcos算法，启动命令中使用参数config_file切换算法，如使用unet算法config_file:="config/mobilenet_unet_workconfig.json"
+# Launch the file using feedback mode
+# By default, the FCOS algorithm will run. To switch algorithms using the config_file parameter, for example, to use the UNet algorithm: config_file:="config/mobilenet_unet_workconfig.json"
 ros2 launch dnn_node_example dnn_node_example_feedback.launch.py
 ```
 
-## Rdkultra Ubuntu系统上运行
+## Running on Rdkultra Ubuntu System
 
 ```shell
 export COLCON_CURRENT_PREFIX=install
 source install/setup.bash
 
-# 使用feedback方式，启动命令中使用参数config_file切换算法
-ros2 launch dnn_node_example dnn_node_example_feedback.launch.py dnn_example_config_file:=config/mobilenetv2workconfig.json dnn_example_image:=config/target_class.jpg 
+# Launch using feedback mode and switch algorithms using config_file parameter
+ros2 launch dnn_node_example dnn_node_example_feedback.launch.py dnn_example_config_file:=config/mobilenetv2workconfig.json dnn_example_image:=config/target_class.jpg
 
-# 使用MIPI摄像头作为图像数据输入，启动命令中使用参数config_file切换算法
+# Using MIPI camera as input for image data and switch algorithms using config_file parameter
 export CAM_TYPE=usb
 ros2 launch dnn_node_example dnn_node_example.launch.py dnn_example_config_file:=config/mobilenetv2workconfig.json
 
 ```
 
-## 注意事项
+## Notes
 
-- config_file配置文件格式为json格式，以yolov5模型配置为例，具体配置如下：
+- The config_file configuration file format is JSON. Here is an example configuration for the YOLOv5 model:
 
 ```json
-  {
-    "model_file": "/opt/hobot/model/x3/basic/yolov5_672x672_nv12.bin",
-    "dnn_Parser": "yolov5",
-    "model_output_count": 3,
-    "class_num": 80,
-    "cls_names_list": "config/coco.list",
-    "strides": [8, 16, 32],
-    "anchors_table": [[[10, 13], [16, 30], [33, 23]], [[30, 61], [62, 45], [59, 119]], [[116, 90], [156, 198], [373, 326]]],
-    "score_threshold": 0.4,
-    "nms_threshold": 0.5,
-    "nms_top_k": 5000
-  }
+{
+  "model_file": "/opt/hobot/model/x3/basic/yolov5_672x672_nv12.bin",
+  "dnn_Parser": "yolov5",
+  "model_output_count": 3,
+  "class_num": 80,
+  "cls_names_list": "config/coco.list",
+  "strides": [8, 16, 32],
+  "anchors_table": [[[10, 13], [16, 30], [33, 23]], [[30, 61], [62, 45], [59, 119]], [[116, 90], [156, 198], [373, 326]]],
+  "score_threshold": 0.4,
+  "nms_threshold": 0.5,
+  "nms_top_k": 5000
+}
 ```
 
-  "model_file"为模型文件的路径。
-  目前example支持的模型:
-  | 模型名称                               | 模型类型 | 平台支持情况 | 模型输出说明                             | 渲染效果                              |
-  | -------------------------------------- | -------- | -------- | ---------------------------------------- | ------------------------------------- |
-  | yolov2_608x608_nv12                    | 检测模型 | x3/x86 | 输出检测到的物体和检测框                 | ![image](./render/yolov2.jpeg)        |
-  | yolov3_416x416_nv12                    | 检测模型 | x3/x86 | 输出检测到的物体和检测框                 | ![image](./render/yolov3.jpeg)        |
-  | yolov5_672x672_nv12                    | 检测模型 | x3 | 输出检测到的物体和检测框                 | ![image](./render/yolov5.jpeg)        |
-  | yolov5x_672x672_nv12                   | 检测模型 | Rdkultra | 输出检测到的物体和检测框                 | ![image](./render/yolov5x.jpeg)        |
-  | mobilenet_ssd_300x300_nv12             | 检测模型 | x3/x86 | 输出检测到的物体和检测框                 | ![image](./render/mobilenet_ssd.jpeg) |
-  | fcos_512x512_nv12                      | 检测模型 | x3/x86 | 输出检测到的物体和检测框                 | ![image](./render/fcos.jpeg)          |
-  | efficient_det_no_dequanti_512x512_nv12 | 检测模型 | x3 | 输出检测到的物体和检测框                 | ![image](./render/efficient_det.jpeg) |
-  | multitask_body_kps_960x544.hbm         | 检测模型 | x3/x86 | 输出检测到body检测框和人体kps指标点      | ![image](./render/body_kps.jpeg)      |
-  | mobilenetv2_224x224_nv12.bin           | 分类模型 | x3/x86 | 输出置信度最大的分类结果                 | ![image](./render/mobilenetv2.jpeg)   |
-  | mobilenet_unet_1024x2048_nv12.bin      | 分割模型 | x3/x86 | 语义分割，输出每个像素点对应其种类的图像 | ![image](./render/unet.jpeg)          |
+  "model_file" indicates the path to the model file.
+  Models currently supported by the example:
+  | Model Name                            | Model Type | Platform Support | Model Output Description                 | Rendering Effect                       |
+  | -------------------------------------- | ---------- | ---------------- | ---------------------------------------- | --------------------------------------- |
+  | yolov2_608x608_nv12                    | Detection Model | x3/x86 | Output objects detected and bounding boxes | ![image](./render/yolov2.jpeg)         |
+``` 
 
-  "dnn_Parser"设置选择内置的后处理算法，目前支持的配置有`"yolov2","yolov3","yolov5","yolov5x","kps_parser","classification","ssd","efficient_det","fcos","unet"`。
-  "model_output_count"为模型输出branch个数。
+如有任何问题，请随时询问。| yolov3_416x416_nv12                    | Detection model | x3/x86 | Output detected objects and bounding boxes | ![image](./render/yolov3.jpeg)        |
+| yolov5_672x672_nv12                    | Detection model | x3 | Output detected objects and bounding boxes | ![image](./render/yolov5.jpeg)        |
+| yolov5x_672x672_nv12                   | Detection model | Rdkultra | Output detected objects and bounding boxes | ![image](./render/yolov5x.jpeg)        |
+| mobilenet_ssd_300x300_nv12             | Detection model | x3/x86 | Output detected objects and bounding boxes | ![image](./render/mobilenet_ssd.jpeg) |
+| fcos_512x512_nv12                      | Detection model | x3/x86 | Output detected objects and bounding boxes | ![image](./render/fcos.jpeg)          |
+| efficient_det_no_dequanti_512x512_nv12 | Detection model | x3 | Output detected objects and bounding boxes | ![image](./render/efficient_det.jpeg) |
+| multitask_body_kps_960x544.hbm         | Detection model | x3/x86 | Output detected body bounding boxes and human keypoint indices | ![image](./render/body_kps.jpeg)      |
+| mobilenetv2_224x224_nv12.bin           | Classification model | x3/x86 | Output the class result with the highest confidence | ![image](./render/mobilenetv2.jpeg)   |
+| mobilenet_unet_1024x2048_nv12.bin      | Segmentation model | x3/x86 | Semantic segmentation, output image with each pixel corresponding to its class | ![image](./render/unet.jpeg)          |
 
-- 分割模型算法暂时只支持本地图片回灌，无web效果展示
+"dnn_Parser" setting chooses the built-in post-processing algorithm, currently support configurations include `"yolov2", "yolov3", "yolov5", "yolov5x", "kps_parser", "classification", "ssd", "efficient_det", "fcos", "unet"`.
+"model_output_count" represents the number of model output branches.
 
+- Segmentation model algorithm currently only supports local image feedback and does not have web display functionality.
 
-# 结果分析
+# Results Analysis
 
-## X3结果展示
+## X3 Results Display
 
-log：
+log:
 
-运行命令：`ros2 run dnn_node_example example --ros-args -p config_file:=config/yolov3workconfig.json -p dump_render_img:=1`
+Command executed: `ros2 run dnn_node_example example --ros-args -p config_file:=config/yolov3workconfig.json -p dump_render_img:=1`
 
 ```
 [WARN] [1684542863.055571066] [example]: This is dnn node example!
@@ -298,7 +302,7 @@ log：
 [INFO] [1684542864.121412067] [dnn]: Set task_num [2]
 [INFO] [1684542864.121486859] [example]: The model input width is 416 and height is 416
 [INFO] [1684542864.121529775] [example]: Dnn node feed with local image: config/test.jpg
-[INFO] [1684542866.023484026] [example]: task_num: 2
+```[INFO] [1684542866.023484026] [example]: task_num: 2
 [INFO] [1684542866.200993943] [Yolo3Darknet_detection_parser]: dep out size: 3 3
 [INFO] [1684542866.319497818] [example]: Output from image_name: config/test.jpg, frame_id: , stamp: 0.0
 [INFO] [1684542866.319713068] [PostProcessBase]: outputs size: 3
@@ -347,30 +351,29 @@ log：
 [INFO] [1684542866.327777318] [ImageUtils]: roi x_offset: 143 y_offset: 121 width: 13 height: 22
 [INFO] [1684542866.327839360] [ImageUtils]: target.rois.size: 1
 [INFO] [1684542866.365547943] [ImageUtils]: roi.type:
-[INFO] [1684542866.365588651] [ImageUtils]: roi x_offset: 235 y_offset: 120 width: 7 height: 10
-[WARN] [1684542866.365663276] [ImageUtils]: Draw result to file: render__0_0.jpeg
+[INFO] [1684542866.365588651] [ImageUtils]: roi x_offset: 235 y_offset: 120 width: 7 height: 10[WARN] [1684542866.365663276] [ImageUtils]: Draw result to file: render__0_0.jpeg
 [WARN] [1684542866.386982151] [example]: Smart fps = 1
 
 ```
 
-渲染图片：![image](./render/yolov3.jpeg)
+Rendered image: ![image](./render/yolov3.jpeg)
 
-## web效果展示
-本web效果采用的是yolov2的模型检测结果，启动流程如下：
+## Web demonstration
+The web demonstration uses the model detection results of yolov2. The startup process is as follows:
 
 ```shell
-# 1 启动图片发布节点：
+# 1 Start the image publishing node:
 ros2 run mipi_cam mipi_cam --ros-args -p out_format:=nv12 -p image_width:=608 -p image_height:=608 -p io_method:=shared_mem --log-level error &
 
-# 2 启动jpeg图片编码&发布pkg
+# 2 Start the jpeg image encoding & publishing package
 ros2 run hobot_codec hobot_codec_republish --ros-args -p channel:=1 -p in_mode:=shared_mem -p in_format:=nv12 -p out_mode:=ros -p out_format:=jpeg -p sub_topic:=/hbmem_img -p pub_topic:=/image_jpeg --ros-args --log-level error &
 
-# 3 启动web展示pkg
+# 3 Start the web display package
 ros2 run websocket websocket --ros-args -p image_topic:=/image_jpeg -p image_type:=mjpeg -p smart_topic:=/hobot_dnn_detection --log-level error &
 
-# 4 使用订阅图片异步加载方式启动dnn_node_example
+# 4 Start the dnn_node_example using asynchronous image loading method to subscribe
 ros2 run dnn_node_example example --ros-args -p feed_type:=1 -p is_shared_mem_sub:=1 -p msg_pub_topic_name:=hobot_dnn_detection -p config_file:=config/yolov2workconfig.json
 ```
 
-web效果截图：
+Screenshot of the web demonstration:
 ![image](./render/webrender.jpg)

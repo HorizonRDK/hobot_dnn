@@ -1,81 +1,82 @@
-Getting Started with Dnn Node
+English| [简体中文](./README_cn.md)
+
+# Getting Started with Dnn Node
 =======
 
 
-# 功能介绍
+# Introduction
 
-通过阅读本文档，用户可以在地平线X3开发板上使用模型和图像数据利用BPU处理器进行模型推理，并处理解析后的模型输出。
+By reading this document, users can utilize models and image data on the Horizon X3 development board to perform model inference using the BPU processor and process the parsed model outputs.
 
-Dnn Node package是地平线机器人开发平台的一部分，基于地平线EasyDNN和ROS2 Node进行二次开发，为应用开发提供更简单易用的模型集成开发接口，包括模型管理、基于模型描述的输入处理及结果解析，以及模型输出内存分配管理等功能。
+The Dnn Node package is part of the Horizon Robotics robot development platform, based on the Horizon EasyDNN and ROS2 Node for secondary development, providing a simpler and more user-friendly model integration development interface for application development. This includes functions such as model management, input processing and result parsing based on model descriptions, and model output memory allocation management.
 
-Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的数据结构和接口，用户需要继承DnnNode类并实现前后处理和配置接口。
+The DnnNode in the Dnn Node package is a virtual base class that defines the data structures and interfaces for model integration development. Users need to inherit the DnnNode class and implement pre- and post-processing as well as configuration interfaces.
 
-# 开发环境
+# Development Environment
 
-- 编程语言: C/C++
-- 开发平台: X3/Rdkultra/X86
-- 系统版本：Ubuntu 20.04
-- 编译工具链:Linux GCC 9.3.0/Linaro GCC 9.3.0
+- Programming Language: C/C++
+- Development Platform: X3/Rdkultra/X86
+- System Version: Ubuntu 20.04
+- Compilation Toolchain: Linux GCC 9.3.0/Linaro GCC 9.3.0
 
-# 编译
+# Compilation
 
-- X3版本：支持在X3 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
+- X3 Version: Supports compilation on X3 Ubuntu system and cross-compilation using Docker on PC.
 
-- Rdkultra版本：支持在Rdkultra Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
+- Rdkultra Version: Supports compilation on Rdkultra Ubuntu system and cross-compilation using Docker on PC.
 
-- X86版本：支持在X86 Ubuntu系统上编译一种方式。
+- X86 Version: Supports compilation on X86 Ubuntu system.
 
-同时支持通过编译选项控制编译pkg的依赖和pkg的功能。
+Compilation options can control the dependencies and functionalities of compiling the package.
 
-## 依赖库
+## Dependency Libraries
 
-### X3 依赖
+### X3 Dependencies
 
-- dnn:1.18.4
-- easydnn:1.6.1
-- opencv:3.4.5
-- hlog:1.6.1
+- dnn: 1.18.4
+- easydnn: 1.6.1
+- opencv: 3.4.5
+- hlog: 1.6.1
 
-### X86 依赖
+### X86 Dependencies
 
-- dnn:1.12.3
-- easydnn:1.1.8
-- opencv:3.4.5
-- hlog:1.1.3
+- dnn: 1.12.3
+- easydnn: 1.1.8
+- opencv: 3.4.5
+- hlog: 1.1.3
 
-### Rdkultra 依赖
+### Rdkultra Dependencies
 
-- dnn:1.19.3
-- easydnn:1.6.1
-- opencv:3.4.5
-- hlog:1.6.1
+- dnn: 1.19.3
+- easydnn: 1.6.1
+- opencv: 3.4.5- hlog:1.6.1
 
-## X3/Rdkultra Ubuntu系统上编译
+## Compilation on X3/Rdkultra Ubuntu System
 
-1、编译环境确认
+1. Compilation Environment Confirmation
 
-- 当前编译终端已设置TROS环境变量：`source /opt/tros/setup.bash`。
+- The current compilation terminal has set the TROS environment variable: `source /opt/tros/setup.bash`.
 
-- 已安装ROS2软件包构建系统ament_cmake。安装命令：`apt update; apt-get install python3-catkin-pkg; pip3 install empy`
+- The ROS2 software package build system `ament_cmake` has been installed. Installation command: `apt update; apt-get install python3-catkin-pkg; pip3 install empy`.
 
-- 已安装ROS2编译工具colcon。安装命令：`pip3 install -U colcon-common-extensions`
+- The ROS2 compilation tool `colcon` has been installed. Installation command: `pip3 install -U colcon-common-extensions`.
 
-2、编译
+2. Compilation
 
-- 编译dnn_node package：`colcon build --packages-select dnn_node`
+- Compile the `dnn_node` package: `colcon build --packages-select dnn_node`
 
-## docker交叉编译 X3/Rdkultra版本
+## Cross-Compilation for X3/Rdkultra using Docker
 
-1、编译环境确认
+1. Compilation Environment Confirmation
 
-- 在docker中编译，并且docker中已经编译好TROS。docker安装、交叉编译说明、TROS编译和部署说明详见[地平线机器人平台用户手册](https://developer.horizon.ai/api/v1/fileData/TogetherROS/quick_start/cross_compile.html#togetherros)。
+- Compile in Docker, where TROS has been pre-compiled in Docker. For Docker installation, cross-compilation instructions, TROS compilation, and deployment, please refer to [Horizon Robotics Robot Platform User Manual](https://developer.horizon.ai/api/v1/fileData/TogetherROS/quick_start/cross_compile.html#togetherros).
 
-2、编译
+2. Compilation
 
-- 编译dnn_node package： 
+- Compile the `dnn_node` package:
 
   ```shell
-  
+
   # RDK X3
   bash robot_dev_config/build.sh -p X3 -s dnn_node
 
@@ -83,74 +84,74 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
   bash robot_dev_config/build.sh -p Rdkultra -s dnn_node
   ```
 
-## X86 Ubuntu系统上编译 X86版本
+## Compilation on X86 Ubuntu System for X86 Version
 
-1、编译环境确认
+1. Compilation Environment Confirmation
 
-  x86 ubuntu版本: ubuntu20.04
-  
-2、编译
+  X86 Ubuntu version: ubuntu20.04
 
-- 编译命令：
+2. Compilation
+
+- Compilation command:
 
   ```shell
   colcon build --packages-select dnn_node \
      --merge-install \
      --cmake-force-configure \
      --cmake-args \
-     --no-warn-unused-cli \
+``````
+--no-warn-unused-cli \
      -DPLATFORM_X86=ON \
      -DTHIRD_PARTY=`pwd`/../sysroot_docker
   ```
 
 # Usage
 
-用户需要继承DnnNode虚基类并实现配置等虚接口。
+Users need to inherit the DnnNode virtual base class and implement virtual interfaces such as configuration.
 
-dnn node package中的数据和接口说明详见使用手册：docs/API-Manual/API-Manual.md
+For data and interface descriptions in the dnn node package, please refer to the API manual: docs/API-Manual/API-Manual.md
 
-## 使用流程
+## Workflow
 
 ![](./docs/dnnnode_workflow.jpg)
 
-使用时包含两个流程，分别是初始化和运行时流程。
+There are two processes involved in usage, namely the initialization process and the runtime process.
 
-初始化流程是继承dnn node基类，创建用户node，实现虚接口`SetNodePara`和`PostProcess`，并使用基类的`Init`接口完成初始化操作。
+The initialization process involves inheriting the dnn node base class, creating a user node, implementing the virtual interfaces `SetNodePara` and `PostProcess`, and using the base class's `Init` interface to complete the initialization operation.
 
-运行时流程是执行推理和业务逻辑。以使用图片数据进行推理的算法举例，流程是订阅图片消息（sub msg），将图片处理成算法输入数据类型（前处理）后，使用基类的`Run`接口进行算法推理；推理完成后`PostProcess`接口回调输出算法输出的tensor数据，解析tensor后发布结构化AI数据。
+The runtime process involves performing inference and business logic. Taking an algorithm that infers using image data as an example, the process involves subscribing to image messages (sub msg), processing the image into the algorithm's input data type (preprocessing), using the base class's `Run` interface for algorithm inference; after the inference is completed, the `PostProcess` interface callback outputs the tensor data from the algorithm, parsing the tensor data and publishing structured AI data.
 
-## 使用方法
+## How to Use
 
-### 选择算法推理使用的task类型model_task_type
+### Select the model_task_type for algorithm inference
 
-使用`SetNodePara`接口配置模型管理和推理参数`dnn_node_para_ptr_`时，指定算法推理使用的task类型`model_task_type`，dnn node内部根据配置的类型自动创建对应类型的task。
+When configuring the model management and inference parameters `dnn_node_para_ptr_` using the `SetNodePara` interface, specify the `model_task_type` used for algorithm inference. The dnn node automatically creates a corresponding type of task based on the configured type.
 
-task类型包括`ModelInferType`和`ModelRoiInferType`，默认是`ModelInferType`类型。
+Task types include `ModelInferType` and `ModelRoiInferType`, with the default being `ModelInferType`.
 
-当算法的输入包含roi（Region of Interest，例如目标的检测框）时使用`ModelRoiInferType`类型的task。例如人手关键点检测算法，算法输入为图片和人手在图片中的roi坐标。
+Use the `ModelRoiInferType` task type when the algorithm input contains roi (Region of Interest), such as in the case of hand keypoint detection algorithms where the input is an image and the roi coordinates of the hands in the image.
 
-其他情况下选择`ModelInferType`类型。例如算法输入只有图片的YOLO、FCOS、mobilenetv2的检测和分类检测。
+For other cases, select the `ModelInferType` type. For example, algorithms that only take images as input such as YOLO, FCOS, and mobilenetv2 for detection and classification.
 
-### 设置算法推理任务数量task_num
+### Set the number of inference tasks
 
-一个model支持由多个task执行，即多帧并行推理，从而提高BPU使用率和算法推理输出帧率。在dnn node初始化阶段（调用Init接口时）根据用户配置的task数量预先创建好推理task。
+A model supports multiple tasks to be executed, enabling parallel inference of multiple frames to improve BPU utilization and algorithm inference output frame rate. During the dnn node initialization phase (when calling the Init interface), inference tasks are created in advance based on the number of tasks configured by the user.
 
-使用SetNodePara接口配置模型管理和推理参数dnn_node_para_ptr_时，指定算法推理任务数量task_num。默认的算法推理任务数量task_num为2，如果算法推理耗时较长（表现为算法推理输出帧率低于输入帧率），需要指定使用更多的task进行推理。
+When configuring the model management and inference parameters `dnn_node_para_ptr_` using the `SetNodePara` interface, specify the number of algorithm inference tasks as `task_num`. The default number of inference tasks is set to 2, and if the algorithm inference takes a long time (resulting in a lower frame rate for the output), more tasks need to be specified for inference.
 
-### 准备算法输入数据（前处理）
+### Prepare algorithm input data (preprocessing)
 
-前处理是将数据处理成算法输入的数据类型。
+Preprocessing involves preparing the data into the data type required for algorithm input.
 
-对于以图像作为输入的算法，dnn node提供了`hobot::dnn_node::ImageProc::GetNV12PyramidFromNV12Img`接口，实现将nv12编码格式图片数据生成NV12PyramidInput类型数据，用于算法输入推理。
+For algorithms that take images as input, the dnn node provides the `hobot::dnn_node::ImageProc::GetNV12PyramidFromNV12Img` interface to generate NV12PyramidInput type data from nv12 encoded image data for algorithm inference.
 
-### 解析算法模型输出的tensor
+### Parse the tensor output from the algorithm model
 
-推理完成后，PostProcess接口回调输出算法输出的tensor数据，用户解析tensor后使用结构化的AI数据。
+After the inference is completed, the PostProcess interface callbacks the output tensor data from the algorithm. Users need to parse the tensor data for structured AI data.
 
-以检测算法为例，自定义的模型输出解析方法如下：
-
-```C++
-// 定义算法输出数据类型
+For example, for detection algorithms, a custom model output parsing method would be as follows:
+``````C++
+// Define the data type for algorithm output
 struct DetResult {
   float xmin;
   float ymin;
@@ -159,126 +160,122 @@ struct DetResult {
   float score;
 };
 
-// 自定义的算法输出解析方法
-// - 参数
-//   - [in] node_output dnn node输出，包含算法推理输出
-//   - [in/out] results 解析后的推理结果
-// - 返回值
-//   - 0 成功
-//   - -1 失败
+// Custom algorithm output parsing method
+// - Parameters
+//   - [in] node_output The DnnNodeOutput containing the algorithm inference output
+//   - [in/out] results Parsed inference results
+// - Return Value
+//   - 0 Success
+//   - -1 Failure
 int32_t Parse(const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output,
               std::vector<std::shared_ptr<DetResult>> &results);
 ```
 
-定义了算法输出数据类型DetResult和算法输出解析方法Parse，Parse中解析node_output中的模型输出（`std::vector<std::shared_ptr<DNNTensor>> output_tensors`），解析后的结构化的AI数据存储在results中。
+Defined the data type DetResult for algorithm output and the algorithm output parsing method Parse, which parses the model output in node_output (containing `std::vector<std::shared_ptr<DNNTensor>> output_tensors`) and stores the structured AI data in results.
 
-此外dnn node中内置了多种检测、分类和分割算法的模型输出解析方法，详见FAQ中的说明。
+In addition, the dnn node built-in various detection, classification, and segmentation algorithm model output parsing methods, please refer to the FAQ for details.
 
 # FAQ
 
-1. 如何获取算法推理输入和输出帧率，推理耗时等数据？
+1. How to obtain the algorithm inference input and output frame rates, inference time, etc.?
 
-推理完成后输出的`DnnNodeOutput`类型数据中rt_stat表示推理统计。
+The `DnnNodeOutput` type data output after inference contains the inference statistics in rt_stat.
 
-其中推理耗时infer_time_ms为当前帧的耗时，输入输出帧率是以1秒为周期统计，当fps_updated为true时表示在当前帧刷新了帧率统计。
+Among them, infer_time_ms represents the inference time for the current frame. The input and output frame rates are calculated on a per-second basis. When fps_updated is true, it means that the frame rate statistics have been updated for the current frame.
 
-2. 订阅到的图片分辨率和算法输入分辨率是否必须要一致？
+2. Do the resolution of the subscription images need to be consistent with the algorithm input resolution?
 
-不是必须一致。
+It is not mandatory.
 
-在准备算法输入数据（前处理）阶段，dnn node提供了`hobot::dnn_node::ImageProc::GetNV12PyramidFromNV12Img`接口，实现将nv12编码格式图片数据生成`NV12PyramidInput`类型数据，用于算法输入推理。
+During the preparation of algorithm input data (pre-processing) stage, the dnn node provides the `hobot::dnn_node::ImageProc::GetNV12PyramidFromNV12Img` interface to generate `NV12PyramidInput` type data from nv12 encoded format image data, which is used for algorithm input inference.
 
-在处理图片时，如果输入图片分辨率小于模型输入分辨率，将输入图片padding到左上区域；如果输入图片分辨率大于模型输入分辨率，将截图输入图片左上区域。
+When processing images, if the input image resolution is smaller than the model input resolution, the input image is padded to the top-left area; if the input image resolution is larger than the model input resolution, the input image will be cropped to the top-left area.
 
-也可以使用hobotcv对图片做resize处理，将**输入图片resize到算法输入分辨率，从而保留图片的全部信息**。使用方法参考dnn_node_sample。
+Also, hobotcv can be used for resizing images, **resize the input image to the algorithm input resolution to retain all the image information**. Refer to the dnn_node_sample for the usage.
 
-3. 在算法输出解析方法和后处理PostProcess中使用算法输入信息
+3. Using algorithm input information in the algorithm output parsing method and post-processing PostProcess
 
-后处理PostProcess的输入参数类型是hobot::dnn_node::DnnNodeOutput，用户可以继承DnnNodeOutput数据类型，添加需要使用的数据。
+The input parameter type for PostProcess is hobot::dnn_node::DnnNodeOutput. Users can inherit the DnnNodeOutput data type and add the required data to use.
 
-例如，PostProcess需要用到一个uint64_t类型的参数，并且每帧推理输入对应的参数不同，可以做如下扩展：
-
-```
+For example, if PostProcess requires a parameter of type uint64_t and the corresponding parameter for each frame inference input is different, it can be extended as follows:
+``````
 struct SampleOutput : public DnnNodeOutput {
   uint64_t para;
 };
 ```
 
-在算法前处理中设置para的值，PostProcess中使用para。
+Set the value of `para` in PreProcess and use it in PostProcess.
 
-4. 算法输出和输入匹配
+4. Match Algorithm Output with Input
 
-后处理PostProcess的输入参数类型hobot::dnn_node::DnnNodeOutput中`std::shared_ptr<std_msgs::msg::Header> msg_header`成员是在前处理中使用订阅到的图片消息的header填充，可用于匹配对应的输入。
+The input parameter type `std::shared_ptr<std_msgs::msg::Header> msg_header` in the input parameters of PostProcess in `hobot::dnn_node::DnnNodeOutput` is filled with the header of the image message subscribed in PreProcess, which can be used to match the corresponding input.
 
-5. 同步和异步推理
+5. Synchronous and Asynchronous Inference
 
-dnn node支持同步和异步两种推理方式。在调用Run推理接口时通过is_sync_mode参数指定，默认使用效率更高的异步模式。
+dnn node supports two types of inference modes: synchronous and asynchronous. When calling the Run interface for inference, specify the `is_sync_mode` parameter to set the mode, with the default being the more efficient asynchronous mode.
 
-同步推理：调用Run接口进行推理时，接口内部阻塞等待推理完成和PostProcess回调接口处理模型输出结束。
+Synchronous inference: When calling the Run interface for inference, the interface internally blocks until the inference is completed and the PostProcess callback interface finishes processing the model output.
 
-异步推理：调用Run接口进行预测时，接口内部异步使用线程池处理预测，预测任务送入线程池后不等待预测结束直接返回。当预测结果返回时（预测完成或者预测报错），在dnn node内部使用ReleaseTask接口释放task，并通过PostProcess接口回调解析后的模型输出。
+Asynchronous inference: When calling the Run interface for prediction, the interface internally asynchronously uses a thread pool to process the prediction. After the prediction task is sent to the thread pool, it returns directly without waiting for the prediction to finish. When the prediction result is returned (either when the prediction is completed or when there is an error), the task is released using the ReleaseTask interface inside the dnn node, and the parsed model output is returned through the PostProcess interface.
 
-异步推理模式能够充分利用BPU，提升算法推理输出帧率，但是不能保证算法输出顺序和输入顺序一致。**对于输出序列有要求的场景，使用时需要判断是否需要对算法输出进行排序**。
+Asynchronous inference mode can fully utilize BPU, improve the algorithm's inference output frame rate, but it cannot guarantee the consistency of algorithm output order with input order. **For scenarios that have requirements on output sequences, it is necessary to determine whether the algorithm output needs to be sorted**.
 
-**如无特殊需求，推荐使用默认的效率更高的异步模式进行算法推理。**
+**Unless there are specific requirements, it is recommended to use the default more efficient asynchronous mode for algorithm inference**.
 
-6. 使用dnn node中内置的模型输出解析方法
+6. Using the Built-in Model Output Parsing Methods in dnn node
 
-dnn node中内置了多种检测、分类和分割算法的模型输出解析方法，X3派上安装TROS后查询支持的解析方法如下：
+dnn node comes with various model output parsing methods for detection, classification, and segmentation algorithms. After installing TROS on X3, the supported parsing methods are as follows:
 
 ```shell
 root@ubuntu:~# tree /opt/tros/include/dnn_node/util/output_parser
 /opt/tros/include/dnn_node/util/output_parser
 ├── classification
-│   └── ptq_classification_output_parser.h
+│   └── ptq_classification_output_parser.h
 ├── detection
-│   ├── fasterrcnn_output_parser.h
-│   ├── fcos_output_parser.h
-│   ├── nms.h
-│   ├── ptq_efficientdet_output_parser.h
-│   ├── ptq_ssd_output_parser.h
-│   ├── ptq_yolo2_output_parser.h
-│   ├── ptq_yolo3_darknet_output_parser.h
-│   └── ptq_yolo5_output_parser.h
+│   ├── fasterrcnn_output_parser.h
+│   ├── fcos_output_parser.h
+│   ├── nms.h
+│   ├── ptq_efficientdet_output_parser.h
+│   ├── ptq_ssd_output_parser.h
+│   ├── ptq_yolo2_output_parser.h
+│   ├── ptq_yolo3_darknet_output_parser.h
+│   └── ptq_yolo5_output_parser.h
 ├── perception_common.h
 ├── segmentation
-│   └── ptq_unet_output_parser.h
+│   └── ptq_unet_output_parser.h
 └── utils.h
 
 3 directories, 12 files
-```
+```You can see that there are three paths `classification`, `detection`, and `segmentation` under the `/opt/tros/include/dnn_node/util/output_parser` directory, corresponding to the output parsing methods of classification, detection, and segmentation algorithms.
 
-可以看到`/opt/tros/include/dnn_node/util/output_parser`路径下有`classification`、`detection`和`segmentation`三个路径，分别对应分类、检测和分割算法的模型输出解析方法。
+`perception_common.h` defines the parsed perception result data type.
 
-perception_common.h为定义的解析后的感知结果数据类型。
+The algorithm models and their corresponding output parsing methods are as follows:
 
-算法模型和对应的输出解析方法如下：
-
-| 算法类别       | 算法                 | 算法输出解析方法 |
+| Algorithm Category | Algorithm | Output Parsing Method |
 | ---------------------- | ---------------------- | ----------- |
-| 目标检测       | [FCOS](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_FCOS.html)           | fcos_output_parser.h         |
-| 目标检测       | [EfficientNet_Det](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_efficient_det.html)           | ptq_efficientdet_output_parser.h         |
-| 目标检测       | [MobileNet_SSD](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_mobilenet_ssd.html)        |   ptq_ssd_output_parser.h       |
-| 目标检测       | [YoloV2](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_yolov2.html)       |   ptq_yolo2_output_parser.h       |
-| 目标检测       | [YoloV3](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_yolov2.html)       |    ptq_yolo3_darknet_output_parser.h       |
-| 目标检测       | [YoloV5](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_yolov2.html)       |  ptq_yolo5_output_parser.h        |
-| 人体检测       | [FasterRcnn](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_adv/face_body_skeleton.html)             |  fasterrcnn_output_parser.h       |
-| 图片分类       | [mobilenetv2](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/classification/mobilenetv2.html)  |  ptq_classification_output_parser.h        |
-| 语义分割       | [mobilenet_unet](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/fragmentation/index.html)      |  ptq_unet_output_parser.h        |
+| Object Detection | [FCOS](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_FCOS.html) | fcos_output_parser.h |
+| Object Detection | [EfficientNet_Det](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_efficient_det.html) | ptq_efficientdet_output_parser.h |
+| Object Detection | [MobileNet_SSD](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_mobilenet_ssd.html) | ptq_ssd_output_parser.h |
+| Object Detection | [YoloV2](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_yolov2.html) | ptq_yolo2_output_parser.h |
+| Object Detection | [YoloV3](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_yolov2.html) | ptq_yolo3_darknet_output_parser.h |
+| Object Detection | [YoloV5](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/detection/detection_yolov2.html) | ptq_yolo5_output_parser.h |
+| Human Detection | [FasterRcnn](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_adv/face_body_skeleton.html) | fasterrcnn_output_parser.h |
+| Image Classification | [mobilenetv2](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/classification/mobilenetv2.html) | ptq_classification_output_parser.h |
+| Semantic Segmentation | [mobilenet_unet](https://developer.horizon.ai/api/v1/fileData/TogetherROS/box/box_basic/fragmentation/index.html) | ptq_unet_output_parser.h |
 
-
-在推理结果回调`PostProcess(const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output)`中，使用`hobot_dnn`中内置的解析方法解析`YoloV5`算法输出举例：
+In the inference result callback `PostProcess(const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output)`, using the built-in parsing method in `hobot_dnn` to parse the output of the `YoloV5` algorithm is shown in the following example:
 
 ```C++
-    // 1 创建解析输出数据，DnnParserResult是hobot_dnn中内置的解析方法对应的算法输出数据类型
+    // 1 Create parsed output data, DnnParserResult is the algorithm output data type corresponding to the built-in parsing method in hobot_dnn
     std::shared_ptr<DnnParserResult> det_result = nullptr;
     
-    // 2 开始解析
+    // 2 Start the parsing
     if (hobot::dnn_node::parser_yolov5::Parse(node_output, det_result) < 0) {
       RCLCPP_ERROR(rclcpp::get_logger("dnn_node_sample"),
                   "Parse output_tensors fail!");
       return -1;
     }
     
-    // 3 使用解析后的算法结果det_result
+    // 3 Use the parsed algorithm result det_result
 ```

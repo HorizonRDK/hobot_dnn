@@ -1,134 +1,131 @@
+English| [简体中文](./README_cn.md)
+
 Getting Started with Dnn Node Sample
 =======
 
 
-# 功能介绍
+# Introduction
 
-Dnn Node sample package是Dnn Node package的使用示例，通过继承DnnNode虚基类，使用YOLOv5模型和图像数据利用BPU处理器进行算法推理。
+The Dnn Node sample package is an example of using the Dnn Node package. By inheriting the DnnNode virtual base class, it utilizes the YOLOv5 model and image data to perform algorithm inference on a BPU processor.
 
-图像数据来源于订阅到的图像数据消息，支持使用MIPI/USB摄像头和本地图片发布的图像数据；推理完成后，使用自定义的算法输出解析方法解析算法输出的tensor；解析完成后发布智能结果，可通过web查看实时的渲染效果。
+The image data comes from subscribed image data messages, supporting image data published using MIPI/USB cameras and local images. After the inference is completed, a custom algorithm output parsing method is used to parse the algorithm's output tensor. Once parsed, the intelligent results are published, and real-time rendering effects can be viewed through a web interface.
 
-# 开发环境
+# Development Environment
 
-- 编程语言: C/C++
-- 开发平台: X3/X86
-- 系统版本：Ubuntu 20.0.4
-- 编译工具链:Linux GCC 9.3.0/Linaro GCC 9.3.0
+- Programming Language: C/C++
+- Development Platform: X3/X86
+- System Version: Ubuntu 20.0.4
+- Compiler Toolchain: Linux GCC 9.3.0/Linaro GCC 9.3.0
 
-# 编译
+# Compilation
 
-- X3版本：支持在X3 Ubuntu系统上编译和在PC上使用docker交叉编译两种方式。
-- X86版本：支持在X86 Ubuntu系统上编译一种方式。
-同时支持通过编译选项控制编译pkg的依赖和pkg的功能。
+- X3 Version: Supports compilation on X3 Ubuntu system and cross-compilation on PC using Docker.
+- X86 Version: Supports compilation on X86 Ubuntu system.
+Compilation dependencies and package functionalities can be controlled through compilation options.
 
-## X3 Ubuntu系统上编译 X3版本
+## Compilation on X3 Ubuntu System for X3 Version
 
-1、编译环境确认
+1. Confirm Compilation Environment
 
-- 板端已安装X3 Ubuntu系统。
+- X3 Ubuntu system is installed on the board.
+- The current compilation terminal has set the TROS environment variable: `source /opt/tros/setup.bash`.
+- ROS2 software package build system ament_cmake is installed. Installation command: `apt update; apt-get install python3-catkin-pkg; pip3 install empy`.
+- ROS2 compile tool colcon is installed. Installation command: `pip3 install -U colcon-common-extensions`.
 
-- 当前编译终端已设置TROS环境变量：`source /opt/tros/setup.bash`。
+2. Compilation
 
-- 已安装ROS2软件包构建系统ament_cmake。安装命令：`apt update; apt-get install python3-catkin-pkg; pip3 install empy`
+- Compilation command: `colcon build --packages-select dnn_node_sample`
 
-- 已安装ROS2编译工具colcon。安装命令：`pip3 install -U colcon-common-extensions`
+## Docker Cross-Compilation for X3 Version
 
-2、编译
+1. Confirm Compilation Environment
 
-- 编译命令：`colcon build --packages-select dnn_node_sample`
+- Compile in Docker environment, and TROS is already compiled in Docker. For detailed instructions on Docker installation, cross-compilation, TROS compilation, and deployment, please refer to the [Horizon Robotics Platform User Manual](https://developer.horizon.ai/api/v1/fileData/TogetherROS/quick_start/cross_compile.html#togetherros).
 
-## docker交叉编译 X3版本
+2. Compilation
 
-1、编译环境确认
+- Compilation command:
 
-- 在docker中编译，并且docker中已经编译好TROS。docker安装、交叉编译、TROS编译和部署说明详见[地平线机器人平台用户手册](https://developer.horizon.ai/api/v1/fileData/TogetherROS/quick_start/cross_compile.html#togetherros)。
+```shell```shell
+export TARGET_ARCH=aarch64
+export TARGET_TRIPLE=aarch64-linux-gnu
+export CROSS_COMPILE=/usr/bin/$TARGET_TRIPLE-
 
-2、编译
+colcon build --packages-select dnn_node_sample \
+   --merge-install \
+   --cmake-force-configure \
+   --cmake-args \
+   --no-warn-unused-cli \
+   -DCMAKE_TOOLCHAIN_FILE=`pwd`/robot_dev_config/aarch64_toolchainfile.cmake
+```  
 
-- 编译命令：
+# Instructions for Use
 
-  ```shell
-  export TARGET_ARCH=aarch64
-  export TARGET_TRIPLE=aarch64-linux-gnu
-  export CROSS_COMPILE=/usr/bin/$TARGET_TRIPLE-
+## Running on X3 Ubuntu System
 
-  colcon build --packages-select dnn_node_sample \
-     --merge-install \
-     --cmake-force-configure \
-     --cmake-args \
-     --no-warn-unused-cli \
-     -DCMAKE_TOOLCHAIN_FILE=`pwd`/robot_dev_config/aarch64_toolchainfile.cmake
-  ````
+Including image message publishing and web display.
 
-# 使用介绍
-
-## X3 Ubuntu系统上运行
-
-包括图像消息发布和WEB展示。
-
-**使用F37 MIPI摄像头发布图片**
+**Publishing Images Using F37 MIPI Camera**
 
 ```shell
-# 配置TogetherROS环境
+# Set up the TogetherROS environment
 source /opt/tros/setup.bash
 
-# 复制模型和回灌图片到运行目录
+# Copy models and sample images to the working directory
 cp -r /opt/tros/${TROS_DISTRO}/lib/dnn_node_sample/config/ .
 
-# 配置MIPI摄像头
+# Configure the MIPI camera
 export CAM_TYPE=mipi
 
 ros2 launch dnn_node_sample dnn_node_sample.launch.py 
 ```
 
-**使用USB摄像头发布图片**
+**Publishing Images Using USB Camera**
 
 ```shell
-# 配置TogetherROS环境
+# Set up the TogetherROS environment
 source /opt/tros/setup.bash
 
-# 复制模型和回灌图片到运行目录
+# Copy models and sample images to the working directory
 cp -r /opt/tros/${TROS_DISTRO}/lib/dnn_node_sample/config/ .
 
-# 配置USB摄像头
+# Configure the USB camera
 export CAM_TYPE=usb
 
 ros2 launch dnn_node_sample dnn_node_sample.launch.py 
 ```
 
-**使用本地图片回灌**
-
-```shell
-# 配置TogetherROS环境
+**Injecting Local Images**```shell
+# Setup TogetherROS environment
 source /opt/tros/setup.bash
 
-# 复制模型和回灌图片到运行目录
+# Copy models and feedback images to the running directory
 cp -r /opt/tros/${TROS_DISTRO}/lib/dnn_node_sample/config/ .
 
-# 配置本地图片回灌
+# Configure local image feedback
 export CAM_TYPE=fb
 
-# 使用的本地图片为/opt/tros/${TROS_DISTRO}/lib/dnn_node_sample/config/target.jpg
-ros2 launch dnn_node_sample dnn_node_sample.launch.py 
+# The local image used is /opt/tros/${TROS_DISTRO}/lib/dnn_node_sample/config/target.jpg
+ros2 launch dnn_node_sample dnn_node_sample.launch.py
 ```
 
-## 注意事项
+## Notes
 
-1. 切换MIPI摄像头类型
+1. Switching MIPI camera type
 
-默认使用的MIPI摄像头类型为`F37`，可以修改launch启动脚本中`mipi_node`中的`video_device`配置项修改摄像头类型，支持的配置项为`F37`和`GC4663`。
+The default MIPI camera type is `F37`, you can modify the `video_device` configuration in the `mipi_node` section of the launch script to change the camera type. The supported configurations are `F37` and `GC4663`.
 
-2. 修改回灌图片
+2. Modifying the feedback image
 
-默认使用的回灌图片为`/opt/tros/${TROS_DISTRO}/lib/dnn_node_sample/config/target.jpg`，可以修改launch启动脚本中`fb_node`中的`image_source`配置项修改回灌的图片。
+The default feedback image is `/opt/tros/${TROS_DISTRO}/lib/dnn_node_sample/config/target.jpg`, you can modify the `image_source` configuration in the `fb_node` section of the launch script to change the feedback image.
 
-# 结果分析
+# Results Analysis
 
-使用本地图片回灌举例说明。
+Illustration using local image feedback.
 
-## X3结果展示
+## X3 Result Display
 
-运行命令：
+Execute the following command:
 
 ```bash
 root@ubuntu:~# source /opt/tros/setup.bash
@@ -136,7 +133,7 @@ root@ubuntu:~# export CAM_TYPE=fb
 root@ubuntu:~# ros2 launch dnn_node_sample dnn_node_sample.launch.py
 ```
 
-log输出：
+Log Output:
 
 ```text
 [INFO] [launch]: All log files can be found below /root/.ros/log/2022-09-20-12-47-57-043477-ubuntu-4390
@@ -148,7 +145,7 @@ webserver has launch
 [INFO] [hobot_codec_republish-2]: process started with pid [4398]
 [INFO] [dnn_node_sample-3]: process started with pid [4400]
 [INFO] [websocket-4]: process started with pid [4402]
-[dnn_node_sample-3] [C][4400][09-20][12:47:58:604][configuration.cpp:49][EasyDNN]EasyDNN version: 0.4.11
+```[dnn_node_sample-3] [C][4400][09-20][12:47:58:604][configuration.cpp:49][EasyDNN]EasyDNN version: 0.4.11
 [dnn_node_sample-3] [BPU_PLAT]BPU Platform Version(1.3.1)!
 [dnn_node_sample-3] [HBRT] set log level as 0. version = 3.14.5
 [dnn_node_sample-3] [DNN] Runtime version = 1.9.7_(3.14.5 HBRT)
@@ -159,14 +156,13 @@ webserver has launch
 [dnn_node_sample-3] [WARN] [1663649282.217524812] [dnn_node_sample]: input fps: 10.00, out fps: 9.97, infer time ms: 71, post process time ms: 74
 [dnn_node_sample-3] [WARN] [1663649283.318315410] [dnn_node_sample]: input fps: 10.00, out fps: 10.00, infer time ms: 71, post process time ms: 74
 [dnn_node_sample-3] [WARN] [1663649284.320494664] [dnn_node_sample]: input fps: 10.00, out fps: 9.99, infer time ms: 72, post process time ms: 76
-```
 
-log显示订阅图像消息和发布AI消息的帧率都为10fps左右，算法单帧推理耗时为70毫秒左右，算法输出解析耗时为78毫秒左右。
+The log shows that both the frame rates of subscribing image messages and publishing AI messages are around 10fps, with the algorithm taking about 70 milliseconds for single-frame inference and about 78 milliseconds for output parsing.
 
-## web效果展示
+## Web Effect Display
 
-web效果截图：
+Web effect screenshot:
 
 ![image](./render/webrender.jpg)
 
-渲染出了检测出来的目标检测框和类别。
+Detected target bounding boxes and categories are rendered.
