@@ -1,20 +1,22 @@
+English| [简体中文](./README_cn.md)
+
 Getting Started with Hobot Dnn
 =======
 
-仓库中包含dnn_node、dnn_node_sample、dnn_node_example、dnn_benchmark_example四部分内容，用户可以实现在地平线X3开发板上使用模型和数据利用BPU处理器进行模型推理，以及模型性能评测。
+The repository contains four parts: dnn_node, dnn_node_sample, dnn_node_example, and dnn_benchmark_example. Users can implement model inference on the Horizon X3 development board using the BPU processor, as well as evaluate model performance.
 
 # dnn_node
 
-板端算法推理框架。在地平线旭日X3开发板上利用BPU处理器实现AI推理功能，基于地平线EasyDNN算法推理框架和ROS2 Node进行二次开发，为机器人应用开发提供更简单易用的模型集成开发接口。
+On-board algorithm inference framework. Utilizing the BPU processor on the Horizon X3 development board for AI inference, based on the Horizon EasyDNN algorithm inference framework and ROS2 Node for secondary development, providing a simpler and more user-friendly model integration development interface for robot applications.
 
 # dnn_node_sample
 
-dnn_node的使用示例，用户可以**参考部署**自己的算法模型。
+Sample usage of dnn_node, users can **reference** it to deploy their own algorithm models.
 
 # dnn_node_example
 
-dnn_node中内置算法后处理的使用示例。
+Example of post-processing with built-in algorithms in dnn_node.
 
 # dnn_benchmark_example
 
-基于dnn_node的算法性能评测工具。
+Algorithm performance evaluation tool based on dnn_node.
