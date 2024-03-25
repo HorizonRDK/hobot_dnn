@@ -66,6 +66,7 @@ def generate_launch_description():
             'mipi_image_width': LaunchConfiguration('dnn_example_image_width'),
             'mipi_image_height': LaunchConfiguration('dnn_example_image_height'),
             'mipi_io_method': 'shared_mem',
+            'mipi_frame_ts_type': 'realtime',
             'mipi_video_device': LaunchConfiguration('device')
         }.items()
     )
@@ -190,6 +191,13 @@ def generate_launch_description():
             image_width_launch_arg,
             image_height_launch_arg,
             msg_pub_topic_name_launch_arg,
+            # 启动零拷贝环境配置node
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    os.path.join(
+                        get_package_share_directory('hobot_shm'),
+                        'launch/hobot_shm.launch.py'))
+            ),
             # 图片发布pkg
             cam_node,
             # 图片编解码&发布pkg
@@ -207,6 +215,13 @@ def generate_launch_description():
             image_width_launch_arg,
             image_height_launch_arg,
             msg_pub_topic_name_launch_arg,
+            # 启动零拷贝环境配置node
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    os.path.join(
+                        get_package_share_directory('hobot_shm'),
+                        'launch/hobot_shm.launch.py'))
+            ),
             # 图片发布pkg
             cam_node,
             # 图片编解码&发布pkg

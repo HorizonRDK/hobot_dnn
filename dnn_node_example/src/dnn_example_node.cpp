@@ -857,6 +857,14 @@ void DnnExampleNode::SharedMemImgProcess(
      << img_msg->time_stamp.nanosec << ", data size: " << img_msg->data_size;
   RCLCPP_INFO(rclcpp::get_logger("example"), "%s", ss.str().c_str());
 
+  rclcpp::Time msg_ts = img_msg->time_stamp;
+  rclcpp::Duration dura = this->now() - msg_ts;
+  float duration_ms = dura.nanoseconds() / 1000.0 / 1000.0;
+  RCLCPP_WARN_THROTTLE(this->get_logger(),
+    *this->get_clock(), 3000,
+    "%s, comm delay [%.4f]ms",
+    ss.str().c_str(), duration_ms);
+
   auto tp_start = std::chrono::system_clock::now();
 
   // 1. 将图片处理成模型输入数据类型DNNInput
