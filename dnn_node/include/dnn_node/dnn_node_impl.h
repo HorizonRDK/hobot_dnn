@@ -20,7 +20,10 @@
 #include <vector>
 
 #include "dnn_node/dnn_node_data.h"
+#include "easy_dnn/model.h"
 #include "util/threads/threadpool.h"
+
+using hobot::easy_dnn::Model;
 
 namespace hobot {
 namespace dnn_node {
@@ -38,11 +41,12 @@ struct DnnNodeTask {
     task_id = id;
     alloc_tp = std::chrono::system_clock::now();
   }
-  void SetBPUCoreID(BPUCoreIDType bpu_core_id) { core_id = bpu_core_id; }
+  void SetBPUCoreID(int32_t bpu_core_id) { bpuCoreId = bpu_core_id; }
   TaskId task_id = -1;
   // 实际运行时使用的BPU核，必须为BPU_CORE_0或BPU_CORE_1
   // 如果用户指定的是BPU_CORE_ANY，将会转成BPU_CORE_0或BPU_CORE_1
-  BPUCoreIDType core_id = BPUCoreIDType::BPU_CORE_0;
+  int32_t bpuCoreId = HB_BPU_CORE_0;
+
   std::chrono::high_resolution_clock::time_point alloc_tp;
 };
 
@@ -84,36 +88,6 @@ struct ThreadPool {
   int msg_limit_count_ = 10;
 };
 
-// 为了创建DNNDefaultSingleBranchOutputParser而创建的空数据类型
-class DNNDefaultOutputResult : public DNNResult {
- public:
-  void Reset() override {}
-};
-
-// 空解析方法类，绕过EasyDNN的后处理框架限制，实现推理完成后输出模型的所有tensor
-// 目的是支持用户可以不学习EasyDNN的后处理框架使用方法，推理完成后直接解析模型输出的所有tensor
-// 如果用户没有使用SetOutputParser接口配置模型输出的解析方式，会使用DNNDefaultSingleBranchOutputParser配置模型输出的解析方式
-class DNNDefaultSingleBranchOutputParser
-    : public SingleBranchOutputParser<DNNDefaultOutputResult> {
- public:
-  DNNDefaultSingleBranchOutputParser() {}
-
-  int32_t Parse(
-      std::shared_ptr<DNNDefaultOutputResult> &output,
-      std::vector<std::shared_ptr<InputDescription>> &input_descriptions,
-      std::shared_ptr<OutputDescription> &output_description,
-      std::shared_ptr<DNNTensor> &output_tensor) override {
-    // 模型输出的每个branch都会调用一次Parse，不需要做任何处理
-    // 推理完成后，用户会拿到所有tensor，再做统一解析
-    if (output_description) {
-      RCLCPP_DEBUG(rclcpp::get_logger("dnn_node"),
-                   "Output idx: %d",
-                   output_description->GetIndex());
-    }
-    return 0;
-  }
-};
-
 class DnnNodeImpl {
  public:
   explicit DnnNodeImpl(std::shared_ptr<DnnNodePara> &dnn_node_para_ptr);
@@ -121,9 +95,6 @@ class DnnNodeImpl {
   ~DnnNodeImpl();
 
   int ModelInit();
-
-  // 如果用户没有继承dnn_node中的SetOutputParser接口或者通过DnnNodePara参数配置解析方法，使用默认的解析方法
-  int SetDefaultOutputParser();
 
  public:
   // 申请模型预测任务。
@@ -150,7 +121,6 @@ class DnnNodeImpl {
   int Run(std::vector<std::shared_ptr<DNNInput>> &dnn_inputs,
           std::vector<std::shared_ptr<DNNTensor>> &tensor_inputs,
           InputType input_type,
-          std::vector<std::shared_ptr<OutputDescription>> &output_descs,
           const std::shared_ptr<DnnNodeOutput> &output,
           PostProcessCbType post_process,
           const std::shared_ptr<std::vector<hbDNNRoi>> rois,
@@ -162,7 +132,6 @@ class DnnNodeImpl {
   int RunImpl(std::vector<std::shared_ptr<DNNInput>> dnn_inputs,
               std::vector<std::shared_ptr<DNNTensor>> tensor_inputs,
               InputType input_type,
-              std::vector<std::shared_ptr<OutputDescription>> output_descs,
               std::shared_ptr<DnnNodeOutput> output,
               PostProcessCbType post_process,
               const std::shared_ptr<std::vector<hbDNNRoi>> rois,
@@ -180,16 +149,9 @@ class DnnNodeImpl {
                  const TaskId &task_id,
                  const std::shared_ptr<std::vector<hbDNNRoi>> rois = nullptr);
 
-  // 执行推理任务
-  // - 参数
-  //   - [in/out] node_output 推理任务输出智能。
-  //   - [in] task_id 推理任务ID。
-  //   - [in] timeout_ms 推理推理超时时间。
-  int RunInferTask(std::shared_ptr<DnnNodeOutput> &node_output,
-                   const TaskId &task_id,
-                   PostProcessCbType post_process,
-                   InputType input_type,
-                   const int timeout_ms = 1000);
+  // 输入预处理
+  int RunProcessInput( const TaskId &task_id,
+                   InputType input_type);
 
   // 使用通过SetInputs输入给模型的数据进行推理
   // - 参数
@@ -197,10 +159,9 @@ class DnnNodeImpl {
   //   - [in] task 推理任务。
   //   - [in] timeout_ms 推理推理超时时间。
   // outputs为模型输出，timeout_ms为推理超时时间
-  int RunInfer(std::shared_ptr<DnnNodeOutput> node_output,
+  int RunInferTask(std::shared_ptr<DnnNodeOutput> node_output,
                const std::shared_ptr<Task> &task,
-               InputType input_type,
-               const int timeout_ms);
+               const int timeout_ms = 1000);
 
   // 获取dnn node管理和推理使用的模型。
   Model *GetModel();
@@ -212,19 +173,21 @@ class DnnNodeImpl {
   //   - [out] h 模型输入的高度。
   int GetModelInputSize(int32_t input_index, int &w, int &h);
 
+  int LoadModels(std::vector<Model *> &models,
+              const std::string &model_file);
+
  private:
   std::shared_ptr<DnnNodePara> dnn_node_para_ptr_ = nullptr;
   std::shared_ptr<DnnNodeRunTimePara> dnn_rt_para_ = nullptr;
   std::shared_ptr<ThreadPool> thread_pool_ = nullptr;
+
+  hbPackedDNNHandle_t packed_dnn_handle_;
 
   // 输入的统计
   // 例如对于订阅图片进行推理的场景，此处统计的输入帧率等于订阅到图片的帧率
   DnnNodeRunTimeFpsStat input_stat_;
   // 输出的统计，只统计推理成功（推理+解析模型输出）的帧率
   DnnNodeRunTimeFpsStat output_stat_;
-
-  // 默认的解析方法
-  std::shared_ptr<OutputParser> dnn_default_output_parser_ = nullptr;
 
   // 配置task参数使能开关（使用SetCtrlParam接口配置，如推理使用的BPU核）
   // true: 允许用户配置，false: 禁止用户配置
@@ -233,6 +196,9 @@ class DnnNodeImpl {
   // 例如dnn node推理默认使用负载均衡模式（交替指定两个BPU核），
   // 而对于多核模型，推理任务会同时使用两个BPU核，因此如果指定了BPU核将会推理失败。
   bool en_set_task_para_ = true;
+
+  std::mutex load_lock_;
+  int32_t core_id_ = HB_BPU_CORE_0;
 };
 
 }  // namespace dnn_node

@@ -14,7 +14,7 @@ The image data comes from subscribed image data messages, supporting image data 
 
 - Programming Language: C/C++
 - Development Platform: X3/X86
-- System Version: Ubuntu 20.0.4
+- System Version: Ubuntu 20.04/Ubuntu 22.04
 - Compiler Toolchain: Linux GCC 9.3.0/Linaro GCC 9.3.0
 
 # Compilation

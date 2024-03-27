@@ -21,7 +21,6 @@
 #include <utility>
 #include <vector>
 
-#include "easy_dnn/status.h"
 #include "rclcpp/rclcpp.hpp"
 
 namespace hobot {
@@ -62,7 +61,9 @@ DnnNodeImpl::DnnNodeImpl(std::shared_ptr<DnnNodePara> &dnn_node_para_ptr) {
 
 DnnNodeImpl::~DnnNodeImpl() {
   if (!dnn_rt_para_) {
-    ModelManager::GetInstance()->OffLoad(dnn_rt_para_->models_load);
+    std::unique_lock<std::mutex> lk(load_lock_);
+    dnn_rt_para_->models_load.clear();
+    hbDNNRelease(packed_dnn_handle_);
   }
 }
 
@@ -75,14 +76,14 @@ int DnnNodeImpl::ModelInit() {
 
   // 1. 加载模型hbm文件，一个hbm中可能包含多个模型
   int ret = 0;
-  ret = ModelManager::GetInstance()->Load(dnn_rt_para_->models_load,
-                                          dnn_node_para_ptr_->model_file);
+  ret = LoadModels(dnn_rt_para_->models_load,
+                   dnn_node_para_ptr_->model_file);
   if (0 != ret) {
     RCLCPP_ERROR(rclcpp::get_logger("dnn"),
                  "Load model: %s fail, ret: %d",
                  dnn_node_para_ptr_->model_file.c_str(),
                  ret);
-    if (hobot::easy_dnn::DNN_CAN_NOT_OPEN_FILE == ret) {
+    if (ret == HB_DNN_CAN_NOT_OPEN_FILE) {
       RCLCPP_ERROR(rclcpp::get_logger("dnn"),
                   "Model file %s is not exist, please install models with apt install!",
                   dnn_node_para_ptr_->model_file.c_str());
@@ -137,33 +138,46 @@ int DnnNodeImpl::ModelInit() {
                 in_h);
   }
 
+  // 4. 打印模型输入输出信息
+  std::stringstream ss;
+  GetModel()->PrintModelInfo(ss);
+  RCLCPP_INFO(
+    rclcpp::get_logger("dnn"), "%s", ss.str().c_str());
   return 0;
 }
 
-int DnnNodeImpl::SetDefaultOutputParser() {
-  RCLCPP_INFO(rclcpp::get_logger("dnn impl"), "Set default output parser");
-
-  auto model = GetModel();
-  if (!model) {
-    RCLCPP_ERROR(rclcpp::get_logger("dnn impl"),
-                 "Set default output parser fail! Invalid model");
-    return -1;
+int DnnNodeImpl::LoadModels(std::vector<Model *> &models,
+                               const std::string &model_file) {
+  const char *file{model_file.c_str()};
+  int ret = 0;
+  //第一步加载模型
+  ret = hbDNNInitializeFromFiles(&packed_dnn_handle_, static_cast<const char **>(&file), 1);
+  if (ret != 0) {
+    return ret;
   }
 
-  if (!dnn_default_output_parser_) {
-    dnn_default_output_parser_ =
-        std::make_shared<DNNDefaultSingleBranchOutputParser>();
+  // 第二步获取模型名称
+  const char **model_names;
+  int32_t model_count = 0;
+  ret = hbDNNGetModelNameList(&model_names, &model_count, packed_dnn_handle_);
+  if (ret != 0) {
+    return ret;
   }
 
-  for (int32_t idx = 0; idx < model->GetOutputCount(); idx++) {
-    if (model->SetOutputParser(idx, dnn_default_output_parser_) != 0) {
-      RCLCPP_ERROR(rclcpp::get_logger("dnn impl"),
-                   "Set output parser index %d fail!",
-                   idx);
-      return -1;
+  // 第三步获取dnn_handle
+  {
+    for (int32_t i{0}; i < model_count; i++) {
+      hbDNNHandle_t dnn_handle{nullptr};
+      ret = hbDNNGetModelHandle(&dnn_handle, packed_dnn_handle_, model_names[i]);
+      if (ret != 0) {
+        return ret;
+      }
+      Model* model = new Model(dnn_handle, model_names[i]);
+      models.push_back(model);
     }
   }
-  return 0;
+
+  return ret;
 }
 
 int DnnNodeImpl::TaskInit() {
@@ -195,14 +209,14 @@ int DnnNodeImpl::TaskInit() {
   // 2. 创建idle running task
   {
     int task_num = dnn_rt_para_->tasks.size();
-    auto bpu_core_id = BPUCoreIDType::BPU_CORE_0;
+    auto bpu_core_id = HB_BPU_CORE_0;
     std::unique_lock<std::mutex> lg(dnn_rt_para_->task_mtx);
     if (static_cast<int>(dnn_node_para_ptr_->bpu_core_ids.size()) == task_num) {
       // 用户指定了BPU核
       for (int idx = 0; idx < task_num; idx++) {
         auto node_task = std::make_shared<DnnNodeTask>(idx);
         if (dnn_node_para_ptr_->bpu_core_ids.at(idx) !=
-            BPUCoreIDType::BPU_CORE_ANY) {
+            HB_BPU_CORE_ANY) {
           // 指定的是BPU 0或1
           node_task->SetBPUCoreID(dnn_node_para_ptr_->bpu_core_ids.at(idx));
           dnn_rt_para_->idle_tasks[node_task->task_id] = node_task;
@@ -214,12 +228,12 @@ int DnnNodeImpl::TaskInit() {
             break;
           }
           // 更新bpu_core_id，保证每个task交替使用不同的BPU核
-          if (BPUCoreIDType::BPU_CORE_0 == bpu_core_id) {
-            bpu_core_id = BPUCoreIDType::BPU_CORE_1;
-          } else if (BPUCoreIDType::BPU_CORE_1 == bpu_core_id) {
-            bpu_core_id = BPUCoreIDType::BPU_CORE_0;
+          if (HB_BPU_CORE_0 == bpu_core_id) {
+            bpu_core_id = HB_BPU_CORE_1;
+          } else if (HB_BPU_CORE_1 == bpu_core_id) {
+            bpu_core_id = HB_BPU_CORE_0;
           } else {
-            bpu_core_id = BPUCoreIDType::BPU_CORE_0;
+            bpu_core_id = HB_BPU_CORE_0;
           }
         }
       }
@@ -233,12 +247,12 @@ int DnnNodeImpl::TaskInit() {
           break;
         }
         // 更新bpu_core_id，保证每个task交替使用不同的BPU核
-        if (BPUCoreIDType::BPU_CORE_0 == bpu_core_id) {
-          bpu_core_id = BPUCoreIDType::BPU_CORE_1;
-        } else if (BPUCoreIDType::BPU_CORE_1 == bpu_core_id) {
-          bpu_core_id = BPUCoreIDType::BPU_CORE_0;
+        if (HB_BPU_CORE_0 == bpu_core_id) {
+          bpu_core_id = HB_BPU_CORE_1;
+        } else if (HB_BPU_CORE_1 == bpu_core_id) {
+          bpu_core_id = HB_BPU_CORE_0;
         } else {
-          bpu_core_id = BPUCoreIDType::BPU_CORE_0;
+          bpu_core_id = HB_BPU_CORE_0;
         }
       }
     }
@@ -298,8 +312,10 @@ int DnnNodeImpl::PreProcess(
     }
   } else if (ModelTaskType::ModelInferType ==
              dnn_node_para_ptr_->model_task_type) {
+
     std::shared_ptr<ModelInferTask> infer_task =
         std::dynamic_pointer_cast<ModelInferTask>(GetTask(task_id));
+        
     if (!infer_task) {
       RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid infer task");
       return -1;
@@ -322,35 +338,24 @@ int DnnNodeImpl::PreProcess(
   return ret;
 }
 
-int DnnNodeImpl::RunInferTask(std::shared_ptr<DnnNodeOutput> &node_output,
-                              const TaskId &task_id,
-                              PostProcessCbType post_process,
-                              InputType input_type,
-                              const int timeout_ms) {
-  if (!dnn_rt_para_ || !node_output) {
-    return -1;
-  }
-  int ret = RunInfer(node_output, GetTask(task_id), input_type, timeout_ms);
-  if (ret != 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Run infer fail\n");
-  } else {
-    // 统计输出fps
-    node_output->rt_stat->fps_updated = output_stat_.Update();
-    node_output->rt_stat->output_fps = output_stat_.Get();
-  }
+int DnnNodeImpl::RunProcessInput(const TaskId &task_id,
+                   InputType input_type) {
+  auto task = std::dynamic_pointer_cast<Task>(GetTask(task_id));
 
-  ReleaseTask(task_id);
-  // 即使推理失败，也要将对应的（空）结果输出，保证每个推理输入都有输出。
-  if (post_process) {
-    post_process(node_output);
+  int ret = 0;
+  if (input_type == InputType::DNN_INPUT) {
+    ret = task->ProcessInput();
+    if (ret != 0) {
+      RCLCPP_ERROR(
+          rclcpp::get_logger("dnn"), "Failed to process input, ret[%d]", ret);
+      return ret;
+    }
   }
-
-  return ret;
+  return 0;
 }
 
-int DnnNodeImpl::RunInfer(std::shared_ptr<DnnNodeOutput> node_output,
+int DnnNodeImpl::RunInferTask(std::shared_ptr<DnnNodeOutput> node_output,
                           const std::shared_ptr<Task> &node_task,
-                          InputType input_type,
                           const int timeout_ms) {
   if (!dnn_node_para_ptr_ || !node_output || !node_task) {
     RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid node task\n");
@@ -362,27 +367,19 @@ int DnnNodeImpl::RunInfer(std::shared_ptr<DnnNodeOutput> node_output,
   clock_gettime(CLOCK_REALTIME, &timespec_now);
 
   auto &task = node_task;
-  uint32_t ret = 0;
-  // Use ProcessInput api to process inputs only when the input type is DNN_INPUT
-  if (input_type == InputType::DNN_INPUT) {
-    ret = task->ProcessInput();
-    if (ret != 0) {
-      RCLCPP_ERROR(
-          rclcpp::get_logger("dnn"), "Failed to process input, ret[%d]", ret);
-      return ret;
-    }
-  }
+  int ret = 0;
 
   ret = task->RunInfer();
   if (ret != 0) {
     RCLCPP_ERROR(
         rclcpp::get_logger("dnn"), "Failed to run infer task, ret[%d]", ret);
 
-    if (hobot::easy_dnn::DNN_INVALID_ARGUMENT == ret) {
+    if (HB_DNN_INVALID_ARGUMENT == ret) {
       // task参数错误导致推理失败，尝试使用默认参数
       RCLCPP_WARN(rclcpp::get_logger("dnn"),
                   "Try to reset dnn infer ctrl param");
-      hobot::easy_dnn::DNNInferCtrlParam ctrl_param;
+      hbDNNInferCtrlParam ctrl_param;
+      HB_DNN_INITIALIZE_INFER_CTRL_PARAM(&ctrl_param);
       task->SetCtrlParam(ctrl_param);
       ret = task->RunInfer();
       if (ret == 0) {
@@ -421,31 +418,17 @@ int DnnNodeImpl::RunInfer(std::shared_ptr<DnnNodeOutput> node_output,
 
   if (ModelTaskType::ModelInferType == dnn_node_para_ptr_->model_task_type) {
     auto model_task = std::dynamic_pointer_cast<ModelInferTask>(task);
-    // 解析DNNTensor，内部会为算法的每个branch输出调用自定义的Parse接口进行解析
-    ret = model_task->ParseOutput();
-    if (ret != 0) {
-      RCLCPP_ERROR(
-          rclcpp::get_logger("dnn"), "Failed to parse outputs, ret[%d]", ret);
-      return ret;
-    }
 
     // 获取解析前的DNNTensor
     model_task->GetOutputTensors(node_output->output_tensors);
-    // 获取解析后的DNNResult
-    ret = model_task->GetOutputs(node_output->outputs);
-  } else if (ModelTaskType::ModelRoiInferType ==
+  
+  } 
+  else if (ModelTaskType::ModelRoiInferType ==
              dnn_node_para_ptr_->model_task_type) {
     auto model_task = std::dynamic_pointer_cast<ModelRoiInferTask>(task);
-    ret = model_task->ParseOutput();
-    if (ret != 0) {
-      RCLCPP_ERROR(
-          rclcpp::get_logger("dnn"), "Failed to parse outputs, ret[%d]", ret);
-      return ret;
-    }
+    
     // 解析DNNTensor，内部会为算法的每个branch输出调用自定义的Parse接口进行解析
     model_task->GetOutputTensors(node_output->output_tensors);
-    // 获取解析后的DNNResult
-    ret = model_task->GetOutputs(node_output->outputs);
   }
 
   if (node_output->rt_stat) {
@@ -468,7 +451,7 @@ int DnnNodeImpl::RunInfer(std::shared_ptr<DnnNodeOutput> node_output,
 TaskId DnnNodeImpl::AllocTask(int timeout_ms) {
   RCLCPP_DEBUG(rclcpp::get_logger("dnn"), "Alloc task");
   TaskId task_id = -1;
-  BPUCoreIDType bpu_core_id = BPUCoreIDType::BPU_CORE_0;
+  int32_t bpu_core_id = HB_BPU_CORE_0;
   if (!dnn_rt_para_) {
     return task_id;
   }
@@ -477,25 +460,29 @@ TaskId DnnNodeImpl::AllocTask(int timeout_ms) {
   std::shared_ptr<Task> task = nullptr;
   // 根据模型类型选择接口创建task,为task添加model
   if (ModelTaskType::ModelInferType == dnn_node_para_ptr_->model_task_type) {
-    task = TaskManager::GetInstance()->GetModelInferTask(
-        dnn_node_para_ptr_->timeout_ms);
+
+    task = std::make_shared<hobot::easy_dnn::ModelInferTask>();    
+
     if (!task) {
       RCLCPP_ERROR(rclcpp::get_logger("dnn"), "GetModelInferTask fail");
       return task_id;
     }
     std::dynamic_pointer_cast<ModelInferTask>(task)->SetModel(
         dnn_rt_para_->model_manage);
-  } else if (ModelTaskType::ModelRoiInferType ==
+
+  }
+  else if (ModelTaskType::ModelRoiInferType ==
              dnn_node_para_ptr_->model_task_type) {
-    task = TaskManager::GetInstance()->GetModelRoiInferTask(
-        dnn_node_para_ptr_->timeout_ms);
+
+    task = std::make_shared<hobot::easy_dnn::ModelRoiInferTask>();
     if (!task) {
       RCLCPP_ERROR(rclcpp::get_logger("dnn"), "GetModelRoiInferTask fail");
       return task_id;
     }
     std::dynamic_pointer_cast<ModelRoiInferTask>(task)->SetModel(
         dnn_rt_para_->model_manage);
-  } else {
+  }
+  else {
     RCLCPP_ERROR(rclcpp::get_logger("dnn"),
                  "Invalid model task type [%d]",
                  static_cast<int>(dnn_node_para_ptr_->model_task_type));
@@ -506,7 +493,7 @@ TaskId DnnNodeImpl::AllocTask(int timeout_ms) {
     auto idle_task = dnn_rt_para_->idle_tasks.begin();
     idle_task->second->alloc_tp = std::chrono::system_clock::now();
     task_id = idle_task->first;
-    bpu_core_id = idle_task->second->core_id;
+    bpu_core_id = idle_task->second->bpuCoreId;
     dnn_rt_para_->running_tasks[task_id] = idle_task->second;
     dnn_rt_para_->idle_tasks.erase(task_id);
   };
@@ -542,8 +529,9 @@ TaskId DnnNodeImpl::AllocTask(int timeout_ms) {
 
   if (en_set_task_para_) {
     // 允许配置task参数
-    hobot::easy_dnn::DNNInferCtrlParam ctrl_param;
-    ctrl_param.bpuCoreId = static_cast<int32_t>(bpu_core_id);
+    hbDNNInferCtrlParam ctrl_param;
+    HB_DNN_INITIALIZE_INFER_CTRL_PARAM(&ctrl_param);
+    ctrl_param.bpuCoreId = bpu_core_id;
     RCLCPP_INFO(rclcpp::get_logger("dnn"),
                 "task id: %d set bpu core: %d",
                 task_id,
@@ -574,24 +562,24 @@ int DnnNodeImpl::ReleaseTask(const TaskId &task_id) {
   }
 
   // 上一次推理任务使用的BPU核
-  auto last_bpu_core_id = dnn_rt_para_->running_tasks[task_id]->core_id;
+  auto last_bpu_core_id = dnn_rt_para_->running_tasks[task_id]->bpuCoreId;
   // 本次推理任务使用的BPU核
   auto present_bpu_core_id = last_bpu_core_id;
   if (static_cast<int>(dnn_node_para_ptr_->bpu_core_ids.size()) ==
           dnn_node_para_ptr_->task_num &&
       task_id < dnn_node_para_ptr_->task_num &&
       dnn_node_para_ptr_->bpu_core_ids.at(task_id) !=
-          BPUCoreIDType::BPU_CORE_ANY) {
+          HB_BPU_CORE_ANY) {
     // 用户指定的是BPU 0或1，本次推理直接使用上一次推理任务使用的BPU核
     present_bpu_core_id = last_bpu_core_id;
   } else {
     // 交替使用BPU核
-    if (BPUCoreIDType::BPU_CORE_0 == last_bpu_core_id) {
-      present_bpu_core_id = BPUCoreIDType::BPU_CORE_1;
-    } else if (BPUCoreIDType::BPU_CORE_1 == last_bpu_core_id) {
-      present_bpu_core_id = BPUCoreIDType::BPU_CORE_0;
+    if (HB_BPU_CORE_0 == last_bpu_core_id) {
+      present_bpu_core_id = HB_BPU_CORE_1;
+    } else if (HB_BPU_CORE_1 == last_bpu_core_id) {
+      present_bpu_core_id = HB_BPU_CORE_0;
     } else {
-      present_bpu_core_id = BPUCoreIDType::BPU_CORE_0;
+      present_bpu_core_id = HB_BPU_CORE_0;
     }
   }
 
@@ -642,9 +630,13 @@ int DnnNodeImpl::GetModelInputSize(int32_t input_index, int &w, int &h) {
 
   hbDNNTensorProperties properties;
   dnn_rt_para_->model_manage->GetInputTensorProperties(properties, input_index);
-  w = properties.validShape.dimensionSize[3];
-  h = properties.validShape.dimensionSize[2];
-
+  if (properties.tensorLayout == HB_DNN_LAYOUT_NHWC) {
+    w = properties.validShape.dimensionSize[2];
+    h = properties.validShape.dimensionSize[1];
+  } else if (properties.tensorLayout == HB_DNN_LAYOUT_NCHW) {
+    w = properties.validShape.dimensionSize[3];
+    h = properties.validShape.dimensionSize[2];
+  }
   return 0;
 }
 
@@ -652,7 +644,6 @@ int DnnNodeImpl::Run(
     std::vector<std::shared_ptr<DNNInput>> &inputs,
     std::vector<std::shared_ptr<DNNTensor>> &tensor_inputs,
     InputType input_type,
-    std::vector<std::shared_ptr<OutputDescription>> &output_descs,
     const std::shared_ptr<DnnNodeOutput> &output,
     PostProcessCbType post_process,
     const std::shared_ptr<std::vector<hbDNNRoi>> rois,
@@ -661,12 +652,10 @@ int DnnNodeImpl::Run(
     const int infer_timeout_ms) {
   // 统计输入fps
   input_stat_.Update();
-
   if (is_sync_mode) {
     return RunImpl(inputs,
                    tensor_inputs,
                    input_type,
-                   output_descs,
                    output,
                    post_process,
                    rois,
@@ -690,7 +679,6 @@ int DnnNodeImpl::Run(
                        inputs,
                        tensor_inputs,
                        input_type,
-                       output_descs,
                        output,
                        post_process,
                        rois,
@@ -699,7 +687,6 @@ int DnnNodeImpl::Run(
       RunImpl(inputs,
               tensor_inputs,
               input_type,
-              output_descs,
               output,
               post_process,
               rois,
@@ -717,33 +704,40 @@ int DnnNodeImpl::RunImpl(
     std::vector<std::shared_ptr<DNNInput>> inputs,
     std::vector<std::shared_ptr<DNNTensor>> tensor_inputs,
     InputType input_type,
-    std::vector<std::shared_ptr<OutputDescription>> output_descs,
     const std::shared_ptr<DnnNodeOutput> output,
     PostProcessCbType post_process,
     const std::shared_ptr<std::vector<hbDNNRoi>> rois,
     const int alloctask_timeout_ms,
     const int infer_timeout_ms) {
+  
+  // 检查参数是否正确
+  if (!dnn_rt_para_) {
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid Para In Run, ret[%d]", HB_DNN_INVALID_ARGUMENT);
+    return HB_DNN_INVALID_ARGUMENT;
+  }
+
+  // 1. dnn_output用于存储模型推理输出
+  std::shared_ptr<DnnNodeOutput> dnn_output = nullptr;
+  if (output) {
+    // 使用传入的DnnNodeOutput
+    dnn_output = output;
+  }
+  if (!dnn_output) {
+    // 没有传入，创建DnnNodeOutput
+    dnn_output = std::make_shared<DnnNodeOutput>();
+  }
+  if (!dnn_output->rt_stat) {
+    dnn_output->rt_stat = std::make_shared<DnnNodeRunTimeStat>();
+  }
+  // 统计输入fps
+  dnn_output->rt_stat->input_fps = input_stat_.Get();
+  dnn_output->rois = rois;
+
   // 对于roi
   // infer，如果当前帧中无roi，不需要推理，更新统计信息后直接执行用户定义的后处理
   if (dnn_node_para_ptr_ &&
       ModelTaskType::ModelRoiInferType == dnn_node_para_ptr_->model_task_type &&
       (!rois || rois->empty())) {
-    std::shared_ptr<DnnNodeOutput> dnn_output = nullptr;
-    if (output) {
-      // 使用传入的DnnNodeOutput
-      dnn_output = output;
-    }
-    if (!dnn_output) {
-      // 没有传入，创建DnnNodeOutput
-      dnn_output = std::make_shared<DnnNodeOutput>();
-    }
-
-    if (!dnn_output->rt_stat) {
-      dnn_output->rt_stat = std::make_shared<DnnNodeRunTimeStat>();
-    }
-
-    // 统计输入fps
-    dnn_output->rt_stat->input_fps = input_stat_.Get();
     // 统计输出fps
     dnn_output->rt_stat->fps_updated = output_stat_.Update();
     dnn_output->rt_stat->output_fps = output_stat_.Get();
@@ -761,19 +755,11 @@ int DnnNodeImpl::RunImpl(
     return -1;
   }
 
-  if (!output_descs.empty()) {
-    auto infer_task = std::dynamic_pointer_cast<ModelTask>(GetTask(task_id));
-    if (!infer_task) {
-      RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid infer task");
-      return -1;
-    }
-    if (infer_task->SetOutputDescriptions(output_descs) < 0) {
-      RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Set output desc fail");
-      return -1;
-    } else {
-      RCLCPP_DEBUG(
-          rclcpp::get_logger("dnn"), "Set output desc to task id: %d", task_id);
-    }
+  // 检查任务是否正常
+  auto infer_task = std::dynamic_pointer_cast<Task>(GetTask(task_id));
+  if (!infer_task) {
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid infer task");
+    return -1;
   }
 
   // 2 将准备好的模型输入数据inputs通过前处理接口输入给模型
@@ -783,30 +769,30 @@ int DnnNodeImpl::RunImpl(
     return -1;
   }
 
-  // 3 创建模型输出数据
-  // dnn_output用于存储模型推理输出
-  std::shared_ptr<DnnNodeOutput> dnn_output = nullptr;
-  if (output) {
-    // 使用传入的DnnNodeOutput
-    dnn_output = output;
+  // 3 进行预处理
+  int ret = 0;
+  ret = RunProcessInput(task_id, input_type);
+  if (ret != 0) {
+    return ret;
   }
-  if (!dnn_output) {
-    // 没有传入，创建DnnNodeOutput
-    dnn_output = std::make_shared<DnnNodeOutput>();
-  }
-
-  if (!dnn_output->rt_stat) {
-    dnn_output->rt_stat = std::make_shared<DnnNodeRunTimeStat>();
-  }
-
-  // 统计输入fps
-  dnn_output->rt_stat->input_fps = input_stat_.Get();
 
   // 4 执行模型推理
-  if (RunInferTask(dnn_output, task_id, post_process, input_type, infer_timeout_ms) != 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Run RunInferTask failed!");
-    ReleaseTask(task_id);
-    return -1;
+  ret = RunInferTask(dnn_output, GetTask(task_id), infer_timeout_ms);
+  if (ret != 0) {
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Run infer fail\n");
+  } else {
+    // 统计输出fps
+    dnn_output->rt_stat->fps_updated = output_stat_.Update();
+    dnn_output->rt_stat->output_fps = output_stat_.Get();
+  }
+
+  // 5 推理任务资源释放
+  ReleaseTask(task_id);
+  
+  // 6 执行模型后处理
+  // 即使推理失败，也要将对应的（空）结果输出，保证每个推理输入都有输出。
+  if (post_process) {
+    post_process(dnn_output);
   }
 
   return 0;

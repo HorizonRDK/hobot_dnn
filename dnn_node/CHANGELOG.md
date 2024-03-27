@@ -1,5 +1,13 @@
 # Changelog for package dnn_node
 
+tros_2.3.0 (2024-03-27)
+------------------
+1. 新增中英双语Readme。
+2. 新增Model类用于管理模型生命周期。
+3. 新增Task类用于管理推理任务生命周期。
+4. 简化模型后处理框架，统一直接使用模型推理输出Tensor解析。
+5. ImageProc新增多种读取数据转为DNNInput、DNNTensor。
+
 tros_2.2.2 (2023-12-22)
 ------------------
 

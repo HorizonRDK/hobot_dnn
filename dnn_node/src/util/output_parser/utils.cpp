@@ -104,7 +104,6 @@ int32_t TensorUtils::GetTensorHWCIndex(int32_t tensor_layout,
     *h_index = 2;
     *w_index = 3;
   } else {
-    // LOGE << "Unexpected layout:" << tensor_layout;
     return -1;
   }
   return 0;

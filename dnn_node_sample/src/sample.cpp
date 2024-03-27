@@ -15,10 +15,11 @@
 #include "ai_msgs/msg/perception_targets.hpp"
 #include "dnn_node/dnn_node.h"
 #include "dnn_node/util/image_proc.h"
-#include "dnn_node_sample/parser.h"
 #include "hbm_img_msgs/msg/hbm_msg1080_p.hpp"
 #include "hobot_cv/hobotcv_imgproc.h"
 #include "sensor_msgs/msg/image.hpp"
+
+#include "include/parser.h"
 
 // 使用hobotcv resize nv12格式图片，固定图片宽高比
 int ResizeNV12Img(const char* in_img_data,
@@ -213,6 +214,7 @@ void DNNNodeSample::FeedImg(
 // 推理结果回调，解析算法输出，通过ROS Msg发布消息
 int DNNNodeSample::PostProcess(
     const std::shared_ptr<hobot::dnn_node::DnnNodeOutput>& node_output) {
+
   if (!rclcpp::ok()) {
     return 0;
   }

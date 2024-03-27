@@ -36,6 +36,7 @@ find_package(ament_cmake REQUIRED)
 # find_package(<dependency> REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(dnn_node REQUIRED)
+find_package(std_msgs REQUIRED)
 
 # x3|rdkultra|x86
 set(PREFIX_PATH x3)
@@ -98,6 +99,7 @@ ament_target_dependencies(
   ${PROJECT_NAME}
   rclcpp
   dnn_node
+  std_msgs
 )
 
 

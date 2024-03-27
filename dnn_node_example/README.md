@@ -12,7 +12,7 @@ Dnn Node example package is a usage example of Dnn Node package. By inheriting t
 
 - Programming Language: C/C++
 - Development Platform: X3/Rdkultra/X86
-- System Version: Ubuntu 20.04
+- System Version: Ubuntu 20.04/Ubuntu 22.04
 - Compilation Toolchain: Linux GCC 9.3.0/Linaro GCC 9.3.0
 
 # Compilation

@@ -33,6 +33,11 @@ using hobot::dnn_node::output_parser::Perception;
 namespace hobot {
 namespace dnn_node {
 namespace parser_unet {
+
+int PostProcess(
+    std::vector<std::shared_ptr<DNNTensor>>& output_tensors,
+    Perception& perception);
+
 int32_t Parse(
     const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output,
     int img_w,

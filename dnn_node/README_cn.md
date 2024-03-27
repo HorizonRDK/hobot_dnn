@@ -16,7 +16,7 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
 
 - 编程语言: C/C++
 - 开发平台: X3/Rdkultra/X86
-- 系统版本：Ubuntu 20.04
+- 系统版本：Ubuntu 20.04/Ubuntu 22.04
 - 编译工具链:Linux GCC 9.3.0/Linaro GCC 9.3.0
 
 # 编译
@@ -34,23 +34,17 @@ Dnn Node package中的DnnNode是一个虚基类，定义了模型集成开发的
 ### X3 依赖
 
 - dnn:1.18.4
-- easydnn:1.6.1
 - opencv:3.4.5
-- hlog:1.6.1
 
 ### X86 依赖
 
 - dnn:1.12.3
-- easydnn:1.1.8
 - opencv:3.4.5
-- hlog:1.1.3
 
 ### Rdkultra 依赖
 
-- dnn:1.19.3
-- easydnn:1.6.1
+- dnn:1.17.3
 - opencv:3.4.5
-- hlog:1.6.1
 
 ## X3/Rdkultra Ubuntu系统上编译
 

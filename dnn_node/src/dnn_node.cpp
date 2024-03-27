@@ -42,48 +42,6 @@ DnnNode::DnnNode(const std::string &node_name,
 
 DnnNode::~DnnNode() {}
 
-int DnnNode::SetOutputParser() {
-  // 如果用户没有继承dnn_node中的SetOutputParser接口
-  RCLCPP_WARN(rclcpp::get_logger("dnn"), "Run default SetOutputParser.");
-
-  if (!dnn_node_para_ptr_) {
-    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid node para!");
-    return -1;
-  }
-
-  if (!dnn_node_para_ptr_->output_parsers_.empty()) {
-    // 使用用户在配置参数中设置的parser进行设置
-    RCLCPP_WARN(rclcpp::get_logger("dnn"),
-                "Set output parser with dnn node para.");
-
-    for (const auto &parser_pair : dnn_node_para_ptr_->output_parsers_) {
-      std::shared_ptr<OutputParser> out_parser = parser_pair.second;
-      if (!out_parser) {
-        RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Invalid out_parser");
-        return -1;
-      }
-      if (GetModel()->SetOutputParser(parser_pair.first, out_parser) != 0) {
-        RCLCPP_ERROR(rclcpp::get_logger("dnn"),
-                     "Set output parser index %d fail!",
-                     parser_pair.first);
-        return -1;
-      }
-      RCLCPP_INFO(rclcpp::get_logger("dnn"),
-                  "SetOutputParser %d success",
-                  parser_pair.first);
-    }
-  } else {
-    // 没有通过DnnNodePara参数配置解析方法，使用dnn node内置的parser进行设置
-    RCLCPP_WARN(
-        rclcpp::get_logger("dnn"),
-        "Set output parser with default dnn node parser, you will get all "
-        "output tensors and should parse output_tensors in PostProcess.");
-    return dnn_node_impl_->SetDefaultOutputParser();
-  }
-
-  return 0;
-}
-
 int DnnNode::Init() {
   RCLCPP_INFO(rclcpp::get_logger("dnn"), "Node init.");
 
@@ -103,7 +61,7 @@ int DnnNode::Init() {
 
   // 校验bpu_core_ids参数
   if (!dnn_node_para_ptr_->bpu_core_ids.empty()) {
-    if (dnn_node_para_ptr_->bpu_core_ids.size() !=
+    if (static_cast<int>(dnn_node_para_ptr_->bpu_core_ids.size()) !=
         dnn_node_para_ptr_->task_num) {
       RCLCPP_ERROR(rclcpp::get_logger("dnn"),
                    "DnnNodePara of bpu_core_ids size %d should be zero or "
@@ -113,13 +71,13 @@ int DnnNode::Init() {
       return -1;
     }
     for (const auto &bpu_core_id : dnn_node_para_ptr_->bpu_core_ids) {
-      if (bpu_core_id < BPUCoreIDType::BPU_CORE_ANY ||
-          bpu_core_id > BPUCoreIDType::BPU_CORE_1) {
+      if (bpu_core_id < HB_BPU_CORE_ANY ||
+          bpu_core_id > HB_BPU_CORE_1) {
         RCLCPP_ERROR(rclcpp::get_logger("dnn"),
                      "Invalid bpu_core_id %d, which should be [%d, %d]",
                      static_cast<int>(bpu_core_id),
-                     static_cast<int>(BPUCoreIDType::BPU_CORE_ANY),
-                     static_cast<int>(BPUCoreIDType::BPU_CORE_1));
+                     static_cast<int>(HB_BPU_CORE_ANY),
+                     static_cast<int>(HB_BPU_CORE_1));
         return -1;
       }
     }
@@ -132,14 +90,7 @@ int DnnNode::Init() {
     return ret;
   }
 
-  // 3. set output parser
-  ret = SetOutputParser();
-  if (ret != 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Set output parser failed!");
-    return ret;
-  }
-
-  // 4. task init
+  // 3. task init
   ret = dnn_node_impl_->TaskInit();
   if (ret != 0) {
     RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Task init failed!");
@@ -170,34 +121,10 @@ int DnnNode::Run(std::vector<std::shared_ptr<DNNInput>> &dnn_inputs,
                  const int infer_timeout_ms) {
   std::vector<std::shared_ptr<DNNTensor>> tensor_inputs;
   InputType input_type = InputType::DNN_INPUT;
-  std::vector<std::shared_ptr<OutputDescription>> output_descs{};
   return dnn_node_impl_->Run(
       dnn_inputs,
       tensor_inputs,
       input_type,
-      output_descs,
-      output,
-      std::bind(&DnnNode::PostProcess, this, std::placeholders::_1),
-      rois,
-      is_sync_mode,
-      alloctask_timeout_ms,
-      infer_timeout_ms);
-}
-
-int DnnNode::Run(std::vector<std::shared_ptr<DNNInput>> &dnn_inputs,
-                 std::vector<std::shared_ptr<OutputDescription>> &output_descs,
-                 const std::shared_ptr<DnnNodeOutput> &output,
-                 const std::shared_ptr<std::vector<hbDNNRoi>> rois,
-                 const bool is_sync_mode,
-                 const int alloctask_timeout_ms,
-                 const int infer_timeout_ms) {
-  std::vector<std::shared_ptr<DNNTensor>> tensor_inputs;
-  InputType input_type = InputType::DNN_INPUT;
-  return dnn_node_impl_->Run(
-      dnn_inputs,
-      tensor_inputs,
-      input_type,
-      output_descs,
       output,
       std::bind(&DnnNode::PostProcess, this, std::placeholders::_1),
       rois,
@@ -207,7 +134,6 @@ int DnnNode::Run(std::vector<std::shared_ptr<DNNInput>> &dnn_inputs,
 }
 
 int DnnNode::Run(std::vector<std::shared_ptr<DNNTensor>> &tensor_inputs,
-                 std::vector<std::shared_ptr<OutputDescription>> &output_descs,
                  const std::shared_ptr<DnnNodeOutput> &output,
                  const bool is_sync_mode,
                  const int alloctask_timeout_ms,
@@ -218,7 +144,6 @@ int DnnNode::Run(std::vector<std::shared_ptr<DNNTensor>> &tensor_inputs,
       dnn_inputs,
       tensor_inputs,
       input_type,
-      output_descs,
       output,
       std::bind(&DnnNode::PostProcess, this, std::placeholders::_1),
       nullptr,

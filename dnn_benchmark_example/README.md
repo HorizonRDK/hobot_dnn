@@ -8,7 +8,7 @@ Dnn Benchmark example package is a performance evaluation example of Dnn Node pa
 
 - Programming Language: C/C++
 - Development Platform: X3/X86
-- System Version: Ubuntu 20.04
+- System Version: Ubuntu 20.04/Ubuntu 22.04
 - Compilation Toolchain: Linux GCC 9.3.0/Linaro GCC 9.3.0
 
 # Compilation
