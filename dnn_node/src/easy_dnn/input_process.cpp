@@ -15,6 +15,8 @@
 
 #include <iostream>
 
+#include "rclcpp/rclcpp.hpp"
+
 #include "easy_dnn/common.h"
 #include "easy_dnn/data_structure.h"
 
@@ -28,7 +30,7 @@ int32_t CropProcessor::Process(std::shared_ptr<DNNTensor>& tensor,
                                std::shared_ptr<CropConfig>& crop_config,
                                std::shared_ptr<DNNInput>& input) {
   if (tensor->properties.tensorType > HB_DNN_IMG_TYPE_NV12_SEPARATE) {
-    std::cout << "CropProcessor only support Y, NV12 and NV12_SEPARATE" << std::endl;
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "CropProcessor only support Y, NV12 and NV12_SEPARATE!");
     return -1;
   }
   // nv12 and nv12_separate model is compatible
@@ -41,40 +43,45 @@ int32_t CropProcessor::Process(std::shared_ptr<DNNTensor>& tensor,
     return -1;
   }
   if (pyramid_input->y_stride != pyramid_input->uv_stride) {
-    std::cout << "Y stride must equal to uv stride!!!" << std::endl;
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "Y stride must equal to uv stride!!!");
     return -1;
   }
 
   if (crop_config->x % 2 != 0 ||
       crop_config->y % 2 != 0) {
-    std::cout << "x,y expected even, but got x:" << crop_config->x
-         << ", y:" << crop_config->y << std::endl;
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "x,y expected even, but got x: %d, y:", crop_config->x, crop_config->y);
     return -1;
   }
   if (crop_config->x >= pyramid_input->width ||
       crop_config->y >= pyramid_input->height) {
-    std::cout << "crop postion x,y out of bound, x:" << crop_config->x
+    std::stringstream ss;
+    ss << "crop postion x,y out of bound, x:" << crop_config->x
          << ", y:" << crop_config->y
          << ", input data width: " << pyramid_input->width
-         << ", height: " << pyramid_input->height << std::endl;
+         << ", height: " << pyramid_input->height << "\n";
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "%s", ss.str().c_str());
     return -1;
   }
   if (crop_config->x + crop_config->width > pyramid_input->width ||
       crop_config->y + crop_config->height > pyramid_input->height) {
-    std::cout << "crop size out of bound, x + width = "
+    std::stringstream ss;
+    ss << "crop size out of bound, x + width = "
          << crop_config->x + crop_config->width
          << ", y + height = " << crop_config->y + crop_config->height
          << ", input data width: " << pyramid_input->width
-         << ", height: " << pyramid_input->height << std::endl;
+         << ", height: " << pyramid_input->height << "\n";
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "%s", ss.str().c_str());
     return -1;
   }
   // BPU address is aligned to 16
   if (crop_config->x % 16 != 0) {
     crop_config->x = static_cast<int32_t>(static_cast<uint32_t>(crop_config->x) &
                                         (~15U));
-    std::cout << "Crop description x position must be aligned to 16, adjust it in "
+    std::stringstream ss;
+    ss << "Crop description x position must be aligned to 16, adjust it in "
             "crop processor. The adjusted description is: "
-         << crop_config << std::endl;
+         << crop_config << "\n";
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "%s", ss.str().c_str());
   }
   auto& y{tensor->sysMem[0]};
   auto& properties{tensor->properties};
@@ -106,7 +113,7 @@ int32_t CropProcessor::Process(std::shared_ptr<DNNTensor>& tensor,
   y.virAddr = reinterpret_cast<uint8_t*>(pyramid_input->y_vir_addr) + y_offset;
 
   if (y.phyAddr % 16U != 0U) {
-    std::cout << "y address is not aligned to bus width! " << crop_config << std::endl;
+    RCLCPP_ERROR(rclcpp::get_logger("dnn"), "y.phyAddr error");
     return -1;
   }
 

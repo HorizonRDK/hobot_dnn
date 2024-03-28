@@ -128,8 +128,11 @@ struct DnnNodeOutput {
   // 推理完成后，用户可以直接解析output_tensors并使用解析后的结构化数据
   std::vector<std::shared_ptr<DNNTensor>> output_tensors;
 
+  // 运行时时间统计指针，用于管理模型推理时间
   std::shared_ptr<DnnNodeRunTimeStat> rt_stat = nullptr;
 
+  // 模型输入的Roi数据指针列表，仅在模型任务为ModelRoiInferTask时有效
+  // 仅传递Roi数据用于模型后处理解析，不用于实际推理
   std::shared_ptr<std::vector<hbDNNRoi>> rois;
 };
 

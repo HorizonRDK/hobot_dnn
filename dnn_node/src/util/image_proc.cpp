@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "dnn/hb_sys.h"
+#include "rclcpp/rclcpp.hpp"
 
 namespace hobot {
 namespace dnn_node {
@@ -180,7 +181,7 @@ std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromBGRImg(
   // cv::imwrite("resized_img.jpg", mat_tmp);
   auto ret = ImageProc::BGRToNv12(mat_tmp, nv12_mat);
   if (ret) {
-    std::cout << "get nv12 image failed " << std::endl;
+    RCLCPP_ERROR(rclcpp::get_logger("image_proc"), "get nv12 image failed ");
     return nullptr;
   }
 
@@ -260,8 +261,7 @@ std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromBGR(
           static_cast<float>(original_img_width) / dst_ratio;
       uint32_t resized_height =
           static_cast<float>(original_img_height) / dst_ratio;
-      cv::resize(bgr_mat, bgr_mat, cv::Size(resized_width, resized_height));
-      std::cout << ratio_w << " " << ratio_h << "\n";
+      cv::resize(bgr_mat, bgr_mat, cv::Size(resized_width, resized_height));      
     }
 
     // 复制到目标图像中间
@@ -275,7 +275,7 @@ std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromBGR(
   // cv::imwrite("resized_img.jpg", pad_frame);
   auto ret = ImageProc::BGRToNv12(pad_frame, nv12_mat);
   if (ret) {
-    std::cout << "get nv12 image failed " << std::endl;
+    RCLCPP_ERROR(rclcpp::get_logger("image_proc"), "get nv12 image from bgr failed ");
     return nullptr;
   }
   original_img_height = bgr_mat.rows;
@@ -340,7 +340,7 @@ std::shared_ptr<DNNTensor> ImageProc::GetNV12TensorFromNV12(const std::string &i
   cv::resize(bgr_mat, mat_tmp, mat_tmp.size());
   auto ret = ImageProc::BGRToNv12(mat_tmp, nv12_mat);
   if (ret) {
-    std::cout << "get nv12 image failed " << std::endl;
+    RCLCPP_ERROR(rclcpp::get_logger("image_proc"), "get nv12 image failed ");
     return nullptr;
   }
   int original_img_height = bgr_mat.rows;
@@ -395,7 +395,6 @@ std::shared_ptr<DNNTensor> ImageProc::GetNV12TensorFromNV12(const std::string &i
   return std::shared_ptr<DNNTensor>(
       input_tensor, [y, uv](DNNTensor *input_tensor) {
         // Release memory after deletion
-        // std::cout << "Release input_tensor" << std::endl;
         hbSysFreeMem(y);
         hbSysFreeMem(uv);
         delete y;
