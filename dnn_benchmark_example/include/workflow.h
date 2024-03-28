@@ -38,15 +38,7 @@ using rclcpp::NodeOptions;
 using hobot::dnn_node::DNNInput;
 using hobot::dnn_node::DnnNode;
 using hobot::dnn_node::DnnNodeOutput;
-using hobot::dnn_node::DnnNodePara;
-using hobot::dnn_node::DNNResult;
 using hobot::dnn_node::ModelTaskType;
-using hobot::dnn_node::TaskId;
-
-using hobot::dnn_node::Model;
-using hobot::dnn_node::ModelInferTask;
-using hobot::dnn_node::ModelManager;
-using hobot::dnn_node::ModelRoiInferTask;
 
 struct FasterRcnnOutput : public DnnNodeOutput
 {

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef EASY_DNN_IMAGE_UTILS_H
-#define EASY_DNN_IMAGE_UTILS_H
+#ifndef IMAGE_UTILS_H
+#define IMAGE_UTILS_H
 
 #include <memory>
 #include <string>
@@ -46,28 +46,10 @@ enum class ImageType { BGR = 0, NV12 = 1, BIN = 2 };
 
 class ImageUtils {
  public:
-  static std::shared_ptr<NV12PyramidInput> GetNV12Pyramid(
-      const std::string &image_file,
-      ImageType image_type,
-      int scaled_img_height,
-      int scaled_img_width);
-
-  static std::shared_ptr<NV12PyramidInput> GetNV12Pyramid(
-      const std::string &image_file,
-      int scaled_img_height,
-      int scaled_img_width,
-      int &original_img_height,
-      int &original_img_width);
-
-  static std::shared_ptr<NV12PyramidInput> GetNV12Pyramid(const cv::Mat &image,
-                                                          int scaled_img_height,
-                                                          int scaled_img_width);
-
-  static int32_t BGRToNv12(cv::Mat &bgr_mat, cv::Mat &img_nv12);
 
   static int Render(
       const std::shared_ptr<hobot::dnn_node::NV12PyramidInput> &pyramid,
       const ai_msgs::msg::PerceptionTargets::UniquePtr &perception);
 };
 
-#endif  // EASY_DNN_IMAGE_UTILS_H
+#endif  // IMAGE_UTILS_H

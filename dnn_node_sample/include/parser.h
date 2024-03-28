@@ -65,6 +65,9 @@ int32_t Parse(
     const std::shared_ptr<hobot::dnn_node::DnnNodeOutput> &node_output,
     std::vector<std::shared_ptr<YoloV5Result>> &results);
 
+
+
+
 }  // namespace dnn_node_sample
 }  // namespace dnn_node
 }  // namespace hobot

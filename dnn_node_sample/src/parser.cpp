@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <memory>
+#include "include/parser.h"
 
-#include "dnn_node_sample/parser.h"
+#include <memory>
 
 using hobot::dnn_node::DNNTensor;
 

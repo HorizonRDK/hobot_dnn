@@ -31,56 +31,6 @@ namespace hobot {
 namespace dnn_node {
 namespace parser_unet {
 
-ai_msgs::msg::PerceptionTargets::UniquePtr PostProcess(
-    const std::shared_ptr<DnnNodeOutput> &node_output,
-    int img_w,
-    int img_h,
-    int model_w,
-    int model_h,
-    bool dump_render_img) {
-  std::shared_ptr<DnnParserResult> det_result = nullptr;
-  if (hobot::dnn_node::parser_unet::Parse(node_output, 
-                                            img_w,
-                                            img_h,
-                                            model_w,
-                                            model_h,
-                                            dump_render_img,
-                                            det_result) < 0) {
-    RCLCPP_ERROR(rclcpp::get_logger("example"), "Parse fail");
-    return nullptr;
-  }
-
-  if (!det_result) {
-    RCLCPP_INFO(rclcpp::get_logger("UnetPostProcess"), "invalid cast");
-    return nullptr;
-  }
-  ai_msgs::msg::PerceptionTargets::UniquePtr pub_data(
-      new ai_msgs::msg::PerceptionTargets());
-  ai_msgs::msg::Capture capture;
-  auto &seg = det_result->perception.seg;
-  if (dump_render_img) {
-    RenderUnet(node_output, seg);
-  }
-
-  capture.features.swap(seg.data);
-  capture.img.height = seg.valid_h;
-  capture.img.width = seg.valid_w;
-  capture.img.step = seg.channel;
-
-  RCLCPP_INFO(rclcpp::get_logger("UnetPostProcess"),
-              "features size: %d, width: %d, height: %d, channel: %d",
-              capture.features.size(),
-              capture.img.width,
-              capture.img.height,
-              capture.img.step);
-
-  ai_msgs::msg::Target target;
-  target.captures.emplace_back(std::move(capture));
-  pub_data->targets.emplace_back(std::move(target));
-
-  return pub_data;
-}
-
 int RenderUnet(
     const std::shared_ptr<DnnNodeOutput> &node_output, Parsing &seg) {
   static uint8_t bgr_putpalette[] = {

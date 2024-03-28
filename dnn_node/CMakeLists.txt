@@ -102,13 +102,16 @@ if(PLATFORM_X3)
     src/util/output_parser/detection/fcos_output_parser.cpp
     src/util/output_parser/classification/ptq_classification_output_parser.cpp
     src/util/output_parser/segmentation/ptq_unet_output_parser.cpp
+    src/easy_dnn/input_process.cpp
+    src/easy_dnn/model.cpp
+    src/easy_dnn/model_infer_task.cpp
+    src/easy_dnn/model_roi_infer_task.cpp
+    src/easy_dnn/task.cpp
   )
 
   target_link_libraries(${PROJECT_NAME}
     opencv_world
     alog
-    hlog
-    easy_dnn
     dnn
     cnn_intf
     ion
@@ -132,13 +135,16 @@ elseif(PLATFORM_Rdkultra)
     src/util/output_parser/detection/fcos_output_parser.cpp
     src/util/output_parser/classification/ptq_classification_output_parser.cpp
     src/util/output_parser/segmentation/ptq_unet_output_parser.cpp
+    src/easy_dnn/input_process.cpp
+    src/easy_dnn/model.cpp
+    src/easy_dnn/model_infer_task.cpp
+    src/easy_dnn/model_roi_infer_task.cpp
+    src/easy_dnn/task.cpp
   )
 
   target_link_libraries(${PROJECT_NAME}
     opencv_world
     alog
-    hlog
-    easy_dnn
     dnn
     cnn_intf
     ion
@@ -155,19 +161,22 @@ elseif(PLATFORM_X86)
     src/util/output_parser/detection/ptq_yolo3_darknet_output_parser.cpp
     src/util/output_parser/detection/ptq_yolo2_output_parser.cpp
     # src/util/output_parser/detection/ptq_yolo5_output_parser.cpp
-    src/util/output_parser/detection/ptq_yolov5x_output_parser.cpp
+    # src/util/output_parser/detection/ptq_yolov5x_output_parser.cpp
     src/util/output_parser/detection/fasterrcnn_output_parser.cpp
     # src/util/output_parser/detection/ptq_efficientdet_output_parser.cpp
     src/util/output_parser/detection/ptq_ssd_output_parser.cpp
     src/util/output_parser/detection/fcos_output_parser.cpp
     src/util/output_parser/classification/ptq_classification_output_parser.cpp
     src/util/output_parser/segmentation/ptq_unet_output_parser.cpp
+    src/easy_dnn/input_process.cpp
+    src/easy_dnn/model.cpp
+    src/easy_dnn/model_infer_task.cpp
+    src/easy_dnn/model_roi_infer_task.cpp
+    src/easy_dnn/task.cpp
   )
 
   target_link_libraries(${PROJECT_NAME}
     opencv_world
-    hlog
-    easy_dnn
     dnn
     hbdk_sim_x86
   )
@@ -188,16 +197,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 install(TARGETS dnn_node
   DESTINATION lib/)
 
-if(PLATFORM_X86)
-  install(FILES
-    ${SYS_ROOT}/usr/lib/libdnn.so
-    ${SYS_ROOT}/usr/lib/libeasy_dnn.so
-    ${SYS_ROOT}/usr/lib/libhbdk_sim_x86.so
-    ${SYS_ROOT}/usr/lib/libhlog.so.1
-    DESTINATION lib/
-  )
-endif()
-
 # Install include files
 install(
   FILES include/dnn_node/dnn_node.h include/dnn_node/dnn_node_data.h
@@ -212,6 +211,11 @@ install(
 install(
   DIRECTORY include/dnn_node/util/output_parser/
   DESTINATION include/dnn_node/util/output_parser/
+)
+
+install(
+  DIRECTORY include/easy_dnn/
+  DESTINATION include/easy_dnn/
 )
 
 # Causes the visibility macros to use dllexport rather than dllimport,

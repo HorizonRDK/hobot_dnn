@@ -24,7 +24,7 @@
 #include "dnn_node/dnn_node.h"
 
 using hobot::dnn_node::NV12PyramidInput;
-typedef std::shared_ptr<hobot::easy_dnn::NV12PyramidInput> NV12PyramidInputPtr;
+typedef std::shared_ptr<hobot::dnn_node::NV12PyramidInput> NV12PyramidInputPtr;
 
 
 #endif  // _INPUT_INPUT_DATA_H_

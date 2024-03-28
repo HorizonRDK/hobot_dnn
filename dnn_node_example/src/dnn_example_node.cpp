@@ -12,13 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
-
+#include "include/dnn_example_node.h"
 
 #include <fstream>
 #include <memory>
 #include <string>
 #include <vector>
+
+#include "hobot_cv/hobotcv_imgproc.h"
+#include "rapidjson/document.h"
+#include "rapidjson/istreamwrapper.h"
+#include "rapidjson/writer.h"
+#include "rclcpp/rclcpp.hpp"
+#include <cv_bridge/cv_bridge.h>
+#include <unistd.h>
 
 #include "dnn_node/dnn_node.h"
 #include "dnn_node/util/output_parser/classification/ptq_classification_output_parser.h"
@@ -30,15 +37,7 @@
 #include "dnn_node/util/output_parser/detection/ptq_yolo5_output_parser.h"
 #include "dnn_node/util/output_parser/detection/ptq_yolov5x_output_parser.h"
 #include "dnn_node/util/output_parser/segmentation/ptq_unet_output_parser.h"
-#include "hobot_cv/hobotcv_imgproc.h"
-#include "rapidjson/document.h"
-#include "rapidjson/istreamwrapper.h"
-#include "rapidjson/writer.h"
-#include "rclcpp/rclcpp.hpp"
-#include <cv_bridge/cv_bridge.h>
-#include <unistd.h>
 
-#include "include/dnn_example_node.h"
 #include "include/image_utils.h"
 #include "include/post_process/post_process_unet.h"
 
@@ -104,7 +103,7 @@ DnnExampleNode::DnnExampleNode(const std::string &node_name,
     : DnnNode(node_name, options) {
   // 更新配置
   this->declare_parameter<int>("feed_type", feed_type_);
-  this->declare_parameter<std::string>("image", image_);
+  this->declare_parameter<std::string>("image", image_file_);
   this->declare_parameter<int>("image_type", image_type_);
   this->declare_parameter<int>("image_width", image_width);
   this->declare_parameter<int>("image_height", image_height);
@@ -115,7 +114,7 @@ DnnExampleNode::DnnExampleNode(const std::string &node_name,
                                        msg_pub_topic_name_);
 
   this->get_parameter<int>("feed_type", feed_type_);
-  this->get_parameter<std::string>("image", image_);
+  this->get_parameter<std::string>("image", image_file_);
   this->get_parameter<int>("image_type", image_type_);
   this->get_parameter<int>("image_width", image_width);
   this->get_parameter<int>("image_height", image_height);
@@ -128,7 +127,7 @@ DnnExampleNode::DnnExampleNode(const std::string &node_name,
     std::stringstream ss;
     ss << "Parameter:"
        << "\n feed_type(0:local, 1:sub): " << feed_type_
-       << "\n image: " << image_ << "\n image_type: " << image_type_
+       << "\n image: " << image_file_ << "\n image_type: " << image_type_
        << "\n dump_render_img: " << dump_render_img_
        << "\n is_shared_mem_sub: " << is_shared_mem_sub_
        << "\n config_file: " << config_file
@@ -187,9 +186,10 @@ DnnExampleNode::DnnExampleNode(const std::string &node_name,
     // 本地图片回灌
     RCLCPP_INFO(rclcpp::get_logger("example"),
                 "Dnn node feed with local image: %s",
-                image_.c_str());
+                image_file_.c_str());
     FeedFromLocal();
-  } else if (static_cast<int>(DnnFeedType::FROM_SUB) == feed_type_) {
+  } 
+  else if (static_cast<int>(DnnFeedType::FROM_SUB) == feed_type_) {
     // 创建图片消息的订阅者
     RCLCPP_INFO(rclcpp::get_logger("example"),
                 "Dnn node feed with subscription");
@@ -351,7 +351,7 @@ int DnnExampleNode::PostProcess(
     return -1;
   }
 
-  // 后处理开始时间
+  // 1. 记录后处理开始时间
   struct timespec time_start = {0, 0};
   clock_gettime(CLOCK_REALTIME, &time_start);
 
@@ -361,13 +361,7 @@ int DnnExampleNode::PostProcess(
     ss << "Output from frame_id: " << parser_output->msg_header->frame_id
        << ", stamp: " << parser_output->msg_header->stamp.sec << "."
        << parser_output->msg_header->stamp.nanosec;
-
     RCLCPP_INFO(rclcpp::get_logger("example"), "%s", ss.str().c_str());
-  }
-
-  if (!msg_publisher_) {
-    RCLCPP_ERROR(rclcpp::get_logger("example"), "Invalid msg_publisher_");
-    return -1;
   }
 
   // 校验算法输出是否有效
@@ -377,7 +371,7 @@ int DnnExampleNode::PostProcess(
     return -1;
   }
 
-  // 解析后的结构化数据
+  // 2. 解析后的结构化数据
   std::shared_ptr<DnnParserResult> det_result = nullptr;
   int parse_ret = 0;
   // 根据parser类型选择解析方法
@@ -390,7 +384,7 @@ int DnnExampleNode::PostProcess(
       parse_ret =
           hobot::dnn_node::parser_yolov3::Parse(node_output, det_result);
       break;
-#ifdef PLATFORM_X3
+  #ifdef PLATFORM_X3
     case DnnParserType::YOLOV5_PARSER:
       parse_ret =
           hobot::dnn_node::parser_yolov5::Parse(node_output, det_result);
@@ -399,13 +393,13 @@ int DnnExampleNode::PostProcess(
       parse_ret =
           hobot::dnn_node::parser_efficientdet::Parse(node_output, det_result);
       break;
-#endif
-#ifdef PLATFORM_Rdkultra
+  #endif
+  #ifdef PLATFORM_Rdkultra
     case DnnParserType::YOLOV5X_PARSER:
       parse_ret =
           hobot::dnn_node::parser_yolov5x::Parse(node_output, det_result);
       break;
-#endif
+  #endif
     case DnnParserType::CLASSIFICATION_PARSER:
       parse_ret =
           hobot::dnn_node::parser_mobilenetv2::Parse(node_output, det_result);
@@ -417,15 +411,14 @@ int DnnExampleNode::PostProcess(
       parse_ret = hobot::dnn_node::parser_fcos::Parse(node_output, det_result);
       break;
     case DnnParserType::UNET_PARSER:
-      hobot::dnn_node::parser_unet::PostProcess(node_output,
-                                                parser_output->img_w,
-                                                parser_output->img_h,
-                                                parser_output->model_w,
-                                                parser_output->model_h,
-                                                dump_render_img_);
-      // break;
-      // 不发布AI msg
-      return 0;
+      parse_ret = hobot::dnn_node::parser_unet::Parse(node_output, 
+                                            parser_output->img_w,
+                                            parser_output->img_h,
+                                            parser_output->model_w,
+                                            parser_output->model_h,
+                                            dump_render_img_,
+                                            det_result);
+      break;
     default:
       RCLCPP_ERROR(rclcpp::get_logger("example"), "Inlvaid parser: %d", parser);
       return -1;
@@ -436,9 +429,14 @@ int DnnExampleNode::PostProcess(
     return -1;
   }
 
-  // 创建用于发布的AI消息
+  // 3. 创建用于发布的AI消息
+  if (!msg_publisher_) {
+    RCLCPP_ERROR(rclcpp::get_logger("example"), "Invalid msg_publisher_");
+    return -1;
+  }
   ai_msgs::msg::PerceptionTargets::UniquePtr pub_data(
       new ai_msgs::msg::PerceptionTargets());
+  // 3.1 发布检测AI消息
   RCLCPP_INFO(rclcpp::get_logger("PostProcessBase"),
               "out box size: %d",
               det_result->perception.det.size());
@@ -472,6 +470,7 @@ int DnnExampleNode::PostProcess(
     pub_data->targets.emplace_back(std::move(target));
   }
 
+  // 3.2 发布分类AI消息
   RCLCPP_INFO(rclcpp::get_logger("ClassificationPostProcess"),
               "out cls size: %d",
               det_result->perception.cls.size());
@@ -494,6 +493,39 @@ int DnnExampleNode::PostProcess(
     ai_msgs::msg::Target target;
     target.set__type(cls.class_name);
     target.rois.emplace_back(roi);
+    pub_data->targets.emplace_back(std::move(target));
+  }
+
+  // 3.3 发布分割AI消息
+  auto &seg = det_result->perception.seg;
+  if (seg.height != 0 && seg.width != 0) {
+    if (dump_render_img_) {
+      hobot::dnn_node::parser_unet::RenderUnet(node_output, seg);
+    }
+
+    ai_msgs::msg::Capture capture;
+    capture.features.swap(seg.data);
+    capture.img.height = seg.height;
+    capture.img.width = seg.width;
+    capture.img.step = model_input_width_ / seg.width;
+
+    RCLCPP_INFO(rclcpp::get_logger("SegmentationPostProcess"),
+                "features size: %d, width: %d, height: %d, num_classes: %d, step: %d",
+                capture.features.size(),
+                capture.img.width,
+                capture.img.height,
+                seg.num_classes,
+                capture.img.step);
+
+    ai_msgs::msg::Target target;
+    target.set__type("parking_space");
+    
+    ai_msgs::msg::Attribute attribute;
+    attribute.set__type("segmentation_label_count");
+    attribute.set__value(seg.num_classes);
+    target.attributes.emplace_back(std::move(attribute));
+
+    target.captures.emplace_back(std::move(capture));
     pub_data->targets.emplace_back(std::move(target));
   }
 
@@ -608,27 +640,29 @@ int DnnExampleNode::PostProcess(
 }
 
 int DnnExampleNode::FeedFromLocal() {
-  if (access(image_.c_str(), R_OK) == -1) {
+  if (access(image_file_.c_str(), R_OK) == -1) {
     RCLCPP_ERROR(
-        rclcpp::get_logger("example"), "Image: %s not exist!", image_.c_str());
+        rclcpp::get_logger("example"), "Image: %s not exist!", image_file_.c_str());
     return -1;
   }
 
   // 1. 将图片处理成模型输入数据类型DNNInput
   // 使用图片生成pym，NV12PyramidInput为DNNInput的子类
-  std::shared_ptr<hobot::easy_dnn::NV12PyramidInput> pyramid = nullptr;
+  std::shared_ptr<hobot::dnn_node::NV12PyramidInput> pyramid = nullptr;
   if (static_cast<int>(ImageType::BGR) == image_type_) {
     // bgr img，支持将图片resize到模型输入size
-    pyramid = ImageUtils::GetNV12Pyramid(
-        image_, ImageType::BGR, model_input_height_, model_input_width_);
+    // pyramid = ImageUtils::GetNV12Pyramid(
+    //     image_file_, ImageType::BGR, model_input_height_, model_input_width_);
+    pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromBGR(
+        image_file_, model_input_height_, model_input_width_);
     if (!pyramid) {
       RCLCPP_ERROR(rclcpp::get_logger("example"),
                    "Get Nv12 pym fail with image: %s",
-                   image_.c_str());
+                   image_file_.c_str());
       return -1;
     }
   } else if (static_cast<int>(ImageType::NV12) == image_type_) {
-    std::ifstream ifs(image_, std::ios::in | std::ios::binary);
+    std::ifstream ifs(image_file_, std::ios::in | std::ios::binary);
     if (!ifs) {
       return -1;
     }
@@ -646,7 +680,7 @@ int DnnExampleNode::FeedFromLocal() {
     if (!pyramid) {
       RCLCPP_ERROR(rclcpp::get_logger("example"),
                    "Get Nv12 pym fail with image: %s",
-                   image_.c_str());
+                   image_file_.c_str());
       return -1;
     }
 
@@ -711,11 +745,10 @@ void DnnExampleNode::RosImgProcess(
   //   img_msg->data.size());
 
   auto tp_start = std::chrono::system_clock::now();
-
+  auto dnn_output = std::make_shared<DnnExampleOutput>();
   // 1. 将图片处理成模型输入数据类型DNNInput
   // 使用图片生成pym，NV12PyramidInput为DNNInput的子类
-  std::shared_ptr<hobot::easy_dnn::NV12PyramidInput> pyramid = nullptr;
-  auto dnn_output = std::make_shared<DnnExampleOutput>();
+  std::shared_ptr<hobot::dnn_node::NV12PyramidInput> pyramid = nullptr;
   if ("rgb8" == img_msg->encoding) {
     auto cv_img =
         cv_bridge::cvtColorForDisplay(cv_bridge::toCvShare(img_msg), "bgr8");
@@ -734,8 +767,7 @@ void DnnExampleNode::RosImgProcess(
                    "after cvtColorForDisplay cost ms: %d",
                    interval);
     }
-
-    pyramid = ImageUtils::GetNV12Pyramid(
+    pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromBGRImg(
         cv_img->image, model_input_height_, model_input_width_);
   } else if ("bgr8" == img_msg->encoding) {
     auto cv_img =
@@ -755,8 +787,7 @@ void DnnExampleNode::RosImgProcess(
                    "after cvtColorForDisplay cost ms: %d",
                    interval);
     }
-
-    pyramid = ImageUtils::GetNV12Pyramid(
+    pyramid = hobot::dnn_node::ImageProc::GetNV12PyramidFromBGRImg(
         cv_img->image, model_input_height_, model_input_width_);
   } else if ("nv12" == img_msg->encoding) {  // nv12格式使用hobotcv resize
     if (img_msg->height != static_cast<uint32_t>(model_input_height_) ||
@@ -798,13 +829,6 @@ void DnnExampleNode::RosImgProcess(
     return;
   }
 
-  if (parser == DnnParserType::UNET_PARSER) {
-    dnn_output->img_w = img_msg->width;
-    dnn_output->img_h = img_msg->height;
-    dnn_output->model_w = model_input_width_;
-    dnn_output->model_h = model_input_height_;
-  }
-
   {
     auto tp_now = std::chrono::system_clock::now();
     auto interval =
@@ -819,6 +843,13 @@ void DnnExampleNode::RosImgProcess(
   // inputs将会作为模型的输入通过RunInferTask接口传入
   auto inputs = std::vector<std::shared_ptr<DNNInput>>{pyramid};
 
+  // 3. 初始化输出
+  if (parser == DnnParserType::UNET_PARSER) {
+    dnn_output->img_w = img_msg->width;
+    dnn_output->img_h = img_msg->height;
+    dnn_output->model_w = model_input_width_;
+    dnn_output->model_h = model_input_height_;
+  }
   dnn_output->msg_header = std::make_shared<std_msgs::msg::Header>();
   dnn_output->msg_header->set__frame_id(img_msg->header.frame_id);
   dnn_output->msg_header->set__stamp(img_msg->header.stamp);
@@ -827,7 +858,7 @@ void DnnExampleNode::RosImgProcess(
     dnn_output->pyramid = pyramid;
   }
 
-  // 3. 开始预测
+  // 4. 开始预测
   if (Run(inputs, dnn_output, nullptr) != 0) {
     RCLCPP_INFO(rclcpp::get_logger("example"), "Run predict failed!");
     return;

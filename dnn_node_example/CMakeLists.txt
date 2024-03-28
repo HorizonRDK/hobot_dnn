@@ -41,7 +41,6 @@ find_package(ai_msgs REQUIRED)
 find_package(dnn_node REQUIRED)
 find_package(hobot_cv REQUIRED)
 find_package(cv_bridge REQUIRED)
-find_package(OpenCV 3.4.5 REQUIRED)
 
 option(SHARED_MEM "using shared mem" ON)
 if (${SHARED_MEM})
@@ -136,11 +135,6 @@ install(DIRECTORY
   ${PROJECT_SOURCE_DIR}/launch/
   DESTINATION share/${PROJECT_NAME}/launch)
 
-# install(DIRECTORY
-#   ${PROJECT_SOURCE_DIR}/config/
-#   DESTINATION lib/${PROJECT_NAME}/config/
-# )
-
 if(PLATFORM_X3)
   install(DIRECTORY
     ${PROJECT_SOURCE_DIR}/config/x3/
@@ -153,7 +147,7 @@ elseif(PLATFORM_Rdkultra)
   )
 elseif(PLATFORM_X86)
   install(DIRECTORY
-    ${PROJECT_SOURCE_DIR}/config/x86/
+    ${PROJECT_SOURCE_DIR}/config/x3/
     DESTINATION lib/${PROJECT_NAME}/config/
   )
 endif()

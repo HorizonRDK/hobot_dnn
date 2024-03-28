@@ -323,6 +323,7 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &tensors,
     RCLCPP_INFO(rclcpp::get_logger("fcos_example"), "tensor layout error.");
     return -1;
   }
+
   int h_index, w_index, c_index;
   int ret = hobot::dnn_node::output_parser::get_tensor_hwc_index(
       tensors[0], &h_index, &w_index, &c_index);
@@ -344,6 +345,7 @@ int PostProcess(std::vector<std::shared_ptr<DNNTensor>> &tensors,
     }
     hbSysFlushMem(&(tensors[i]->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
   }
+
   std::vector<std::vector<ScoreId>> scores;
   std::vector<Detection> dets;
   if (tensors[0]->properties.tensorLayout == HB_DNN_LAYOUT_NHWC) {

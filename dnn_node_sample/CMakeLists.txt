@@ -80,6 +80,7 @@ link_directories(
 
 include_directories(
   include
+  ${PROJECT_SOURCE_DIR}
   ${SYS_ROOT}/usr/include
 )
 

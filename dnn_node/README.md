@@ -16,7 +16,7 @@ The DnnNode in the Dnn Node package is a virtual base class that defines the dat
 
 - Programming Language: C/C++
 - Development Platform: X3/Rdkultra/X86
-- System Version: Ubuntu 20.04
+- System Version: Ubuntu 20.04/Ubuntu 22.04
 - Compilation Toolchain: Linux GCC 9.3.0/Linaro GCC 9.3.0
 
 # Compilation
@@ -34,22 +34,17 @@ Compilation options can control the dependencies and functionalities of compilin
 ### X3 Dependencies
 
 - dnn: 1.18.4
-- easydnn: 1.6.1
 - opencv: 3.4.5
-- hlog: 1.6.1
 
 ### X86 Dependencies
 
 - dnn: 1.12.3
-- easydnn: 1.1.8
 - opencv: 3.4.5
-- hlog: 1.1.3
 
 ### Rdkultra Dependencies
 
-- dnn: 1.19.3
-- easydnn: 1.6.1
-- opencv: 3.4.5- hlog:1.6.1
+- dnn: 1.17.3
+- opencv: 3.4.5
 
 ## Compilation on X3/Rdkultra Ubuntu System
 

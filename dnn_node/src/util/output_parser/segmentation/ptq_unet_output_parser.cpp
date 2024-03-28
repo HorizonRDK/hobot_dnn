@@ -23,27 +23,7 @@ namespace hobot {
 namespace dnn_node {
 namespace parser_unet {
 
-class UnetOutputDescription : public OutputDescription {
- public:
-  UnetOutputDescription(Model* mode, int index, std::string type = "")
-      : OutputDescription(mode, index, std::move(type)) {}
-  ~UnetOutputDescription() override = default;
-
-  uint32_t valid_w = 0;
-  uint32_t valid_h = 0;
-  int parse_render = 0;
-};
-
-int PostProcess(std::vector<std::shared_ptr<DNNTensor>>& output_tensors,
-                Perception& perception,
-                int valid_w,
-                int valid_h);
-
-int ParseRenderPostProcess(
-    std::vector<std::shared_ptr<DNNTensor>>& output_tensors,
-    Perception& perception);
-
-int num_classes_ = 20;
+int num_classes_ = 19;
 
 int32_t Parse(
     const std::shared_ptr<hobot::dnn_node::DnnNodeOutput>& node_output,
@@ -62,18 +42,11 @@ int32_t Parse(
     return -1;
   }
 
-  int valid_w = img_w > static_cast<uint32_t>(model_w)
-                    ? static_cast<uint32_t>(model_w)
-                    : img_w;
-  int valid_h = img_h > static_cast<uint32_t>(model_h)
-                    ? static_cast<uint32_t>(model_h)
-                    : img_h;
+  int valid_w = img_w > model_w ? model_w : img_w;
+  int valid_h = img_h > model_h ? model_h : img_h;
 
-  int ret = PostProcess(
-      node_output->output_tensors, result->perception, valid_w, valid_h);
-  if (1 == parser_render) {
-    ParseRenderPostProcess(node_output->output_tensors, result->perception);
-  }
+  int ret = PostProcess(node_output->output_tensors, result->perception);
+
   if (ret != 0) {
     RCLCPP_INFO(rclcpp::get_logger("UnetOutputParser"),
                 "postprocess return error, code = %d",
@@ -87,41 +60,6 @@ int32_t Parse(
 }
 
 int PostProcess(std::vector<std::shared_ptr<DNNTensor>>& tensors,
-                Perception& perception,
-                int valid_w,
-                int valid_h) {
-  perception.type = Perception::SEG;
-  hbSysFlushMem(&(tensors[0]->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
-
-  // get shape
-  int h_index, w_index, c_index;
-  hobot::dnn_node::output_parser::get_tensor_hwc_index(
-      tensors[0], &h_index, &w_index, &c_index);
-  int height = tensors[0]->properties.validShape.dimensionSize[h_index];
-  int width = tensors[0]->properties.validShape.dimensionSize[w_index];
-  int channel = tensors[0]->properties.validShape.dimensionSize[c_index];
-
-  float* data = reinterpret_cast<float*>(tensors[0]->sysMem[0].virAddr);
-  int parse_valid_h = valid_h / 4;
-  int parse_valid_w = valid_w / 4;
-  perception.seg.data.resize(parse_valid_h * parse_valid_w * channel);
-  perception.seg.valid_w = parse_valid_w;
-  perception.seg.valid_h = parse_valid_h;
-  perception.seg.channel = channel;
-  perception.seg.num_classes = num_classes_;
-
-  for (int h = 0; h < parse_valid_h; h++) {
-    auto index = h * parse_valid_w * channel;
-    auto* dst = &perception.seg.data[index];
-    auto* src = data + h * width * channel;
-    int copy_len = parse_valid_w * channel * sizeof(float);
-    memcpy(dst, src, copy_len);
-  }
-
-  return 0;
-}
-
-int ParseRenderPostProcess(std::vector<std::shared_ptr<DNNTensor>>& tensors,
                            Perception& perception) {
   perception.type = Perception::SEG;
   hbSysFlushMem(&(tensors[0]->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
@@ -141,9 +79,12 @@ int ParseRenderPostProcess(std::vector<std::shared_ptr<DNNTensor>>& tensors,
                channel);
 
   float* data = reinterpret_cast<float*>(tensors[0]->sysMem[0].virAddr);
+  perception.seg.data.resize(height * width);
   perception.seg.seg.resize(height * width);
   perception.seg.width = width;
   perception.seg.height = height;
+  perception.seg.valid_w = width;
+  perception.seg.valid_h = height;
   perception.seg.channel = channel;
   perception.seg.num_classes = num_classes_;
 
@@ -159,6 +100,7 @@ int ParseRenderPostProcess(std::vector<std::shared_ptr<DNNTensor>>& tensors,
         }
       }
       perception.seg.seg[h * width + w] = top_index;
+      perception.seg.data[h * width + w] = static_cast<float>(top_index);
     }
   }
   return 0;

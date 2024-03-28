@@ -109,17 +109,7 @@ virtual int SetNodePara() = 0;
 - 返回值
     - 0成功，非0失败。
 
-## 3.4 SetOutputParser()
-```cpp
-virtual int SetOutputParser() = 0;
-```
-
-配置模型输出的解析方式。
-
-- 返回值
-  - 0成功，非0失败。
-
-## 3.5 PostProcess()
+## 3.4 PostProcess()
 ```cpp
 virtual int PostProcess(const std::shared_ptr<DnnNodeOutput> &output) = 0;
 ```
@@ -136,7 +126,7 @@ DNNResult是easy dnn中定义的模型输出数据类型，用户必须根据实
 - 返回值
     - 0成功，非0失败。
 
-## 3.6 GetModel()
+## 3.5 GetModel()
 ```cpp
 Model* GetModel();
 ```
@@ -145,7 +135,7 @@ Model* GetModel();
 - 返回值
     - 返回已加载的模型指针。
 
-## 3.7 GetModelInputSize()
+## 3.6 GetModelInputSize()
 ```cpp
 int GetModelInputSize(int32_t input_index, int& w, int& h);
 ```
@@ -158,10 +148,9 @@ int GetModelInputSize(int32_t input_index, int& w, int& h);
 - 返回值
     - 返回已加载的模型指针。
 
-## 3.8 Run()
+## 3.7 Run()
 ```cpp
 int Run(std::vector<std::shared_ptr<DNNInput>> &inputs,
-        std::vector<std::shared_ptr<OutputDescription>> &output_descs,
         const std::shared_ptr<DnnNodeOutput> &output = nullptr,
         const std::shared_ptr<std::vector<hbDNNRoi>> rois = nullptr,
         const bool is_sync_mode = true,
@@ -175,7 +164,6 @@ int Run(std::vector<std::shared_ptr<DNNInput>> &inputs,
 
 - 参数
     - [in] inputs 输入数据智能指针列表
-    - [in] output_descs 输出描述智能指针列表
     - [in] outputs 输出数据智能指针
     - [in] rois 抠图roi数据，只对ModelRoiInferType模型有效
     - [in] is_sync_mode 预测模式，true为同步模式，false为异步模式
@@ -187,10 +175,9 @@ int Run(std::vector<std::shared_ptr<DNNInput>> &inputs,
     - 0成功，非0失败。
 
 
-## 3.9 Run()
+## 3.8 Run()
 ```cpp
 int Run(std::vector<std::shared_ptr<DNNTensor>> &inputs,
-        std::vector<std::shared_ptr<OutputDescription>> &output_descs,
         const std::shared_ptr<DnnNodeOutput> &output = nullptr,
         const bool is_sync_mode = true,
         const int alloctask_timeout_ms = -1,
@@ -203,7 +190,6 @@ int Run(std::vector<std::shared_ptr<DNNTensor>> &inputs,
 
 - 参数
     - [in] inputs 输入数据智能指针列表
-    - [in] output_descs 输出描述智能指针列表
     - [in] outputs 输出数据智能指针
     - [in] is_sync_mode 预测模式，true为同步模式，false为异步模式
     - [in] alloctask_timeout_ms 申请推理任务超时时间，单位毫秒

@@ -66,7 +66,7 @@ struct DnnExampleOutput : public DnnNodeOutput {
   float ratio = 1.0;  //缩放比例系数，无需缩放为1
 
   // 算法推理使用的图像数据，用于本地渲染使用
-  std::shared_ptr<hobot::easy_dnn::NV12PyramidInput> pyramid = nullptr;
+  std::shared_ptr<hobot::dnn_node::NV12PyramidInput> pyramid = nullptr;
 
   // 前处理的开始和结束时间，用于发布perf统计信息
   struct timespec preprocess_timespec_start;
@@ -116,7 +116,7 @@ class DnnExampleNode : public DnnNode {
   int task_num_ = 4;
 
   // 用于回灌的本地图片信息
-  std::string image_ = "config/test.jpg";
+  std::string image_file_ = "config/test.jpg";
   // 回灌图片的格式，0: bgr, 1: nv12
   int image_type_ = 0;
   // 回灌图片的分辨率
@@ -148,7 +148,7 @@ class DnnExampleNode : public DnnNode {
       ros_img_subscription_ = nullptr;
   // 目前只支持订阅原图，可以使用压缩图"/image_raw/compressed" topic
   // 和sensor_msgs::msg::CompressedImage格式扩展订阅压缩图
-  std::string ros_img_topic_name_ = "/image_raw";
+  std::string ros_img_topic_name_ = "/image";
   void RosImgProcess(const sensor_msgs::msg::Image::ConstSharedPtr msg);
 };
 

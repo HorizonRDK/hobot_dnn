@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "dnn/hb_sys.h"
+#include "rclcpp/rclcpp.hpp"
 
 namespace hobot {
 namespace dnn_node {
@@ -169,6 +170,279 @@ std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromNV12Img(
                                              delete uv;
                                              delete pyramid;
                                            });
+}
+
+std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromBGRImg(
+    const cv::Mat &bgr_mat, int scaled_img_height, int scaled_img_width) {
+  cv::Mat nv12_mat;
+  cv::Mat mat_tmp;
+  mat_tmp.create(scaled_img_height, scaled_img_width, bgr_mat.type());
+  cv::resize(bgr_mat, mat_tmp, mat_tmp.size(), 0, 0);
+  // cv::imwrite("resized_img.jpg", mat_tmp);
+  auto ret = ImageProc::BGRToNv12(mat_tmp, nv12_mat);
+  if (ret) {
+    RCLCPP_ERROR(rclcpp::get_logger("image_proc"), "get nv12 image failed ");
+    return nullptr;
+  }
+
+  auto *y = new hbSysMem;
+  auto *uv = new hbSysMem;
+
+  auto w_stride = ALIGN_16(scaled_img_width);
+  hbSysAllocCachedMem(y, scaled_img_height * w_stride);
+  hbSysAllocCachedMem(uv, scaled_img_height / 2 * w_stride);
+
+  uint8_t *data = nv12_mat.data;
+  auto *hb_y_addr = reinterpret_cast<uint8_t *>(y->virAddr);
+  auto *hb_uv_addr = reinterpret_cast<uint8_t *>(uv->virAddr);
+
+  // padding y
+  for (int h = 0; h < scaled_img_height; ++h) {
+    auto *raw = hb_y_addr + h * w_stride;
+    for (int w = 0; w < scaled_img_width; ++w) {
+      *raw++ = *data++;
+    }
+  }
+
+  // padding uv
+  auto uv_data = nv12_mat.data + scaled_img_height * scaled_img_width;
+  for (int32_t h = 0; h < scaled_img_height / 2; ++h) {
+    auto *raw = hb_uv_addr + h * w_stride;
+    for (int32_t w = 0; w < scaled_img_width; ++w) {
+      *raw++ = *uv_data++;
+    }
+  }
+
+  hbSysFlushMem(y, HB_SYS_MEM_CACHE_CLEAN);
+  hbSysFlushMem(uv, HB_SYS_MEM_CACHE_CLEAN);
+  auto pyramid = new NV12PyramidInput;
+  pyramid->width = scaled_img_width;
+  pyramid->height = scaled_img_height;
+  pyramid->y_vir_addr = y->virAddr;
+  pyramid->y_phy_addr = y->phyAddr;
+  pyramid->y_stride = w_stride;
+  pyramid->uv_vir_addr = uv->virAddr;
+  pyramid->uv_phy_addr = uv->phyAddr;
+  pyramid->uv_stride = w_stride;
+  return std::shared_ptr<NV12PyramidInput>(pyramid,
+                                           [y, uv](NV12PyramidInput *pyramid) {
+                                             // Release memory after deletion
+                                             hbSysFreeMem(y);
+                                             hbSysFreeMem(uv);
+                                             delete y;
+                                             delete uv;
+                                             delete pyramid;
+                                           });
+}
+
+std::shared_ptr<NV12PyramidInput> ImageProc::GetNV12PyramidFromBGR(
+    const std::string &image_file,
+    int scaled_img_height,
+    int scaled_img_width) {
+  cv::Mat nv12_mat;
+  cv::Mat bgr_mat = cv::imread(image_file, cv::IMREAD_COLOR);
+  int original_img_width = bgr_mat.cols;
+  int original_img_height = bgr_mat.rows;
+
+  auto w_stride = ALIGN_16(scaled_img_width);
+  cv::Mat pad_frame;
+  if (static_cast<uint32_t>(original_img_width) != w_stride ||
+      original_img_height != scaled_img_height) {
+    pad_frame =
+        cv::Mat(scaled_img_height, w_stride, CV_8UC3, cv::Scalar::all(0));
+    if (static_cast<uint32_t>(original_img_width) > w_stride ||
+        original_img_height > scaled_img_height) {
+      float ratio_w =
+          static_cast<float>(original_img_width) / static_cast<float>(w_stride);
+      float ratio_h = static_cast<float>(original_img_height) /
+                      static_cast<float>(scaled_img_height);
+      float dst_ratio = std::max(ratio_w, ratio_h);
+      uint32_t resized_width =
+          static_cast<float>(original_img_width) / dst_ratio;
+      uint32_t resized_height =
+          static_cast<float>(original_img_height) / dst_ratio;
+      cv::resize(bgr_mat, bgr_mat, cv::Size(resized_width, resized_height));      
+    }
+
+    // 复制到目标图像中间
+    bgr_mat.copyTo(pad_frame(cv::Rect((w_stride - bgr_mat.cols) / 2,
+                                      (scaled_img_height - bgr_mat.rows) / 2,
+                                      bgr_mat.cols,
+                                      bgr_mat.rows)));
+  } else {
+    pad_frame = bgr_mat;
+  }
+  // cv::imwrite("resized_img.jpg", pad_frame);
+  auto ret = ImageProc::BGRToNv12(pad_frame, nv12_mat);
+  if (ret) {
+    RCLCPP_ERROR(rclcpp::get_logger("image_proc"), "get nv12 image from bgr failed ");
+    return nullptr;
+  }
+  original_img_height = bgr_mat.rows;
+  original_img_width = bgr_mat.cols;
+
+  auto *y = new hbSysMem;
+  auto *uv = new hbSysMem;
+
+  hbSysAllocCachedMem(y, scaled_img_height * w_stride);
+  hbSysAllocCachedMem(uv, scaled_img_height / 2 * w_stride);
+
+  uint8_t *data = nv12_mat.data;
+  auto *hb_y_addr = reinterpret_cast<uint8_t *>(y->virAddr);
+  auto *hb_uv_addr = reinterpret_cast<uint8_t *>(uv->virAddr);
+
+  // padding y
+  for (int h = 0; h < scaled_img_height; ++h) {
+    auto *raw = hb_y_addr + h * w_stride;
+    for (uint32_t w = 0; w < w_stride; ++w) {
+      *raw++ = *data++;
+    }
+  }
+
+  // padding uv
+  auto uv_data = nv12_mat.data + scaled_img_height * w_stride;
+  for (int32_t h = 0; h < scaled_img_height / 2; ++h) {
+    auto *raw = hb_uv_addr + h * w_stride;
+    for (uint32_t w = 0; w < w_stride; ++w) {
+      *raw++ = *uv_data++;
+    }
+  }
+
+  hbSysFlushMem(y, HB_SYS_MEM_CACHE_CLEAN);
+  hbSysFlushMem(uv, HB_SYS_MEM_CACHE_CLEAN);
+  auto pyramid = new NV12PyramidInput;
+  pyramid->width = w_stride;
+  pyramid->height = scaled_img_height;
+  pyramid->y_vir_addr = y->virAddr;
+  pyramid->y_phy_addr = y->phyAddr;
+  pyramid->y_stride = w_stride;
+  pyramid->uv_vir_addr = uv->virAddr;
+  pyramid->uv_phy_addr = uv->phyAddr;
+  pyramid->uv_stride = w_stride;
+  return std::shared_ptr<NV12PyramidInput>(pyramid,
+                                           [y, uv](NV12PyramidInput *pyramid) {
+                                             // Release memory after deletion
+                                             hbSysFreeMem(y);
+                                             hbSysFreeMem(uv);
+                                             delete y;
+                                             delete uv;
+                                             delete pyramid;
+                                           });
+}
+
+std::shared_ptr<DNNTensor> ImageProc::GetNV12TensorFromNV12(const std::string &image_file,
+                                                      int scaled_img_height,
+                                                      int scaled_img_width) {
+  cv::Mat nv12_mat;
+  cv::Mat bgr_mat = cv::imread(image_file, cv::IMREAD_COLOR);
+  cv::Mat mat_tmp;
+  mat_tmp.create(scaled_img_height, scaled_img_width, bgr_mat.type());
+  cv::resize(bgr_mat, mat_tmp, mat_tmp.size());
+  auto ret = ImageProc::BGRToNv12(mat_tmp, nv12_mat);
+  if (ret) {
+    RCLCPP_ERROR(rclcpp::get_logger("image_proc"), "get nv12 image failed ");
+    return nullptr;
+  }
+  int original_img_height = bgr_mat.rows;
+  int original_img_width = bgr_mat.cols;
+
+  auto *y = new hbSysMem;
+  auto *uv = new hbSysMem;
+
+  auto w_stride = ALIGN_16(scaled_img_width);
+  hbSysAllocCachedMem(y, scaled_img_height * w_stride);
+  hbSysAllocCachedMem(uv, scaled_img_height / 2 * w_stride);
+
+  uint8_t *data = nv12_mat.data;
+  auto *hb_y_addr = reinterpret_cast<uint8_t *>(y->virAddr);
+  auto *hb_uv_addr = reinterpret_cast<uint8_t *>(uv->virAddr);
+
+  // padding y
+  for (int h = 0; h < scaled_img_height; ++h) {
+    auto *raw = hb_y_addr + h * w_stride;
+    for (int w = 0; w < scaled_img_width; ++w) {
+      *raw++ = *data++;
+    }
+  }
+
+  // padding uv
+  auto uv_data = nv12_mat.data + scaled_img_height * scaled_img_width;
+  for (int32_t h = 0; h < scaled_img_height / 2; ++h) {
+    auto *raw = hb_uv_addr + h * w_stride;
+    for (int32_t w = 0; w < scaled_img_width; ++w) {
+      *raw++ = *uv_data++;
+    }
+  }
+
+  hbSysFlushMem(y, HB_SYS_MEM_CACHE_CLEAN);
+  hbSysFlushMem(uv, HB_SYS_MEM_CACHE_CLEAN);
+  auto input_tensor = new DNNTensor;
+  input_tensor->sysMem[0].virAddr = reinterpret_cast<void *>(y->virAddr);
+  input_tensor->sysMem[0].phyAddr = y->phyAddr;
+  input_tensor->sysMem[0].memSize = scaled_img_height * scaled_img_width;
+  input_tensor->sysMem[1].virAddr = reinterpret_cast<void *>(uv->virAddr);
+  input_tensor->sysMem[1].phyAddr = uv->phyAddr;
+  input_tensor->sysMem[1].memSize = scaled_img_height * scaled_img_width / 2;
+  // auto pyramid = new NV12PyramidInput;
+  // pyramid->width = scaled_img_width;
+  // pyramid->height = scaled_img_height;
+  // pyramid->y_vir_addr = y->virAddr;
+  // pyramid->y_phy_addr = y->phyAddr;
+  // pyramid->y_stride = w_stride;
+  // pyramid->uv_vir_addr = uv->virAddr;
+  // pyramid->uv_phy_addr = uv->phyAddr;
+  // pyramid->uv_stride = w_stride;
+  return std::shared_ptr<DNNTensor>(
+      input_tensor, [y, uv](DNNTensor *input_tensor) {
+        // Release memory after deletion
+        hbSysFreeMem(y);
+        hbSysFreeMem(uv);
+        delete y;
+        delete uv;
+        delete input_tensor;
+      });
+}
+
+int32_t ImageProc::BGRToNv12(cv::Mat &bgr_mat, cv::Mat &img_nv12) {
+  auto height = bgr_mat.rows;
+  auto width = bgr_mat.cols;
+
+  if (height % 2 || width % 2) {
+    std::cerr << "input img height and width must aligned by 2!";
+    return -1;
+  }
+  cv::Mat yuv_mat;
+  cv::cvtColor(bgr_mat, yuv_mat, cv::COLOR_BGR2YUV_I420);
+  if (yuv_mat.data == nullptr) {
+    std::cerr << "yuv_mat.data is null pointer" << std::endl;
+    return -1;
+  }
+
+  auto *yuv = yuv_mat.ptr<uint8_t>();
+  if (yuv == nullptr) {
+    std::cerr << "yuv is null pointer" << std::endl;
+    return -1;
+  }
+  img_nv12 = cv::Mat(height * 3 / 2, width, CV_8UC1);
+  auto *ynv12 = img_nv12.ptr<uint8_t>();
+
+  int32_t uv_height = height / 2;
+  int32_t uv_width = width / 2;
+
+  // copy y data
+  int32_t y_size = height * width;
+  memcpy(ynv12, yuv, y_size);
+
+  // copy uv data
+  uint8_t *nv12 = ynv12 + y_size;
+  uint8_t *u_data = yuv + y_size;
+  uint8_t *v_data = u_data + uv_height * uv_width;
+
+  for (int32_t i = 0; i < uv_width * uv_height; i++) {
+    *nv12++ = *u_data++;
+    *nv12++ = *v_data++;
+  }
+  return 0;
 }
 
 }  // namespace dnn_node

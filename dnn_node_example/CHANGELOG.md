@@ -1,5 +1,12 @@
 # Changelog for package dnn_node_example
 
+tros_2.3.0 (2024-03-27)
+------------------
+1. 新增适配ros2 humble零拷贝。
+2. 新增中英双语Readme。
+3. 适配重构dnn_node。
+4. 新增分割任务发布ai_msgs，支持在Web中显示渲染效果
+
 tros_2.2.2 (2023-12-22)
 ------------------
 1. 更新CMakeLists.txt，解决arm平台打包失败问题。

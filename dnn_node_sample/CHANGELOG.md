@@ -1,5 +1,11 @@
 # Changelog for package dnn_benchmark_example
 
+tros_2.3.0 (2024-03-27)
+------------------
+1. 新增适配ros2 humble零拷贝。
+2. 新增中英双语Readme。
+3. 适配重构dnn_node。
+
 tros_2.2.2 (2023-12-22)
 ------------------
 

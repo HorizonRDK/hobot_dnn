@@ -61,39 +61,15 @@ class DnnNode : public rclcpp::Node {
           const int alloctask_timeout_ms = -1,
           const int infer_timeout_ms = 20000);
 
-  // 使用DNNInput类型数据并指定输出描述进行推理
-  // 执行推理流程，只做pipeline的串联，具体的每个推理步骤由用户（子类中）实现。
-  // 用户可以继承DnnNodeOutput来扩展输出数据智能指针output
-  // 例如增加推理结果对应的图片数据、图片名、时间戳、ID等
-  // 如果不需要扩展输出内容，可以不传入output
-  // - 参数
-  //   - [in] inputs 输入数据智能指针列表
-  //   - [in] output_descs 输出描述智能指针列表
-  //   - [in] outputs 输出数据智能指针
-  //   - [in] rois 抠图roi数据，只对ModelRoiInferType模型有效
-  //   - [in] is_sync_mode 预测模式，true为同步模式，false为异步模式
-  //   - [in] alloctask_timeout_ms 申请推理任务超时时间，单位毫秒
-  //                               默认一直等待直到申请成功
-  //   - [in] infer_timeout_ms 推理超时时间，单位毫秒，默认20000毫秒推理超时
-  int Run(std::vector<std::shared_ptr<DNNInput>> &inputs,
-          std::vector<std::shared_ptr<OutputDescription>> &output_descs,
-          const std::shared_ptr<DnnNodeOutput> &output = nullptr,
-          const std::shared_ptr<std::vector<hbDNNRoi>> rois = nullptr,
-          const bool is_sync_mode = false,
-          const int alloctask_timeout_ms = -1,
-          const int infer_timeout_ms = 20000);
-
   // 使用DNNTensor类型数据并指定输出描述进行推理，一般DDR模型使用此方式推理
   // - 参数
   //   - [in] inputs 输入数据智能指针列表
-  //   - [in] output_descs 输出描述智能指针列表
   //   - [in] outputs 输出数据智能指针
   //   - [in] is_sync_mode 预测模式，true为同步模式，false为异步模式
   //   - [in] alloctask_timeout_ms 申请推理任务超时时间，单位毫秒
   //                               默认一直等待直到申请成功
   //   - [in] infer_timeout_ms 推理超时时间，单位毫秒，默认20000毫秒推理超时
   int Run(std::vector<std::shared_ptr<DNNTensor>> &inputs,
-          std::vector<std::shared_ptr<OutputDescription>> &output_descs,
           const std::shared_ptr<DnnNodeOutput> &output = nullptr,
           const bool is_sync_mode = false,
           const int alloctask_timeout_ms = -1,
@@ -102,10 +78,6 @@ class DnnNode : public rclcpp::Node {
  protected:
   // 设置DnnNodePara类型的dnn_node_para_ptr_
   virtual int SetNodePara() = 0;
-
-  // 配置模型输出的解析方式
-  // 如果子类没有override此接口，默认使用DnnNodePara中的output_parsers_进行配置
-  virtual int SetOutputParser();
 
   // 处理解析后的模型输出数据，例如将输出封装成msg后发布
   // 如果子类没有override此接口，使用默认的处理方法
